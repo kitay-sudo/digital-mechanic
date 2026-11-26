@@ -15,6 +15,9 @@ services:
     build:
       context: .
       dockerfile: backend/Dockerfile
+    # Чтобы контейнер видел сервер локальной модели на этой же машине (LLM_BASE_URL=http://host.docker.internal:…)
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     env_file:
       - path: .env
         required: false

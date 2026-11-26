@@ -301,3 +301,148 @@ async def test_claude_code_layer_runs_tools_and_answer(store, index, services, m
     assert "[Результат инструмента search_manuals]" in seen[1][1]
     assert set(seen[0][2]["properties"]) == {"tool_calls", "answer"}
     assert "search_manuals" in seen[0][0]
+
+
+# --- слой в формате OpenAI: локальная модель ---
+OIL_ANSWER = {
+    "summary": "Давление масла проверяют манометром.", "observations": [], "hypotheses": [], "repair": [],
+    "limitations": [], "conflicts": [], "not_found": False,
+    "checks": [{"text": "Проверить давление масла контрольным манометром.",
+                "refs": [{"manual_id": "yamz236_rk", "pdf_page": 10,
+                          "quote": "Проверить давление масла контрольным манометром."}]}],
+}
+
+
+def openai_server(replies):
+    """Подмена сервера модели: отдаёт заготовленные ответы и запоминает запросы."""
+    import json as _json
+
+    import httpx
+
+    seen = []
+
+    def handler(request):
+        seen.append(_json.loads(request.content))
+        message = replies[len(seen) - 1]
+        return httpx.Response(200, json={
+            "model": "local-test", "choices": [{"message": message, "finish_reason": "stop"}],
+            "usage": {"prompt_tokens": 200, "completion_tokens": 40},
+        })
+
+    return httpx.MockTransport(handler), seen
+
+
+async def ask_openai(store, index, llm, text="Как проверить давление масла?"):
+    events = []
+
+    async def emit(event):
+        events.append(event)
+
+    await run_turn(vehicle=fleet.get_vehicle("T792HO98"), session_id="S-0043", text=text, store=store, index=index,
+                   settings=get_settings(), llm=llm, emit=emit)
+    return [e for e in events if e["type"] in ("message", "error")][-1]
+
+
+async def test_local_model_json_protocol(store, index, services):
+    import json as _json
+
+    from app.agent.llm_openai import OpenAICompatLLM
+
+    transport, seen = openai_server([
+        {"role": "assistant", "content": "<think>нужен поиск</think>" + _json.dumps(
+            {"tool_calls": [{"name": "search_manuals", "input": {"query": "давление масла"}}], "answer": None})},
+        {"role": "assistant", "content": "```json\n" + _json.dumps({"tool_calls": [], "answer": OIL_ANSWER}) + "\n```"},
+    ])
+    llm = OpenAICompatLLM("local-test", "http://model.test/v1", transport=transport)
+    event = await ask_openai(store, index, llm)
+    message = event["message"]
+    assert message["kind"] == "answer" and message["answer"]["checks"][0]["refs"][0]["pdf_page"] == 10
+    assert seen[0]["response_format"]["type"] == "json_schema" and "tools" not in seen[0]
+    assert "[Результат инструмента search_manuals]" in seen[1]["messages"][1]["content"]
+
+
+async def test_local_model_native_tools(store, index, services):
+    import json as _json
+
+    from app.agent.llm_openai import OpenAICompatLLM
+
+    transport, seen = openai_server([
+        {"role": "assistant", "content": None, "tool_calls": [
+            {"id": "call_1", "type": "function",
+             "function": {"name": "search_manuals", "arguments": _json.dumps({"query": "давление масла"})}}]},
+        {"role": "assistant", "content": _json.dumps(OIL_ANSWER)},
+    ])
+    llm = OpenAICompatLLM("local-test", "http://model.test/v1", tools_mode="native", structured="json",
+                          transport=transport)
+    event = await ask_openai(store, index, llm)
+    assert event["message"]["answer"]["checks"][0]["refs"][0]["pdf_page"] == 10
+    assert seen[0]["tools"][0]["type"] == "function" and seen[0]["response_format"] == {"type": "json_object"}
+    assert [m["role"] for m in seen[1]["messages"]] == ["system", "user", "assistant", "tool"]
+
+
+async def test_local_model_made_up_quote_is_not_shown(store, index, services):
+    """Слабая модель выдумала цитату и норматив: код их не пропускает, механик не видит это число."""
+    import json as _json
+
+    from app.agent.llm_openai import OpenAICompatLLM
+
+    fake = {**OIL_ANSWER, "summary": "Давление масла должно быть не менее 900 кПа.",
+            "checks": [{"text": "Давление масла не менее 900 кПа.",
+                        "refs": [{"manual_id": "yamz236_rk", "pdf_page": 10,
+                                  "quote": "Давление масла должно быть не менее 900 кПа на холостом ходу."}]}]}
+    reply = {"role": "assistant", "content": _json.dumps({"tool_calls": [], "answer": fake})}
+    transport, _ = openai_server([reply, reply])
+    llm = OpenAICompatLLM("local-test", "http://model.test/v1", transport=transport)
+    event = await ask_openai(store, index, llm)
+    message = event["message"]
+    assert "900" not in _json.dumps(message.get("answer") or {}, ensure_ascii=False) and "900" not in message["text"]
+    assert not (message.get("answer") or {}).get("checks")
+
+
+async def test_local_model_server_unreachable(store, index, services):
+    import httpx
+
+    from app.agent.llm_openai import OpenAICompatLLM
+
+    def handler(request):
+        raise httpx.ConnectError("refused")
+
+    llm = OpenAICompatLLM("local-test", "http://model.test/v1", transport=httpx.MockTransport(handler))
+    event = await ask_openai(store, index, llm)
+    assert event["type"] == "error" and "LLM_BASE_URL" in event["text"]
+
+
+async def test_repeated_identical_tool_call_is_not_executed(store, index, services):
+    """Модель зациклилась на одном вызове: второй раз инструмент не выполняется, модель получает подсказку."""
+    import json as _json
+
+    from app.agent.llm_openai import OpenAICompatLLM
+
+    call = {"role": "assistant", "content": _json.dumps(
+        {"tool_calls": [{"name": "search_manuals", "input": {"query": "давление масла"}}], "answer": None})}
+    final = {"role": "assistant", "content": _json.dumps({"tool_calls": [], "answer": OIL_ANSWER})}
+    transport, seen = openai_server([call, call, final])
+    llm = OpenAICompatLLM("local-test", "http://model.test/v1", transport=transport)
+    event = await ask_openai(store, index, llm)
+    message = event["message"]
+    assert message["kind"] == "answer"
+    assert len([s for s in message["steps"] if s["tool"] == "search_manuals"]) == 1
+    assert "уже выполнен" in seen[2]["messages"][1]["content"]
+
+
+async def test_fact_without_source_is_not_shown(store, index, services):  # F4
+    """Модель нашла страницу, но ответила пересказом без ссылки: механик видит отказ, а не факт без источника."""
+    import json as _json
+
+    from app.agent.llm_openai import OpenAICompatLLM
+
+    search = {"role": "assistant", "content": _json.dumps(
+        {"tool_calls": [{"name": "search_manuals", "input": {"query": "давление масла"}}], "answer": None})}
+    bare = {**OIL_ANSWER, "summary": "Давление масла проверяют контрольным манометром на прогретом двигателе.", "checks": []}
+    reply = {"role": "assistant", "content": _json.dumps({"tool_calls": [], "answer": bare})}
+    transport, seen = openai_server([search, reply, reply])
+    llm = OpenAICompatLLM("local-test", "http://model.test/v1", transport=transport)
+    event = await ask_openai(store, index, llm)
+    message = event["message"]
+    assert message["answer"]["not_found"] and "манометром" not in message["text"]
+    assert "Ответ без ссылок" in seen[2]["messages"][1]["content"]

@@ -43,6 +43,14 @@ class Settings:
     llm_model: str
     llm_effort: str
     llm_fallbacks: bool
+    # Сервер с форматом OpenAI (локальная модель): адрес, ключ, способ вызова инструментов и формы ответа
+    llm_base_url: str
+    llm_api_key: str
+    llm_tools: str
+    llm_structured: str
+    llm_max_tokens: int
+    llm_temperature: float | None
+    llm_timeout: float
     # Цены для журнала стоимости
     price_input: float
     price_output: float
@@ -82,9 +90,18 @@ def get_settings() -> Settings:
         kb_dir=_path("KB_DIR", ROOT / "knowledge"),
         data_dir=_path("DATA_DIR", ROOT / "data"),
         llm_provider=provider,
-        llm_model=os.environ.get("LLM_MODEL", "mock-llm" if provider == "mock" else "claude-opus-5-5"),
+        llm_model=os.environ.get(
+            "LLM_MODEL", {"mock": "mock-llm", "openai": ""}.get(provider, "claude-opus-5-5")
+        ),
         llm_effort=os.environ.get("LLM_EFFORT", "medium"),
         llm_fallbacks=os.environ.get("LLM_FALLBACKS", "1") not in ("0", "false", "no"),
+        llm_base_url=os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/"),
+        llm_api_key=os.environ.get("LLM_API_KEY", ""),
+        llm_tools=os.environ.get("LLM_TOOLS", "json").strip().lower(),
+        llm_structured=os.environ.get("LLM_STRUCTURED", "schema").strip().lower(),
+        llm_max_tokens=int(_float("LLM_MAX_TOKENS", 6000)),
+        llm_temperature=None if os.environ.get("LLM_TEMPERATURE", "0").strip() == "" else _float("LLM_TEMPERATURE", 0.0),
+        llm_timeout=_float("LLM_TIMEOUT", 600.0),
         price_input=_float("PRICE_INPUT_PER_MTOK", 4.0),
         price_output=_float("PRICE_OUTPUT_PER_MTOK", 20.0),
         price_cache_read=_float("PRICE_CACHE_READ_PER_MTOK", 0.2),

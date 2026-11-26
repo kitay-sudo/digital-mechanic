@@ -23,6 +23,8 @@ EMPTY_ANSWER = {"summary": "", "observations": [], "hypotheses": [], "checks": [
 HIDDEN_NOTE = "Часть ответа скрыта: её не удалось подтвердить страницей руководства."
 MISMATCH_TEXT = ("Это ошибка модели диагностики, а не диагноз: по этому типу выводов о двигателе нет. "
                  "Повторите проверку или проведите дефектовку.")
+UNSOURCED_TEXT = ("Подтвердить ответ страницей руководства на этот двигатель не удалось. "
+                  "Без страницы и цитаты агент фактов и нормативов не называет.")
 CONFLICT_LEAD = "В руководствах есть расхождение, формулировки показаны ниже."
 
 
@@ -115,6 +117,11 @@ async def run_turn(
 
             raw = _parse(response.text)
             answer, problems = ctx.verifier().verify_answer(raw)
+            if _unsourced(ctx, answer):
+                problems.append(
+                    "Ответ без ссылок: каждый факт из руководства должен стоять в checks или repair со страницей "
+                    "и дословной цитатой. Если подтвердить нечем, поставь not_found: true и не называй фактов"
+                )
             failed = ctx.assessment and ctx.assessment["outcome"] == "check_failed"
             if problems and not retried and not failed:
                 # Одна попытка исправиться: модель видит, какие пункты не прошли сверку со страницей.
@@ -163,6 +170,18 @@ def _usage(totals: dict, started: float, llm: LLM) -> dict:
         "duration_ms": int((time.monotonic() - started) * 1000),
         "llm_calls": totals["llm_calls"], "model": llm.model, "mock": llm.is_mock,
     }
+
+
+def _unsourced(ctx: TurnContext, answer: dict) -> bool:
+    """F4: агент искал в руководствах, но в ответе нет ни одной подтверждённой ссылки и нет отказа.
+
+    Такой ответ пересказывает найденное без страницы и цитаты. Механику он не показывается.
+    """
+    if not ctx.searched or answer["not_found"]:
+        return False
+    if ctx.draft or ctx.ticket or ctx.ticket_block or ctx.diagnosed_this_turn:
+        return False
+    return not (answer["checks"] or answer["repair"] or answer["conflicts"])
 
 
 def _has_instruction(ctx: TurnContext, answer: dict) -> bool:
@@ -260,6 +279,10 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
         if ctx.no_instruction and ctx.diagnosis:
             answer["recommendation_text"] = prompt.recommendation_text(vehicle, ctx.diagnosis, ctx.ticket_block)
         return {"kind": "answer", "text": answer["summary"], "answer": answer}
+
+    if _unsourced(ctx, answer):
+        # Факт без страницы и цитаты не показываем: вместо пересказа честный отказ.
+        answer.update(summary=UNSOURCED_TEXT, observations=[], not_found=True)
 
     has_body = any(
         answer[k] for k in ("observations", "hypotheses", "checks", "repair", "limitations", "conflicts")

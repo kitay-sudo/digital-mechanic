@@ -2,6 +2,7 @@
 
 Агент не знает, какая модель отвечает. Поставщик выбирается переменной LLM_PROVIDER:
 `anthropic` (Claude через официальный SDK, напрямую или через шлюз с тем же форматом),
+`openai` (сервер с форматом OpenAI: локальная модель в контуре заказчика или шлюз),
 `claude_code` (локальный Claude Code, только для разработки) или `mock` (заглушка без ключа).
 Внутренний формат сообщений повторяет формат Messages API: список блоков
 text / tool_use / tool_result.
@@ -50,6 +51,13 @@ def build_llm() -> LLM:
         from .llm_anthropic import AnthropicLLM
 
         return AnthropicLLM(settings.llm_model, settings.llm_effort, settings.llm_fallbacks)
+    if settings.llm_provider == "openai":
+        from .llm_openai import OpenAICompatLLM
+
+        return OpenAICompatLLM(
+            settings.llm_model, settings.llm_base_url, settings.llm_api_key, settings.llm_tools,
+            settings.llm_structured, settings.llm_max_tokens, settings.llm_temperature, settings.llm_timeout,
+        )
     if settings.llm_provider == "claude_code":
         from .llm_claude_code import ClaudeCodeLLM
 

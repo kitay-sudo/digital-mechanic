@@ -190,6 +190,7 @@ class TurnContext:
     warning_ack: bool = False
     steps: list[dict] = field(default_factory=list)
     searched: bool = False
+    seen_calls: set[str] = field(default_factory=set)   # вызовы инструментов этого хода: защита от зацикливания
 
     @property
     def allowed_manuals(self) -> list[str]:
@@ -523,6 +524,13 @@ async def run_tool(ctx: TurnContext, name: str, args: dict, step_id: str) -> tup
     handler = HANDLERS.get(name)
     if handler is None:
         return _dump({"error": f"Неизвестный инструмент {name}"}), True
+    # Слабая модель может повторять один и тот же вызов по кругу. Второй раз инструмент не выполняется:
+    # модель получает подсказку и должна пойти дальше.
+    key = name + json.dumps(args, ensure_ascii=False, sort_keys=True)
+    if key in ctx.seen_calls:
+        return _dump({"error": "Этот вызов с теми же параметрами уже выполнен в этом ходе, его результат есть выше. "
+                               "Не повторяй его: вызови другой инструмент или дай итоговый ответ."}), True
+    ctx.seen_calls.add(key)
     try:
         return await handler(ctx, args, step_id)
     except Exception as exc:  # сбой инструмента не должен ронять ход агента

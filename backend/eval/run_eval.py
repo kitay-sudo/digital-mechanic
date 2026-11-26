@@ -100,17 +100,15 @@ def run_ask(api: str, only: str | None) -> int:
     import httpx
 
     failed, rows, tokens_in, tokens_out, cost = 0, [], 0, 0, 0.0
-    cleared: set[str] = set()
     with httpx.Client(base_url=api, timeout=600) as http:
-        config = http.get("/api/config").json()
-        print(f"Модель: {config.get('model')} ({config.get('provider')})\n")
+        llm = http.get("/api/config").json().get("llm") or {}
+        print(f"Модель: {llm.get('model')} ({llm.get('provider')})\n", flush=True)
         for q in load():
             if only and not q["id"].startswith(only):
                 continue
             vehicle = http.get(f"/api/vehicles/{q['vehicle_id']}").json()
-            if q["vehicle_id"] not in cleared:
-                http.delete(f"/api/conversations/{q['vehicle_id']}")
-                cleared.add(q["vehicle_id"])
+            # Каждый вопрос задаётся в чистом чате: прошлые ответы не должны подсказывать или сбивать.
+            http.delete(f"/api/conversations/{q['vehicle_id']}")
             body = {"vehicle_id": q["vehicle_id"], "session_id": vehicle["sessions"][-1]["session_id"], "text": q["question"]}
             started, message, error = time.monotonic(), None, None
             with http.stream("POST", "/api/chat", json=body) as response:
@@ -152,7 +150,7 @@ def run_ask(api: str, only: str | None) -> int:
             failed += bool(problems)
             cited = ", ".join(f"{m} {p}" for m, p in sorted(pages)) or "нет ссылок"
             rows.append((q["id"], "ok" if not problems else "; ".join(problems), cited, seconds))
-            print(f"{'ok  ' if not problems else 'FAIL'} {q['id']} {seconds:5.1f} с  {'; '.join(problems)}\n     {message.get('text', '')[:160]}\n     {cited}")
+            print(f"{'ok  ' if not problems else 'FAIL'} {q['id']} {seconds:5.1f} с  {'; '.join(problems)}\n     {message.get('text', '')[:160]}\n     {cited}", flush=True)
     print(f"\nИтог: прошло {len(rows) - failed} из {len(rows)}. Токены: вход {tokens_in}, выход {tokens_out}. Стоимость: {cost:.2f} ₽")
     return failed
 
