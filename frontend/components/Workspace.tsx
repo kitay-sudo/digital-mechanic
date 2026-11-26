@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { api, chatStream, confirmDraftStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
+import { usePresence } from '@/lib/presence';
 import { profileOf, useSettings } from '@/lib/settings';
 import type { ManualTarget, Message, Step, StreamEvent, VehicleDetail } from '@/lib/types';
 import { Composer } from './Composer';
@@ -40,6 +41,10 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   /** Место выпадающего подтверждения очистки чата: под кнопкой. null — закрыто */
   const [clearAt, setClearAt] = useState<{ top: number; right: number } | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
+  // Плавное закрытие: панель остаётся на экране, пока уезжает
+  const manualView = usePresence(manual);
+  const sideView = usePresence(sideOpen ? true : null);
+  const clearView = usePresence(clearAt);
   const settings = useSettings();
   const profile = profileOf(settings);
   const profileRef = useRef(profile);
@@ -172,10 +177,10 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const sessionLine = session ? `Проверка ${session.session_id} · ${dateTime(session.checked_at)}` : 'Проверок нет';
 
   return (
-    <div className={`ws${manual ? ' with-manual' : ''}`}>
+    <div className={`ws${manualView.shown ? ' with-manual' : ''}`}>
       <button
         type="button"
-        className={`dimmer${sideOpen || manual ? ' open' : ''}`}
+        className={`dimmer${sideView.shown || manualView.shown ? ' open' : ''}${!sideOpen && !manual ? ' leaving' : ''}`}
         aria-label="Закрыть"
         onClick={() => {
           if (manual) setManual(null);
@@ -187,7 +192,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         vehicle={vehicle}
         session={session}
         onOpenManual={openManual}
-        open={sideOpen}
+        open={Boolean(sideView.shown)}
+        leaving={sideView.leaving}
         onClose={() => setSideOpen(false)}
       />
 
@@ -258,12 +264,19 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         />
       </section>
 
-      {manual ? <ManualPanel target={manual} onNavigate={setManual} onClose={() => setManual(null)} /> : null}
+      {manualView.shown ? (
+        <ManualPanel target={manualView.shown} leaving={manualView.leaving} onNavigate={setManual} onClose={() => setManual(null)} />
+      ) : null}
 
-      {clearAt ? (
+      {clearView.shown ? (
         <>
-          <button type="button" className="veil" aria-label="Отмена" onClick={() => setClearAt(null)} />
-          <div className="pop" role="dialog" aria-label="Очистить чат" style={{ top: clearAt.top, right: clearAt.right }}>
+          <button type="button" className={`veil${clearView.leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={() => setClearAt(null)} />
+          <div
+            className={`pop${clearView.leaving ? ' leaving' : ''}`}
+            role="dialog"
+            aria-label="Очистить чат"
+            style={{ top: clearView.shown.top, right: clearView.shown.right }}
+          >
             <div className="pop-t">Очистить чат по этой машине?</div>
             <div className="pop-s">Заявки и история проверок останутся.</div>
             <div className="pop-f">

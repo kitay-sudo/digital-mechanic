@@ -8,10 +8,13 @@ import { Icon } from './Icon';
 /** Страница руководства: картинка страницы PDF с подсветкой цитаты. */
 export function ManualPanel({
   target,
+  leaving = false,
   onNavigate,
   onClose,
 }: {
   target: ManualTarget;
+  /** Панель закрывается: проигрывается анимация ухода */
+  leaving?: boolean;
   onNavigate: (t: ManualTarget) => void;
   onClose: () => void;
 }) {
@@ -43,7 +46,7 @@ export function ManualPanel({
   const go = (n: number) => onNavigate({ manual_id: target.manual_id, page: n, short: target.short });
 
   return (
-    <aside className="col manual open">
+    <aside className={`col manual open${leaving ? ' leaving' : ''}`}>
       <div className="handle">
         <i />
       </div>

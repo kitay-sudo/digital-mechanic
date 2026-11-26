@@ -6,6 +6,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
+import { usePresence } from '@/lib/presence';
 import { SettingsPanel } from './SettingsPanel';
 
 export function Header() {
@@ -18,6 +19,8 @@ export function Header() {
   }, []);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  // Плавное закрытие: панель остаётся на экране, пока уезжает
+  const settingsView = usePresence(settingsOpen ? true : null);
 
   return (
     <>
@@ -59,7 +62,7 @@ export function Header() {
           <Icon name="adjustments-horizontal" />
         </button>
       </div>
-      {settingsOpen ? <SettingsPanel config={config} onClose={closeSettings} /> : null}
+      {settingsView.shown ? <SettingsPanel config={config} leaving={settingsView.leaving} onClose={closeSettings} /> : null}
     </header>
     {config?.kb && !config.kb.ready ? (
       <div className="kbwarn" role="alert">

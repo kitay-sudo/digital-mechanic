@@ -2169,68 +2169,22 @@ details.fold > .fin {
   font-weight: 600;
 }
 
+/* Пункт настроек бывает ссылкой и кнопкой: выглядят одинаково */
+button.sp-link {
+  width: 100%;
+  background: transparent;
+  color: inherit;
+  font-family: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
 .sp-link span {
   flex: 1;
 }
 
 .sp-link:hover {
   border-color: var(--tx3);
-}
-
-/* ---------- Согласие на обработку данных ---------- */
-
-.consent-dim {
-  position: fixed;
-  inset: 0;
-  z-index: 100;
-  display: grid;
-  place-items: center;
-  padding: 16px;
-  background: var(--dim);
-}
-
-.consent {
-  width: min(calc(480px * var(--k)), 100%);
-  background: var(--panel);
-  border: 1px solid var(--line2);
-}
-
-.consent-h {
-  min-height: 56px;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 20px;
-  border-bottom: 1px solid var(--line);
-  font-size: calc(18px * var(--k));
-  font-weight: 600;
-}
-
-.consent-h .ti {
-  color: var(--acc);
-}
-
-.consent-b {
-  padding: 16px 20px 8px;
-}
-
-.consent-b p {
-  font-size: calc(16px * var(--k));
-  line-height: calc(24px * var(--k));
-  color: var(--tx2);
-}
-
-.consent .ack {
-  padding: 8px 0;
-  border-top: none;
-  margin-top: 8px;
-  font-size: calc(16px * var(--k));
-  font-weight: 600;
-}
-
-.consent-f {
-  display: flex;
-  padding: 8px 20px 20px;
 }
 
 /* ---------- Голосовой ввод ---------- */
@@ -3428,16 +3382,8 @@ details.fold > .fin {
   }
 }
 
-@keyframes in-pop {
-  from {
-    opacity: 0;
-    transform: scale(0.97);
-  }
-}
-
 /* Появление без движения: работает и там, где движение отключено в системе */
 .dimmer.open,
-.consent-dim,
 .steps li,
 .viewer img:not(.pending),
 .viewer .quote,
@@ -3454,10 +3400,6 @@ details.fold > .fin {
   /* Настройки выпадают из-под кнопки */
   .sp {
     animation: in-down var(--mo) var(--ease);
-  }
-
-  .consent {
-    animation: in-pop var(--mo) var(--ease);
   }
 
   /* Новые сообщения в чате и подсказки под шагами */
@@ -3509,8 +3451,7 @@ details.fold > .fin {
 
 .veil,
 .sp-dim,
-.dimmer.open,
-.consent-dim {
+.dimmer.open {
   background: var(--veil);
   -webkit-backdrop-filter: var(--veil-blur);
   backdrop-filter: var(--veil-blur);
@@ -3560,27 +3501,7 @@ details.fold > .fin {
   margin-top: var(--by);
 }
 
-/* Согласие выпадает сверху экрана, а не висит окном по центру */
-.consent-dim {
-  place-items: start center;
-  padding: 0 16px;
-}
-
-.consent {
-  border-top: none;
-  box-shadow: 0 16px 48px rgb(0 0 0 / 0.28);
-}
-
-@keyframes in-drop {
-  from {
-    transform: translateY(-100%);
-  }
-}
-
 @media (prefers-reduced-motion: no-preference) {
-  .consent {
-    animation: in-drop var(--mo) var(--ease);
-  }
 
   .pop {
     animation: in-down var(--mo) var(--ease);
@@ -3594,14 +3515,520 @@ details.fold > .fin {
     right: 12px !important;
     width: auto;
   }
+}
 
-  .consent-dim {
-    padding: 0;
+/* ---------- Плавное закрытие ----------
+   Панель получает класс «leaving» и ещё --mo остаётся на экране (lib/presence.ts),
+   за это время проигрывается уход: то же движение, что при открытии, в обратную сторону. */
+
+@keyframes fade-out {
+  to {
+    opacity: 0;
+  }
+}
+
+@keyframes out-right {
+  to {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes out-down {
+  to {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes out-up {
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.leaving {
+  pointer-events: none;
+}
+
+.col.manual.leaving,
+.col.side.open.leaving,
+.sp.leaving,
+.pop.leaving,
+.dimmer.open.leaving,
+.veil.leaving,
+.sp-dim.leaving {
+  animation: fade-out var(--mo) ease-out forwards;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .col.manual.leaving {
+    animation: out-right var(--mo) var(--ease) forwards;
   }
 
-  .consent {
-    width: 100%;
-    border-left: none;
-    border-right: none;
+  .sp.leaving,
+  .pop.leaving {
+    animation: out-up var(--mo) var(--ease) forwards;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
+  .col.side.open.leaving,
+  .col.manual.open.leaving,
+  .sp.leaving {
+    animation: out-down var(--mo) var(--ease) forwards;
+  }
+}
+
+/* На компьютере боковая панель чата видна всегда: уходить ей некуда */
+@media (min-width: 901px) {
+  .col.side.open.leaving {
+    animation: none;
+    pointer-events: auto;
+  }
+}
+
+/* ---------- Обучение при первом открытии ----------
+   Экран на всю величину окна: шапка со счётчиком, индикатор шагов, слайд, кнопки.
+   На компьютере текст слева и пример справа, на телефоне пример сверху. */
+
+.tour {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--tx);
+  animation: fade-in var(--mo) ease-out;
+}
+
+.tour.leaving {
+  animation: fade-out var(--mo) ease-out forwards;
+}
+
+.tour-top {
+  height: 56px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 24px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line2);
+}
+
+.tour-count {
+  margin-left: auto;
+  font-size: calc(14px * var(--k));
+  color: var(--tx2);
+}
+
+/* Индикатор шагов: пройденные и текущий закрашены */
+.tour-prog {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 12px 24px 0;
+}
+
+.tour-prog i {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line2);
+  transition: background-color var(--mo) ease-out;
+}
+
+.tour-prog i.done,
+.tour-prog i.on {
+  background: var(--acc);
+}
+
+.tour-prog i.done {
+  opacity: 0.5;
+}
+
+.tour-main {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 56px;
+  padding: 32px max(24px, calc((100vw - 1120px) / 2));
+}
+
+.tour-kick {
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--acc);
+}
+
+.tour-text h1 {
+  margin-top: 12px;
+  font-size: calc(34px * var(--k));
+  line-height: calc(42px * var(--k));
+  font-weight: 600;
+  text-wrap: balance;
+}
+
+.tour-text p {
+  margin-top: 16px;
+  font-size: calc(18px * var(--k));
+  line-height: calc(28px * var(--k));
+  color: var(--tx2);
+  max-width: 34em;
+}
+
+.tour-ack {
+  margin-top: 24px;
+  min-height: calc(56px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 0 var(--bx);
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  font-size: calc(17px * var(--k));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.tour-ack input {
+  width: calc(24px * var(--k));
+  height: calc(24px * var(--k));
+  flex: none;
+  accent-color: var(--acc);
+}
+
+/* Пример на слайде: настоящие элементы интерфейса, нажать их нельзя */
+.tour-vis {
+  min-height: 340px;
+  display: grid;
+  place-items: center;
+  padding: 32px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  pointer-events: none;
+  user-select: none;
+}
+
+.tour-vis > * {
+  width: min(100%, 440px);
+}
+
+.tv-list,
+.tv-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.tv-feat {
+  display: grid;
+  grid-template-columns: calc(48px * var(--k)) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 16px;
+  padding: var(--by) var(--bx);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+
+.tv-feat > .ti {
+  width: calc(48px * var(--k));
+  height: calc(48px * var(--k));
+  display: grid;
+  place-items: center;
+  color: var(--acc);
+  background: var(--acc-bg);
+  border-radius: 4px;
+}
+
+.tv-feat b {
+  display: block;
+  font-size: calc(17px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+}
+
+.tv-feat span {
+  display: block;
+  margin-top: 2px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx2);
+}
+
+.tv-rows {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.tv-row {
+  position: relative;
+  min-height: calc(52px * var(--k));
+  display: grid;
+  grid-template-columns: calc(104px * var(--k)) minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  padding: 0 var(--bx);
+  border-bottom: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+}
+
+.tv-row:last-child {
+  border-bottom: none;
+}
+
+.tv-row .m {
+  font-weight: 600;
+}
+
+.tv-row.hot {
+  box-shadow: inset 4px 0 0 var(--crit);
+}
+
+.tv-row.warn {
+  box-shadow: inset 4px 0 0 var(--warn);
+}
+
+.tv-row.pick {
+  background: var(--acc-bg);
+}
+
+.tv-tap {
+  position: absolute;
+  right: 10px;
+  bottom: -12px;
+  z-index: 1;
+  font-size: calc(30px * var(--k));
+  color: var(--acc);
+}
+
+.tv-btn {
+  align-self: stretch;
+}
+
+.tv-out {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+}
+
+.tv-out > div {
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  padding: 8px var(--bx);
+  border-bottom: 1px solid var(--line);
+  font-size: calc(14px * var(--k));
+  color: var(--tx2);
+}
+
+.tv-out > div:last-child {
+  border-bottom: none;
+}
+
+.tv-ask {
+  display: flex;
+  gap: 8px;
+}
+
+.tv-ask .tv-btn {
+  align-self: auto;
+  background: var(--acc);
+  color: var(--acc-tx);
+}
+
+.tv-inp {
+  display: flex;
+  align-items: center;
+  color: var(--tx);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.tv-ans {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  padding: var(--by) var(--bx);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line2);
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+}
+
+.tv-steps {
+  border: 1px solid var(--line);
+}
+
+.tv-step {
+  display: grid;
+  grid-template-columns: calc(36px * var(--k)) minmax(0, 1fr);
+  align-items: center;
+  column-gap: 14px;
+  padding: 12px var(--bx);
+  border-bottom: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+}
+
+.tv-step:last-child {
+  border-bottom: none;
+}
+
+.tv-step.done .chk {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--acc-tx);
+}
+
+.tv-step.done > span:last-child {
+  color: var(--tx3);
+}
+
+.tv-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.tv-ticket .tv-btn {
+  align-self: auto;
+}
+
+.tour-bot {
+  flex: none;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 max(24px, calc((100vw - 1120px) / 2));
+  background: var(--panel);
+  border-top: 1px solid var(--line2);
+}
+
+.tour-bot .btn.pri {
+  min-width: calc(180px * var(--k));
+}
+
+@keyframes in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-28px);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Слайд въезжает со стороны, в которую листаем */
+  .tour-main {
+    animation: in-right var(--mo) var(--ease);
+  }
+
+  .tour-main.back {
+    animation: in-left var(--mo) var(--ease);
+  }
+}
+
+@media (max-width: 900px) {
+  .tour-top {
+    padding: 0 12px;
+  }
+
+  .tour-prog {
+    padding: 10px 12px 0;
+  }
+
+  /* Пример сверху, текст под ним */
+  .tour-main {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+    align-content: start;
+    gap: 20px;
+    padding: 16px 12px 20px;
+  }
+
+  .tour-vis {
+    order: -1;
+    /* auto, а не 0: иначе при нехватке высоты пример сжимается и текст наезжает на него */
+    min-height: auto;
+    padding: 14px;
+  }
+
+  .tv-list,
+  .tv-col {
+    gap: 10px;
+  }
+
+  .tv-feat {
+    grid-template-columns: calc(40px * var(--k)) minmax(0, 1fr);
+    column-gap: 12px;
+    padding: 10px 12px;
+  }
+
+  .tv-feat > .ti {
+    width: calc(40px * var(--k));
+    height: calc(40px * var(--k));
+  }
+
+  /* Строка машины в две линии: номер и результат, под номером название */
+  .tv-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 2px;
+    padding: 8px 12px;
+  }
+
+  .tv-row .nm {
+    grid-column: 1;
+    grid-row: 2;
+    font-size: calc(13px * var(--k));
+    color: var(--tx2);
+  }
+
+  .tv-row .sev {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+
+  .tour-text h1 {
+    margin-top: 8px;
+    font-size: calc(26px * var(--k));
+    line-height: calc(32px * var(--k));
+  }
+
+  .tour-text p {
+    margin-top: 10px;
+    font-size: calc(17px * var(--k));
+    line-height: calc(26px * var(--k));
+  }
+
+  .tour-bot {
+    min-height: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .tour-bot .btn {
+    height: calc(56px * var(--k));
+  }
+
+  .tour-bot .btn.pri {
+    flex: 1;
+    min-width: 0;
   }
 }

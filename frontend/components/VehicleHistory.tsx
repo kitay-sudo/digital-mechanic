@@ -193,20 +193,24 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
   // Проверка, для которой открыт график. closingId держит блок на экране, пока он плавно сворачивается
   const [openId, setOpenId] = useState<string | null>(null);
   const [closingId, setClosingId] = useState<string | null>(null);
-  const prevOpen = useRef<string | null>(null);
+  const [seenOpen, setSeenOpen] = useState<string | null>(null);
   const lastOpen = useRef('');
   const narrow = useNarrow();
   const closeChart = useCallback(() => setOpenId(null), []);
   const toggleChart = useCallback((id: string) => setOpenId((cur) => (cur === id ? null : id)), []);
 
+  // Прежний блок помечается закрывающимся в том же рендере, где сменился openId.
+  // Если ставить пометку позже, в эффекте, блок успевает исчезнуть и сворачивается без анимации
+  if (seenOpen !== openId) {
+    setSeenOpen(openId);
+    if (seenOpen) setClosingId(seenOpen);
+  }
+
   useEffect(() => {
-    const prev = prevOpen.current;
-    prevOpen.current = openId;
-    if (prev && prev !== openId) {
-      setClosingId(prev);
-      window.setTimeout(() => setClosingId((cur) => (cur === prev ? null : cur)), 300);
-    }
-  }, [openId]);
+    if (!closingId) return;
+    const timer = window.setTimeout(() => setClosingId((cur) => (cur === closingId ? null : cur)), 300);
+    return () => window.clearTimeout(timer);
+  }, [closingId]);
 
   // Компьютер: блок не модальный, поэтому закрываем его сами — нажатием на пустое место или клавишей Esc
   useEffect(() => {

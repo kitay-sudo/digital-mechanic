@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { FALLBACK_LEVELS, setSettings, useSettings } from '@/lib/settings';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
+import { openTour } from './Onboarding';
 
 function Choice<T extends string>({
   label,
@@ -43,7 +44,7 @@ function Choice<T extends string>({
 }
 
 /** Настройки механика: размер текста, подача, тема. */
-export function SettingsPanel({ config, onClose }: { config: Config | null; onClose: () => void }) {
+export function SettingsPanel({ config, leaving = false, onClose }: { config: Config | null; leaving?: boolean; onClose: () => void }) {
   const settings = useSettings();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
@@ -71,8 +72,8 @@ export function SettingsPanel({ config, onClose }: { config: Config | null; onCl
 
   return (
     <>
-      <button type="button" className="sp-dim" aria-label="Закрыть настройки" onClick={onClose} />
-      <aside className="sp" role="dialog" aria-label="Настройки">
+      <button type="button" className={`sp-dim${leaving ? ' leaving' : ''}`} aria-label="Закрыть настройки" onClick={onClose} />
+      <aside className={`sp${leaving ? ' leaving' : ''}`} role="dialog" aria-label="Настройки">
         <div className="handle">
           <i />
         </div>
@@ -113,6 +114,18 @@ export function SettingsPanel({ config, onClose }: { config: Config | null; onCl
               onChange={applyTheme}
             />
           </div>
+          <button
+            type="button"
+            className="sp-link"
+            onClick={() => {
+              onClose();
+              openTour();
+            }}
+          >
+            <Icon name="help-circle" />
+            <span>Как работать с системой</span>
+            <Icon name="chevron-right" className="mut" />
+          </button>
           <Link href="/log" className="sp-link" onClick={onClose}>
             <Icon name="history" />
             <span>Журнал обращений</span>

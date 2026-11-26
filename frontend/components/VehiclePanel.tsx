@@ -13,6 +13,7 @@ export function VehiclePanel({
   session,
   onOpenManual,
   open,
+  leaving = false,
   onClose,
 }: {
   vehicle: VehicleDetail;
@@ -20,12 +21,14 @@ export function VehiclePanel({
   session: Session | null;
   onOpenManual: (t: ManualTarget) => void;
   open: boolean;
+  /** Шторка на телефоне закрывается: проигрывается анимация ухода */
+  leaving?: boolean;
   onClose: () => void;
 }) {
   const sid = session?.session_id ?? null;
 
   return (
-    <aside className={`col side${open ? ' open' : ''}`}>
+    <aside className={`col side${open ? ' open' : ''}${leaving ? ' leaving' : ''}`}>
       <div className="handle">
         <i />
       </div>

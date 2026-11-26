@@ -14,7 +14,7 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-600.css';
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import './globals.css';
-import { Consent } from '@/components/Consent';
+import { Onboarding } from '@/components/Onboarding';
 import { Header } from '@/components/Header';
 
 export const metadata: Metadata = {
@@ -45,7 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Header />
           <main className="page">{children}</main>
         </div>
-        <Consent />
+        <Onboarding />
       </body>
     </html>
   );
