@@ -2808,23 +2808,6 @@ details.fold > .fin {
   }
 }
 
-/* Шапка графика: тот же вид, что у шапки таблицы */
-.ghead {
-  height: calc(36px * var(--k));
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 0 16px;
-  font-size: calc(12px * var(--k));
-  font-weight: 500;
-  color: var(--tx3);
-  background: var(--panel2);
-  border: 1px solid var(--line);
-  border-bottom: none;
-  white-space: nowrap;
-}
-
 .hgrid {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
@@ -2943,35 +2926,6 @@ details.fold > .fin {
   }
 }
 
-/* Узкий экран компьютера: график под таблицей на всю ширину, пояснение справа от него */
-@media (min-width: 901px) and (max-width: 1359px) {
-  .hgrid .chart {
-    display: grid;
-    grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
-    align-items: center;
-    column-gap: 24px;
-    padding: 12px 24px 12px 12px;
-  }
-
-  .hgrid .chart .cap {
-    border-top: none;
-    margin-top: 0;
-    padding: 0;
-    align-items: flex-start;
-    font-size: calc(16px * var(--k));
-    line-height: calc(24px * var(--k));
-  }
-}
-
-/* Широкий экран: таблица слева, график справа, пустого места нет */
-@media (min-width: 1360px) {
-  .hgrid {
-    grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 460px);
-    gap: 24px;
-    align-items: start;
-  }
-}
-
 @media (max-width: 900px) {
   /* Панель машины стала короткой: шторка по высоте содержимого */
   .col.side.open {
@@ -3061,5 +3015,294 @@ details.fold > .fin {
 
   .tin dd {
     margin-bottom: 8px;
+  }
+}
+
+/* ---------- Экран проверок: строка тенденции и график в выдвижной панели ---------- */
+
+.trendbar {
+  width: 100%;
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  padding: 8px 12px 8px 20px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--tx2);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  text-align: left;
+  cursor: pointer;
+}
+
+.trendbar:hover,
+.trendbar:focus-visible {
+  border-color: var(--acc);
+}
+
+.trendbar > .ti {
+  flex: none;
+  color: var(--tx3);
+}
+
+.trendbar .tb-t {
+  flex: 1;
+  min-width: 0;
+  color: var(--tx);
+}
+
+.trendbar .tb-a {
+  flex: none;
+  height: calc(32px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  color: var(--acc);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Панель: на компьютере выезжает сверху по центру, на телефоне снизу на всю ширину */
+.csheet {
+  position: fixed;
+  inset: 88px 0 auto 0;
+  width: min(760px, calc(100vw - 48px));
+  max-height: calc(100dvh - 120px);
+  margin: 0 auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  background: var(--panel);
+  color: var(--tx);
+  border: 1px solid var(--line2);
+  box-shadow: 0 24px 64px rgb(0 0 0 / 0.28);
+  touch-action: none;
+  opacity: 0;
+  transition-property: opacity, transform, display, overlay;
+  transition-duration: 0.28s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+  transition-behavior: allow-discrete;
+}
+
+.csheet[open]:where(:not([data-closing])) {
+  opacity: 1;
+}
+
+@starting-style {
+  .csheet[open]:where(:not([data-closing])) {
+    opacity: 0;
+  }
+}
+
+.csheet::backdrop {
+  overflow: hidden;
+  overscroll-behavior: contain;
+  background-color: rgb(8 10 14 / 0);
+  backdrop-filter: blur(0);
+  transition-property: background-color, backdrop-filter, display, overlay;
+  transition-duration: 0.28s;
+  transition-timing-function: ease-out;
+  transition-behavior: allow-discrete;
+}
+
+.csheet[open]:where(:not([data-closing]))::backdrop {
+  background-color: rgb(8 10 14 / 0.42);
+  backdrop-filter: blur(6px);
+}
+
+@starting-style {
+  .csheet[open]:where(:not([data-closing]))::backdrop {
+    background-color: rgb(8 10 14 / 0);
+    backdrop-filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .csheet {
+    transform: translateY(-24px);
+  }
+
+  .csheet[open]:where(:not([data-closing])) {
+    transform: translateY(0);
+  }
+
+  @starting-style {
+    .csheet[open]:where(:not([data-closing])) {
+      transform: translateY(-24px);
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .csheet,
+  .csheet::backdrop {
+    transition-duration: 0.1s;
+  }
+}
+
+.cs-grab {
+  display: none;
+}
+
+.cs-h {
+  height: calc(52px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 8px 0 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.cs-h b {
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+}
+
+.cs-note {
+  margin-right: auto;
+  font-size: calc(13px * var(--k));
+  color: var(--tx3);
+  white-space: nowrap;
+}
+
+.cs-chart {
+  padding: 16px 20px 4px;
+}
+
+.cs-chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cs-cap {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  margin: 0 20px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  color: var(--tx);
+}
+
+.cs-cap > .ti {
+  margin-top: 4px;
+  color: var(--tx3);
+}
+
+.cs-leg {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 12px 20px 16px;
+  border-top: 1px solid var(--line);
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx2);
+}
+
+.cs-leg > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+
+.cs-dot {
+  flex: none;
+  display: block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--tx3);
+}
+
+.cs-dot-a {
+  background: var(--warn);
+}
+
+.cs-bar {
+  flex: none;
+  display: block;
+  width: 2px;
+  height: 14px;
+  background: var(--acc);
+}
+
+.cs-leg .ti {
+  color: var(--tx3);
+}
+
+@media (max-width: 900px) {
+  .trendbar {
+    padding: 8px 8px 8px 14px;
+  }
+
+  /* На телефоне кнопка графика без слова: тексту тенденции нужна ширина */
+  .trendbar .tb-a {
+    width: calc(40px * var(--k));
+    height: calc(40px * var(--k));
+    justify-content: center;
+    padding: 0;
+  }
+
+  .csheet {
+    inset: auto 0 0 0;
+    width: 100%;
+    max-width: none;
+    max-height: 88dvh;
+    border-width: 1px 0 0;
+    border-radius: 12px 12px 0 0;
+    box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
+  }
+
+  .cs-grab {
+    display: block;
+    width: 40px;
+    height: 4px;
+    margin: 8px auto 0;
+    border-radius: 2px;
+    background: var(--line2);
+  }
+
+  .cs-h {
+    height: calc(48px * var(--k));
+    padding: 0 6px 0 14px;
+  }
+
+  .cs-chart {
+    padding: 12px 14px 4px;
+  }
+
+  .cs-cap {
+    margin: 0 14px;
+  }
+
+  .cs-leg {
+    gap: 8px 12px;
+    padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
+  .csheet {
+    transform: translateY(100%);
+  }
+
+  .csheet[open]:where(:not([data-closing])) {
+    transform: translateY(0);
+  }
+
+  @starting-style {
+    .csheet[open]:where(:not([data-closing])) {
+      transform: translateY(100%);
+    }
   }
 }

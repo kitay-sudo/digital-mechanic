@@ -7,7 +7,7 @@ import { PRIORITY_LABEL, QUALITY_LABEL, dateTime, num } from '@/lib/format';
 import type { Session, Ticket, VehicleDetail } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
-import { ScoreChart } from './ScoreChart';
+import { ChartSheet } from './ChartSheet';
 import { ErrorState, Loading } from './States';
 
 export type HistoryTab = 'checks' | 'tickets';
@@ -128,10 +128,12 @@ function TicketRow({ vehicleId, t }: { vehicleId: string; t: Ticket }) {
   );
 }
 
-/** История машины: все проверки с графиком оценки и все заявки. Отдельный экран, чтобы списки не теснились в боковой панели. */
+/** История машины: все проверки, график оценки в выдвижной панели и все заявки. Отдельный экран, чтобы списки не теснились в боковой панели. */
 export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string; tab: HistoryTab; current: string | null }) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [chartOpen, setChartOpen] = useState(false);
+  const closeChart = useCallback(() => setChartOpen(false), []);
 
   const load = useCallback(() => {
     setError(null);
@@ -155,9 +157,9 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
   return (
     <>
       <div className="hdr hhdr">
-        <Link href={chatHref(vehicleId, inChat)} className="btn back">
+        {/* Та же кнопка «назад», что на остальных экранах */}
+        <Link href={chatHref(vehicleId, inChat)} className="hb" aria-label="Назад в чат" title="Назад в чат">
           <Icon name="arrow-left" />
-          В чат
         </Link>
         <div className="grow">
           <div className="h1">
@@ -190,6 +192,17 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
           <div className="hgrid">
             <div>
               {sessions.length ? (
+                // Тенденция одной строкой над таблицей, сам график открывается по нажатию
+                <button type="button" className="trendbar" onClick={() => setChartOpen(true)} aria-haspopup="dialog" title="Открыть график оценки отклонения">
+                  <Icon name={TREND_ICON[vehicle.trend.direction]} />
+                  <span className="tb-t">{vehicle.trend.text}</span>
+                  <span className="tb-a">
+                    <Icon name="chart-line" size="s" />
+                    <span className="only-d">График</span>
+                  </span>
+                </button>
+              ) : null}
+              {sessions.length ? (
                 <div className="ftable ctable">
                   <div className="fhead">
                     <span>Проверка</span>
@@ -211,22 +224,14 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                 </div>
               )}
             </div>
-            {sessions.length ? (
-              <div>
-                {/* Шапка графика того же вида, что шапка таблицы: два блока стоят на одной линии */}
-                <div className="ghead">
-                  <span>Оценка отклонения</span>
-                  <span>пунктир: порог 0,5</span>
-                </div>
-                <div className="chart">
-                  <ScoreChart sessions={vehicle.sessions} selected={inChat} />
-                  <div className="cap">
-                    <Icon name={TREND_ICON[vehicle.trend.direction]} size="s" />
-                    {vehicle.trend.text}
-                  </div>
-                </div>
-              </div>
-            ) : null}
+            <ChartSheet
+              open={chartOpen}
+              onClose={closeChart}
+              sessions={vehicle.sessions}
+              selected={inChat}
+              trendIcon={TREND_ICON[vehicle.trend.direction]}
+              trendText={vehicle.trend.text}
+            />
           </div>
         ) : (
           <>

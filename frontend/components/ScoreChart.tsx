@@ -1,10 +1,23 @@
 import { dateShort, num } from '@/lib/format';
 import type { Session } from '@/lib/types';
 
-/** График оценки отклонения по проверкам (B2). selected — проверка, которая сейчас в чате. */
-export function ScoreChart({ sessions, selected }: { sessions: Session[]; selected: string | null }) {
-  const W = 340;
-  const H = 132;
+/**
+ * График оценки отклонения по проверкам (B2). selected — проверка, которая сейчас в чате.
+ * width и height задают размер в пикселях: подписи остаются своего размера на любой ширине.
+ */
+export function ScoreChart({
+  sessions,
+  selected,
+  width = 340,
+  height = 132,
+}: {
+  sessions: Session[];
+  selected: string | null;
+  width?: number;
+  height?: number;
+}) {
+  const W = width;
+  const H = height;
   const left = 34;
   const right = 14;
   const top = 12;
