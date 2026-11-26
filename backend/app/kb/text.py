@@ -63,12 +63,40 @@ def squash(text: str) -> str:
     return re.sub(r"[^0-9a-zа-я]+", "", text)
 
 
-def quote_on_page(quote: str, page_text: str, min_len: int = 16) -> bool:
-    """Правило П2: цитата должна дословно стоять на странице."""
+_QUOTE_TOKEN = re.compile(r"\d+(?:[.,]\d+)?|[a-zа-я]+")
+
+
+def _quote_tokens(text: str) -> list[str]:
+    return _QUOTE_TOKEN.findall(clean_page_text(text).lower().replace("ё", "е"))
+
+
+def quote_too_short(quote: str, min_len: int = 16) -> bool:
+    """Короткая цитата ничего не доказывает. Исключение — ячейка таблицы с числом («1-5-4-2-6-3-7-8»)."""
     q = squash(quote)
-    if len(q) < min_len:
+    return len(q) < min_len and not (len(q) >= 6 and any(c.isdigit() for c in q))
+
+
+def quote_on_page(quote: str, page_text: str, min_len: int = 16) -> bool:
+    """Правило П2: цитата должна дословно стоять на странице.
+
+    Для строк таблиц есть второй способ: PDF отдаёт ячейки строки не всегда в том порядке, в каком
+    их читает человек. Цитата с числом принимается, если все её слова и числа стоят на странице
+    рядом, в пределах короткого окна. Фраза, собранная из слов с разных концов страницы, не пройдёт.
+    """
+    q = squash(quote)
+    if quote_too_short(quote, min_len):
         return False
-    return q in squash(page_text)
+    if q in squash(page_text):
+        return True
+    wanted = _quote_tokens(quote)
+    if len(set(wanted)) < 4 or not any(token[0].isdigit() for token in wanted):
+        return False
+    page = _quote_tokens(page_text)
+    window = max(12, len(wanted) * 2)
+    need = set(wanted)
+    if not need <= set(page):
+        return False
+    return any(need <= set(page[i:i + window]) for i in range(0, max(1, len(page) - window + 1)))
 
 
 def numbers(text: str) -> set[str]:
@@ -82,11 +110,13 @@ def numbers(text: str) -> set[str]:
     return found
 
 
-_UNIT_AFTER = r"(?!\s*(?:мм|см|м\b|мпа|кпа|па\b|бар|кгс|н\b|н[·*.]|л\b|мл|%|°|в\b|а\b|об|мин|с\b|ч\b))"
+_UNIT_AFTER = r"(?!\s*(?:мм|см|мкм|мпа|кпа|бар|кгс|н[·*.]|мл|%|°|об/|мин))"
 _IGNORED = re.compile(
     r"\bF\d{2}\b|\bS-\d+\b|\bTKT-\d+\b"                                   # коды типов, проверки, заявки
     r"|\b\d{2}\.\d{2}\.\d{2,4}\b|\b\d{2}\.\d{2}\b" + _UNIT_AFTER +          # даты 28.10.2026 и 28.10
+    r"|\b\d{4}-\d{2}-\d{2}\b"                                              # дата 2026-11-19
     r"|\b\d{1,2}:\d{2}\b"                                                   # время
+    r"|\b(?:ЯМЗ|ЗМЗ|КАМАЗ|МАЗ|ГАЗ|ПАЗ|УАЗ|ЗИЛ|Урал)[-–\s]?\d[\w.\-–]*"         # модели двигателей и машин
     r"|(?:стр\.?|страниц\w*|с\.)\s*\d+(?:\s*(?:,|и|-|–)\s*\d+)*"            # страницы: стр. 31, 269 и 276
     r"|(?:рис\.?|рисун\w*|табл\.?|таблиц\w*|поз\.?|позици\w*)\s*[А-ЯA-Z]?\.?\d+(?:\.\d+)*"   # рисунки, таблицы, позиции
     r"|(?:пункт\w*|п\.|раздел\w*|подраздел\w*|приложени\w*|шаг\w*)\s*\d+(?:\.\d+)*"            # пункты и разделы

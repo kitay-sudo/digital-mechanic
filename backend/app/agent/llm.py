@@ -32,6 +32,7 @@ class LLMResponse:
     input_tokens: int = 0
     output_tokens: int = 0
     cache_read_tokens: int = 0
+    cache_write_tokens: int = 0   # входят в input_tokens; нужны отдельно, потому что стоят дороже
     model: str = ""
 
 

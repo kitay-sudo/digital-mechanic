@@ -218,6 +218,13 @@ class TurnContext:
         values.add(_norm(str(self.settings.confidence_min)))
         values.add(str(round(self.settings.confidence_min * 100)))
         values |= page_numbers(self.vehicle.get("engine_model", ""))
+        # Обозначения документов, модель и номера машины, основание приоритета и пороги из оценки правил.
+        card = [fleet.title_of(self.vehicle), str(self.vehicle.get("garage_no", "")), self.vehicle["vehicle_id"]]
+        card += [f"{m.designation} {m.short} {m.title}" for m in manuals_for_engine(self.vehicle["engine_model"])]
+        if self.assessment:
+            card += [*self.assessment.get("basis", []), *self.assessment.get("warnings", []),
+                     str(self.assessment.get("ticket_block_reason") or "")]
+        values |= page_numbers(" ".join(card))
         values.add(str(len(self.vehicle.get("sessions", []))))
         return values
 

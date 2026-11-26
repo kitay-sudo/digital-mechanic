@@ -104,5 +104,6 @@ class AnthropicLLM:
             input_tokens=(usage.input_tokens or 0) + cache_write,
             output_tokens=usage.output_tokens or 0,
             cache_read_tokens=cache_read,
+            cache_write_tokens=cache_write,
             model=response.model,
         )

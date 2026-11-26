@@ -499,3 +499,41 @@ def test_number_inside_designation_on_page_is_accepted(index):
     from app.agent.verify import page_numbers
 
     assert {"145", "17", "26"} <= page_numbers("Отвернуть 26 болтов M15x2.0-6gx145-10.9 ключом S=17")
+
+
+# --- цитаты из таблиц ---
+def test_table_cell_with_number_is_a_valid_quote():
+    from app.kb.text import quote_on_page, quote_too_short
+
+    page = "ТЕХНИЧЕСКАЯ ХАРАКТЕРИСТИКА \nПорядок работы цилиндров \n1-5-4-2-6-3-7-8 \nСтепень сжатия \n7,6"
+    assert quote_on_page("1-5-4-2-6-3-7-8", page) and not quote_too_short("1-5-4-2-6-3-7-8")
+    assert quote_too_short("зазор") and not quote_on_page("7,6", page)
+
+
+def test_table_row_with_cells_in_other_order_is_accepted_but_scattered_words_are_not():
+    from app.kb.text import quote_on_page
+
+    filler = " ".join(f"слово{i}" for i in range(60))
+    page = (f"Давление в масляной системе, кПа \nпри номинальных оборотах \n400-700 \nпри минимальных оборотах \n100 \n{filler} "
+            "Зазор клапанов регулировать на холодном двигателе.")
+    # Строка таблицы: те же ячейки, порядок другой.
+    assert quote_on_page("Давление в масляной системе при номинальных оборотах, кПа 400-700", page)
+    # Фраза, собранная из слов с разных концов страницы, цитатой не считается.
+    assert not quote_on_page("Давление 400-700 регулировать на холодном двигателе клапанов", page)
+    # Без числа второй способ не применяется.
+    assert not quote_on_page("Давление в системе масляной при оборотах номинальных", page)
+
+
+def test_card_numbers_are_allowed_without_page(store, index):
+    from app.agent.verify import stray_numbers
+
+    vehicle = fleet.get_vehicle("T792HO98")
+
+    async def emit(event):
+        pass
+
+    ctx = TurnContext(vehicle=vehicle, session_id="S-0043", store=store, index=index, settings=get_settings(), emit=emit)
+    allowed = ctx.context_numbers()
+    text = (f"В руководствах 236-3902150-Б РЭ и 236.01.01 РК для ЯМЗ-236 данных нет. Машина {fleet.title_of(vehicle)}, "
+            "проверка от 28.10 в норме, запись 2026-11-19 новее.")
+    assert stray_numbers(text, allowed, strict=False) == []

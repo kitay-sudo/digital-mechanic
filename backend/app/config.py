@@ -67,6 +67,7 @@ class Settings:
     price_input: float
     price_output: float
     price_cache_read: float
+    price_cache_write: float
     price_currency: str
     usd_rate: float
     # Правила
@@ -121,6 +122,8 @@ def get_settings() -> Settings:
         price_input=_float("PRICE_INPUT_PER_MTOK", 4.0),
         price_output=_float("PRICE_OUTPUT_PER_MTOK", 20.0),
         price_cache_read=_float("PRICE_CACHE_READ_PER_MTOK", 0.2),
+        # Запись в кэш у Anthropic стоит 1,25 цены входа, если своя цена не задана.
+        price_cache_write=_float("PRICE_CACHE_WRITE_PER_MTOK", _float("PRICE_INPUT_PER_MTOK", 4.0) * 1.25),
         price_currency=os.environ.get("PRICE_CURRENCY", "USD").upper(),
         usd_rate=_float("USD_RATE", 0.0),
         confidence_min=_float("CONFIDENCE_MIN", 0.5),

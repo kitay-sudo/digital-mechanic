@@ -11,7 +11,7 @@ from __future__ import annotations
 import re
 
 from ..kb.index import Index
-from ..kb.text import clean_page_text, is_toc, quote_on_page, squash, strip_service_numbers
+from ..kb.text import clean_page_text, is_toc, quote_on_page, quote_too_short, squash, strip_service_numbers
 from ..manuals import manual_by_id
 
 _NUM = re.compile(r"(?<![0-9a-zа-яё.,])(\d+(?:[.,]\d+)?)(?![0-9a-zа-яё]|[.,]\d)", re.IGNORECASE)
@@ -85,8 +85,11 @@ class Verifier:
             return None, f"в документе {manual.designation} нет страницы {page}"
         if is_toc(text):
             return None, f"стр. {page} документа {manual.designation} — оглавление, оно источником не считается"
+        if quote_too_short(quote):
+            return None, (f"цитата «{quote[:60]}» слишком короткая: возьми строку целиком, вместе с названием параметра "
+                          f"(стр. {page} документа {manual.designation})")
         if not quote_on_page(quote, text):
-            return None, f"цитата не найдена дословно на стр. {page} документа {manual.designation}"
+            return None, f"цитата «{quote[:90]}» не найдена дословно на стр. {page} документа {manual.designation}"
         return {
             "manual_id": manual_id, "designation": manual.designation, "short": manual.short,
             "pdf_page": page, "quote": quote,

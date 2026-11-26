@@ -31,9 +31,10 @@ UNSOURCED_TEXT = ("Подтвердить ответ страницей руко
 CONFLICT_LEAD = "В руководствах есть расхождение, формулировки показаны ниже."
 
 
-def _cost(settings: Settings, inp: int, out: int, cache: int) -> tuple[float, float]:
-    """Стоимость вызова в валюте прайса и в рублях (без НДС)."""
-    cost = (inp * settings.price_input + out * settings.price_output + cache * settings.price_cache_read) / 1_000_000
+def _cost(settings: Settings, inp: int, out: int, cache: int, write: int = 0) -> tuple[float, float]:
+    """Стоимость вызова в валюте прайса и в рублях. inp включает write: токены, записанные в кэш."""
+    cost = ((inp - write) * settings.price_input + write * settings.price_cache_write
+            + out * settings.price_output + cache * settings.price_cache_read) / 1_000_000
     rub = cost if settings.price_currency == "RUB" else cost * settings.usd_rate
     return cost, rub
 
@@ -99,7 +100,8 @@ async def run_turn(
                 label = "tools"
             else:
                 label = "retry" if retried else "answer"
-            cost, rub = _cost(settings, response.input_tokens, response.output_tokens, response.cache_read_tokens)
+            cost, rub = _cost(settings, response.input_tokens, response.output_tokens, response.cache_read_tokens,
+                              response.cache_write_tokens)
             store.log_llm_call(turn_id, STEP_LABELS[label], response.model or llm.model, response.input_tokens,
                                response.output_tokens, response.cache_read_tokens, rub,
                                int((time.monotonic() - call_started) * 1000))
