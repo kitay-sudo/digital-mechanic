@@ -1,7 +1,8 @@
 /*
   «Цифровой механик»: стили интерфейса.
   Сетка: шаг 8 px. Шапка приложения 56, шапки колонок 72, нижние панели 80,
-  строки таблиц и списков 48, кнопки 48, малые кнопки и ссылки на страницы 32.
+  строки таблиц и списков 52, кнопки 48, малые кнопки и ссылки на страницы 36.
+  Отступы блоков заданы четырьмя общими размерами (--sx, --sy, --bx, --by), см. :root.
   Цвет только у статуса, приоритета и одного акцента для действий и ссылок.
 */
 
@@ -30,6 +31,22 @@
   color-scheme: light;
   /* Масштаб текста и высоты элементов: «Крупный» в настройках ставит 1.2 */
   --k: 1;
+  /* Единые отступы, одинаковые во всей системе.
+     Секция карточки: --sx по горизонтали и --sy по вертикали.
+     Вложенный блок (шаг, предупреждение, карточка в боковой панели): --bx и --by */
+  --sx: 24px;
+  --sy: 20px;
+  --bx: 18px;
+  --by: 16px;
+}
+
+@media (max-width: 900px) {
+  :root {
+    --sx: 16px;
+    --sy: 16px;
+    --bx: 14px;
+    --by: 14px;
+  }
 }
 
 html[data-size='large'] {
@@ -359,8 +376,8 @@ a {
 }
 
 .btn.sm {
-  height: calc(32px * var(--k));
-  padding: 0 12px;
+  height: calc(36px * var(--k));
+  padding: 0 14px;
   font: 500 calc(14px * var(--k))/1 var(--sans);
   gap: 6px;
 }
@@ -389,8 +406,8 @@ a {
 }
 
 .src {
-  height: calc(32px * var(--k));
-  padding: 0 10px;
+  height: calc(36px * var(--k));
+  padding: 0 12px;
   border-radius: 4px;
   border: 1px solid var(--line2);
   background: var(--panel);
@@ -468,7 +485,7 @@ a {
 .sec {
   min-height: 28px;
   /* Подпись раздела не прилипает к блоку под ней */
-  margin-bottom: 8px;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -490,7 +507,7 @@ a {
 }
 
 .blk {
-  margin-bottom: 16px;
+  margin-bottom: 24px;
 }
 
 .blk:last-child {
@@ -511,7 +528,7 @@ a {
   background: var(--panel);
   border: 1px solid var(--line);
   border-left: 4px solid var(--crit);
-  padding: calc(12px * var(--k)) 16px;
+  padding: var(--by) var(--bx);
   font-size: calc(15px * var(--k));
   line-height: calc(22px * var(--k));
 }
@@ -695,11 +712,11 @@ a {
   grid-template-columns: calc(170px * var(--k)) minmax(150px, 1fr) calc(160px * var(--k)) calc(150px * var(--k)) minmax(210px, 1.3fr) calc(140px * var(--k)) calc(130px * var(--k));
   align-items: center;
   column-gap: 16px;
-  padding: 0 16px 0 20px;
+  padding: 0 20px 0 24px;
 }
 
 .fhead {
-  height: calc(36px * var(--k));
+  height: calc(40px * var(--k));
   font-size: calc(12px * var(--k));
   font-weight: 500;
   color: var(--tx3);
@@ -708,7 +725,7 @@ a {
 }
 
 .frow {
-  height: calc(48px * var(--k));
+  height: calc(52px * var(--k));
   font-size: calc(16px * var(--k));
   border-bottom: 1px solid var(--line);
   position: relative;
@@ -796,7 +813,7 @@ a {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 12px 16px;
+  padding: var(--by) var(--bx);
   background: var(--panel);
   border: 1px solid var(--line);
 }
@@ -827,7 +844,7 @@ a {
 
 .mlist .src {
   height: calc(40px * var(--k));
-  padding: 0 12px;
+  padding: 0 14px;
 }
 
 .slist {
@@ -842,7 +859,7 @@ a {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 8px 12px;
-  padding: 12px 14px;
+  padding: var(--by) var(--bx);
   border-bottom: 1px solid var(--line);
 }
 
@@ -877,12 +894,12 @@ a {
 
 /* Переход из боковой панели на экран истории машины */
 .navrow {
-  min-height: calc(48px * var(--k));
+  min-height: calc(52px * var(--k));
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 10px;
-  padding: 0 10px 0 14px;
+  padding: 0 14px 0 var(--bx);
   border-bottom: 1px solid var(--line);
   font-size: calc(15px * var(--k));
   line-height: calc(20px * var(--k));
@@ -938,7 +955,7 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 6px 16px;
+  padding: 10px var(--bx);
   border-bottom: 1px solid var(--line);
   font-size: calc(15px * var(--k));
   line-height: calc(20px * var(--k));
@@ -964,7 +981,7 @@ a {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 20px;
 }
 
 .chat > * {
@@ -977,7 +994,7 @@ a {
   background: var(--panel);
   border: 1px solid var(--line2);
   border-radius: 4px;
-  padding: 12px 16px;
+  padding: var(--by) var(--bx);
   font-size: calc(17px * var(--k));
   line-height: calc(24px * var(--k));
   overflow-wrap: anywhere;
@@ -1035,7 +1052,7 @@ a {
 }
 
 .cpad {
-  padding: 16px 20px;
+  padding: var(--sy) var(--sx);
 }
 
 .cdiv {
@@ -1093,7 +1110,7 @@ details.fold > summary {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 20px;
+  padding: 0 var(--sx);
   font-size: calc(15px * var(--k));
   line-height: calc(20px * var(--k));
   color: var(--tx2);
@@ -1123,7 +1140,7 @@ details.fold > summary .rt {
 }
 
 details.fold > .fin {
-  padding: 0 20px 16px 50px;
+  padding: 0 var(--sx) var(--sy) calc(var(--sx) + 30px);
 }
 
 .basis {
@@ -1134,7 +1151,7 @@ details.fold > .fin {
 }
 
 .basis li {
-  padding: 3px 0 3px 16px;
+  padding: 4px 0 4px 16px;
   position: relative;
 }
 
@@ -1159,7 +1176,7 @@ details.fold > .fin {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px 20px;
+  padding: 10px var(--sx);
   border-bottom: 1px solid var(--line);
   font-size: calc(16px * var(--k));
   line-height: calc(22px * var(--k));
@@ -1183,7 +1200,7 @@ details.fold > .fin {
 }
 
 .ab {
-  padding: 12px 20px 16px;
+  padding: var(--sy) var(--sx);
 }
 
 .plain {
@@ -1193,7 +1210,7 @@ details.fold > .fin {
 }
 
 .plain li {
-  padding: 2px 0 2px 16px;
+  padding: 4px 0 4px 16px;
   position: relative;
   overflow-wrap: anywhere;
 }
@@ -1219,8 +1236,8 @@ details.fold > .fin {
 }
 
 .hyp {
-  margin: 12px 20px 16px;
-  padding: 10px 16px 12px;
+  margin: var(--sy) var(--sx);
+  padding: var(--by) var(--bx);
   border: 1px dashed var(--line2);
   background: var(--panel2);
 }
@@ -1244,7 +1261,7 @@ details.fold > .fin {
   grid-template-columns: calc(28px * var(--k)) minmax(0, 1fr);
   column-gap: 14px;
   align-items: start;
-  padding: 10px 14px;
+  padding: var(--by) var(--bx);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1252,8 +1269,10 @@ details.fold > .fin {
   border-bottom: none;
 }
 
-/* Текст шага начинается у верхнего края номера, без сдвига вниз */
+/* Верх букв первой строки стоит на уровне верхней границы квадрата с номером.
+   Сдвиг снимает пустоту над буквами внутри строки (высота строки 24 при кегле 16) */
 .item .tx {
+  margin-top: calc(-6px * var(--k));
   font-size: calc(16px * var(--k));
   line-height: calc(24px * var(--k));
   overflow-wrap: anywhere;
@@ -1270,7 +1289,7 @@ details.fold > .fin {
   display: flex;
   gap: 12px;
   align-items: flex-start;
-  padding: 14px 20px;
+  padding: var(--sy) var(--sx);
   font-size: calc(16px * var(--k));
   line-height: calc(24px * var(--k));
   color: var(--tx2);
@@ -1291,7 +1310,7 @@ details.fold > .fin {
   display: flex;
   align-items: center;
   gap: 16px;
-  padding: 12px 20px;
+  padding: var(--by) var(--sx);
   background: var(--panel2);
   border-top: 1px solid var(--line);
 }
@@ -1312,7 +1331,7 @@ details.fold > .fin {
 }
 
 .reco {
-  margin: 0 20px 16px;
+  margin: 0 var(--sx) var(--sy);
   border: 1px solid var(--line);
   background: var(--panel2);
 }
@@ -1323,7 +1342,7 @@ details.fold > .fin {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 6px 8px 6px 14px;
+  padding: 8px 10px 8px var(--bx);
   border-bottom: 1px solid var(--line);
 }
 
@@ -1333,7 +1352,7 @@ details.fold > .fin {
 }
 
 .reco pre {
-  padding: 12px 14px;
+  padding: var(--by) var(--bx);
   font: calc(14px * var(--k))/calc(22px * var(--k)) var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -1351,7 +1370,7 @@ details.fold > .fin {
   grid-template-columns: calc(20px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
-  padding: 10px 0;
+  padding: 12px 0;
   border-bottom: 1px solid var(--line);
   font-size: calc(15px * var(--k));
   line-height: calc(20px * var(--k));
@@ -1382,7 +1401,7 @@ details.fold > .fin {
 }
 
 .pending {
-  padding: 8px 20px;
+  padding: 12px var(--sx);
 }
 
 .pending .ph {
@@ -1433,7 +1452,7 @@ details.fold > .fin {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 20px;
+  padding: 12px var(--sx);
   border-bottom: 1px solid var(--line);
   font-size: calc(17px * var(--k));
   font-weight: 600;
@@ -1453,7 +1472,7 @@ details.fold > .fin {
 }
 
 .frm > div {
-  padding: 12px 20px;
+  padding: var(--by) var(--sx);
   border-bottom: 1px solid var(--line);
   min-width: 0;
 }
@@ -1538,13 +1557,14 @@ details.fold > .fin {
   grid-template-columns: calc(28px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
-  padding: 9px 10px;
+  padding: var(--by) var(--bx);
   border: 1px solid var(--line);
   border-radius: 4px;
   background: var(--panel2);
 }
 
 .wk .tx {
+  margin-top: calc(-6px * var(--k));
   font-size: calc(16px * var(--k));
   line-height: calc(24px * var(--k));
 }
@@ -1554,7 +1574,7 @@ details.fold > .fin {
   gap: 12px;
   align-items: center;
   min-height: calc(48px * var(--k));
-  padding: 8px 20px;
+  padding: 12px var(--sx);
   border-top: 1px solid var(--line);
   font-size: calc(15px * var(--k));
   line-height: calc(22px * var(--k));
@@ -1572,7 +1592,7 @@ details.fold > .fin {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 16px 20px;
+  padding: var(--sy) var(--sx);
 }
 
 .okline .big {
@@ -1680,7 +1700,7 @@ details.fold > .fin {
 
 .quote {
   margin-top: 12px;
-  padding: 10px 14px;
+  padding: var(--by) var(--bx);
   border: 1px solid var(--line);
   border-left: 3px solid var(--hl-line);
   background: var(--panel);
@@ -1815,7 +1835,7 @@ details.fold > .fin {
     min-height: calc(64px * var(--k));
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 2px;
-    padding: 10px 12px 10px 16px;
+    padding: 14px 14px 14px 16px;
   }
 
   .frow .d {
@@ -1898,7 +1918,7 @@ details.fold > .fin {
   }
 
   .cpad {
-    padding: 12px 14px;
+    padding: var(--sy) var(--sx);
   }
 
   .vtitle {
@@ -1911,7 +1931,7 @@ details.fold > .fin {
   }
 
   details.fold > summary {
-    padding: 0 14px;
+    padding: 0 var(--sx);
   }
 
   details.fold > summary .rt {
@@ -1919,7 +1939,7 @@ details.fold > .fin {
   }
 
   details.fold > .fin {
-    padding: 0 14px 12px 14px;
+    padding: 0 var(--sx) var(--sy) var(--sx);
   }
 
   .kv {
@@ -1927,21 +1947,21 @@ details.fold > .fin {
   }
 
   .kv > div {
-    padding: 8px 14px;
+    padding: 10px var(--sx);
     font-size: calc(15px * var(--k));
   }
 
   .ab {
-    padding: 10px 14px 12px;
+    padding: var(--sy) var(--sx);
   }
 
   .hyp {
     margin: 10px 14px 12px;
-    padding: 10px 12px;
+    padding: var(--by) var(--bx);
   }
 
   .item {
-    padding: 10px;
+    padding: var(--by) var(--bx);
     column-gap: 10px;
   }
 
@@ -1954,14 +1974,14 @@ details.fold > .fin {
   }
 
   .notfound {
-    padding: 12px 14px;
+    padding: var(--sy) var(--sx);
   }
 
   .cfoot {
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
-    padding: 12px 14px;
+    padding: var(--by) var(--sx);
   }
 
   .reco {
@@ -1969,11 +1989,11 @@ details.fold > .fin {
   }
 
   .pending {
-    padding: 8px 14px;
+    padding: 12px var(--sx);
   }
 
   .chead {
-    padding: 8px 14px;
+    padding: 12px var(--sx);
   }
 
   .frm {
@@ -1981,11 +2001,11 @@ details.fold > .fin {
   }
 
   .frm > div {
-    padding: 10px 14px;
+    padding: var(--by) var(--sx);
   }
 
   .frm > .k {
-    padding: 6px 14px;
+    padding: 8px var(--sx);
     border-bottom: none;
     line-height: calc(18px * var(--k));
     font-size: calc(13px * var(--k));
@@ -2003,11 +2023,11 @@ details.fold > .fin {
   }
 
   .ack {
-    padding: 8px 14px;
+    padding: 12px var(--sx);
   }
 
   .okline {
-    padding: 12px 14px;
+    padding: var(--sy) var(--sx);
   }
 
   .composer {
@@ -2318,7 +2338,7 @@ details.fold > .fin {
   align-items: center;
   gap: 12px;
   margin-top: 12px;
-  padding: 10px 12px 10px 14px;
+  padding: 12px 14px 12px var(--bx);
   border: 1px solid var(--acc);
   background: var(--acc-bg);
   font-size: calc(15px * var(--k));
@@ -2581,8 +2601,8 @@ details.fold > .fin {
 /* ---------- Расхождение в руководствах (П18) ---------- */
 
 .cfl {
-  margin: 12px 20px 16px;
-  padding: 10px 16px 14px 20px;
+  margin: var(--sy) var(--sx);
+  padding: var(--by) var(--bx) var(--by) calc(var(--bx) + 4px);
   border: 1px solid var(--line2);
   box-shadow: inset 4px 0 0 var(--warn);
   background: var(--panel2);
@@ -2620,12 +2640,14 @@ details.fold > .fin {
 }
 
 .cfl-say {
+  margin-top: calc(-4px * var(--k));
   font-size: calc(13px * var(--k));
   line-height: calc(18px * var(--k));
   color: var(--tx2);
 }
 
 .cfl-say + .tx {
+  margin-top: 0;
   padding-top: 2px;
 }
 
@@ -2635,7 +2657,7 @@ details.fold > .fin {
   column-gap: 14px;
   align-items: start;
   margin-top: 12px;
-  padding: 0 14px;
+  padding: 0 var(--bx);
   font-size: calc(16px * var(--k));
   line-height: calc(24px * var(--k));
   font-weight: 600;
@@ -2742,16 +2764,7 @@ details.fold > .fin {
 
 /* ---------- История машины: проверки с графиком и заявки ---------- */
 
-.btn.back {
-  flex: none;
-  padding: 0 16px 0 12px;
-}
-
 /* Шапка истории: кнопка назад, машина, вкладки. Вкладки того же вида, что разделы в верхнем меню */
-.hhdr {
-  gap: 20px;
-}
-
 .hhdr .grow {
   flex: 0 1 auto;
 }
@@ -2873,7 +2886,7 @@ details.fold > .fin {
 }
 
 .tin {
-  padding: 12px 20px 16px 48px;
+  padding: var(--sy) var(--sx) var(--sy) calc(var(--sx) + 28px);
   border-top: 1px solid var(--line);
   font-size: calc(15px * var(--k));
   line-height: calc(22px * var(--k));
@@ -3005,7 +3018,7 @@ details.fold > .fin {
   }
 
   .tin {
-    padding: 12px 16px 16px;
+    padding: var(--sy) var(--sx);
   }
 
   .tin dl {

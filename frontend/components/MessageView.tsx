@@ -196,7 +196,9 @@ function StepItems({
           {title}
         </b>
         <span className={`prog${allDone ? ' all' : ''}`}>
-          Сделано {doneCount} из {items.length}
+          {/* На телефоне слово убрано, чтобы подпись раздела не переносилась на вторую строку */}
+          <span className="only-d">Сделано </span>
+          {doneCount} из {items.length}
         </span>
       </div>
       <div className="items">
