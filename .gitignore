@@ -1,0 +1,33 @@
+# Материалы заказчика и база знаний: по просьбе организаторов PDF руководств
+# и индексы с извлечённым текстом не попадают в Git и его историю.
+/materials/
+/knowledge/
+*.pdf
+
+# Данные приложения (SQLite, журнал)
+/data/
+
+# Секреты
+.env
+.env.local
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Node
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# Прочее
+.DS_Store
+Thumbs.db
+.claude/
+
+# Файлы, которые Next.js создаёт сам
+frontend/AGENTS.md
+next-env.d.ts
