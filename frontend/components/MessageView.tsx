@@ -88,13 +88,13 @@ function ConflictBlocks({ conflicts, ctx }: { conflicts: Conflict[]; ctx: Ctx })
 
 /* ---------- Шаги агента ---------- */
 
-const STEP_ICON: Record<Step['status'], string> = { running: 'loader-2', done: 'check', error: 'alert-circle' };
+const STEP_ICON: Record<Step['status'], string> = { running: 'loader-2', done: 'circle-check', error: 'alert-circle' };
 
 function StepList({ steps }: { steps: Step[] }) {
   return (
     <ul className="steps">
       {steps.map((s) => (
-        <li key={s.id} className={s.status === 'error' ? 'err' : ''}>
+        <li key={s.id} className={s.status === 'error' ? 'err' : s.status === 'done' ? 'ok' : ''}>
           <Icon name={STEP_ICON[s.status]} className={s.status === 'running' ? 'spin' : ''} />
           <span>
             {s.title}
@@ -321,14 +321,14 @@ function AnswerBlocks({
         <StepItems title="Возможный ремонт" icon="tool" items={answer.repair} ctx={ctx} storeKey={`${messageId}:repair`} />
       ) : null}
       {answer.limitations.length ? (
-        <section className="ab cdiv">
+        <section className="ab cdiv lim">
           <div className="sec">
             <b>
               <Icon name="alert-circle" size="s" />
               Ограничения
             </b>
           </div>
-          <ul className="plain" style={{ color: 'var(--tx2)' }}>
+          <ul className="plain">
             {answer.limitations.map((t, i) => (
               <li key={i}>{t}</li>
             ))}

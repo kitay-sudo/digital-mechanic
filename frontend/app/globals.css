@@ -21,6 +21,7 @@
   --warn: #d58a00;
   --warn-tx: #965800;
   --watch: #3b7d78;
+  --ok: #2e7d32;
   --hl: rgba(255, 196, 0, 0.24);
   --hl-line: #e0a100;
   --dim: rgba(20, 24, 29, 0.45);
@@ -51,6 +52,7 @@ html[data-size='large'] {
   --warn: #f2b13a;
   --warn-tx: #f2b13a;
   --watch: #67c1b9;
+  --ok: #5fbf77;
   --hl: rgba(255, 196, 0, 0.2);
   --hl-line: #d9a21b;
   --dim: rgba(0, 0, 0, 0.62);
@@ -500,21 +502,23 @@ a {
   border: 1px solid var(--line);
 }
 
+/* Значок стоит у первой строки текста. Отступы подобраны так, что одна строка остаётся по центру */
 .alert {
   min-height: calc(48px * var(--k));
   display: flex;
   gap: 12px;
-  align-items: center;
+  align-items: flex-start;
   background: var(--panel);
   border: 1px solid var(--line);
   border-left: 4px solid var(--crit);
-  padding: 10px 16px;
+  padding: calc(12px * var(--k)) 16px;
   font-size: calc(15px * var(--k));
   line-height: calc(22px * var(--k));
 }
 
 .alert > .ti {
   color: var(--crit);
+  margin-top: 1px;
 }
 
 .alert.a-warn {
@@ -536,6 +540,7 @@ a {
 .alert .rt {
   margin-left: auto;
   flex: none;
+  align-self: center;
 }
 
 .center {
@@ -830,80 +835,44 @@ a {
   border: 1px solid var(--line);
 }
 
-.srow {
-  width: 100%;
-  min-height: calc(56px * var(--k));
+/* Проверка, которая сейчас в чате: номер и результат, под ними дата и оценка.
+   Тот же порядок, что у строки проверки на экране истории машины */
+.inchat {
   display: grid;
-  grid-template-columns: 18px minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  column-gap: 12px;
-  padding: 7px 14px;
-  text-align: left;
-  background: transparent;
-  border: none;
+  gap: 8px 12px;
+  padding: 12px 14px;
   border-bottom: 1px solid var(--line);
-  font-size: calc(15px * var(--k));
-  line-height: calc(20px * var(--k));
 }
 
-.sbody {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+.inchat .cid {
+  font-size: calc(16px * var(--k));
+  line-height: calc(22px * var(--k));
+  font-weight: 600;
 }
 
-.sline {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-width: 0;
+.inchat .r {
+  justify-self: end;
 }
 
-.srow:last-child {
-  border-bottom: none;
-}
-
-.srow:hover {
-  background: var(--panel2);
-}
-
-.srow.cur {
-  background: var(--acc-bg);
-  box-shadow: inset 3px 0 0 var(--acc);
-}
-
-.srow .when {
-  font: calc(13px * var(--k))/calc(20px * var(--k)) var(--mono);
-  color: var(--tx3);
-  white-space: nowrap;
-}
-
-.trow .when {
-  font: calc(13px * var(--k))/calc(16px * var(--k)) var(--mono);
-  color: var(--tx3);
-  display: block;
-  white-space: nowrap;
-}
-
-.srow .sev {
+.inchat .cmeta {
   font-size: calc(14px * var(--k));
   line-height: calc(20px * var(--k));
+  color: var(--tx3);
+  white-space: nowrap;
 }
 
-.srow .sev .ti {
-  font-size: calc(18px * var(--k));
+.inchat .cmeta b {
+  font-weight: 500;
+  color: var(--tx2);
 }
 
-/* Одна строка «проверка в чате»: выбор проверки живёт на экране истории машины */
-.srow.one {
-  grid-template-columns: minmax(0, 1fr);
-  row-gap: 2px;
-}
-
-.srow.one:hover {
-  background: transparent;
+.inchat .cmeta.ex {
+  grid-column: 1 / -1;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 /* Переход из боковой панели на экран истории машины */
@@ -948,6 +917,10 @@ a {
   height: auto;
 }
 
+.chart .cap > .ti {
+  margin-top: 2px;
+}
+
 .chart .cap {
   font-size: calc(14px * var(--k));
   line-height: calc(20px * var(--k));
@@ -957,7 +930,7 @@ a {
   margin-top: 8px;
   display: flex;
   gap: 8px;
-  align-items: center;
+  align-items: flex-start;
 }
 
 .trow {
@@ -1017,10 +990,10 @@ a {
   text-align: right;
 }
 
+/* Ответ агента занимает всю ширину чата: длинные шаги реже переносятся */
 .a {
   align-self: flex-start;
   width: 100%;
-  max-width: 880px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -1168,10 +1141,11 @@ details.fold > .fin {
 .basis li::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: calc(13px * var(--k));
-  width: 6px;
-  height: 2px;
+  left: 2px;
+  top: calc(12px * var(--k));
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
   background: var(--tx3);
 }
 
@@ -1227,11 +1201,21 @@ details.fold > .fin {
 .plain li::before {
   content: '';
   position: absolute;
-  left: 0;
-  top: calc(13px * var(--k));
-  width: 6px;
-  height: 2px;
+  left: 2px;
+  top: calc(12px * var(--k));
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
   background: var(--tx3);
+}
+
+/* Ограничения ответа: подпись и маркеры цветом предупреждения, текст обычный */
+.lim .sec b {
+  color: var(--warn-tx);
+}
+
+.lim .plain li::before {
+  background: var(--warn);
 }
 
 .hyp {
@@ -1360,13 +1344,14 @@ details.fold > .fin {
   list-style: none;
 }
 
+/* Значок стоит у заголовка шага, а не по центру всей строки */
 .steps li {
   min-height: calc(40px * var(--k));
   display: grid;
   grid-template-columns: calc(20px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
-  align-items: center;
-  padding: 6px 0;
+  align-items: start;
+  padding: 10px 0;
   border-bottom: 1px solid var(--line);
   font-size: calc(15px * var(--k));
   line-height: calc(20px * var(--k));
@@ -1378,6 +1363,7 @@ details.fold > .fin {
 
 .steps .dt {
   display: block;
+  margin-top: 4px;
   font: calc(12px * var(--k))/calc(16px * var(--k)) var(--mono);
   color: var(--tx3);
   overflow-wrap: anywhere;
@@ -1385,6 +1371,10 @@ details.fold > .fin {
 
 .steps .ti {
   color: var(--tx3);
+}
+
+.steps .ok .ti {
+  color: var(--ok);
 }
 
 .steps .err .ti {
@@ -1590,6 +1580,10 @@ details.fold > .fin {
   font-size: calc(19px * var(--k));
   font-weight: 600;
   line-height: calc(26px * var(--k));
+}
+
+.okline .st {
+  margin-top: 4px;
 }
 
 /* Панель ввода */

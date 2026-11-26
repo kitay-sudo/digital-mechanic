@@ -92,18 +92,26 @@ export function VehiclePanel({
           </div>
           <div className="slist">
             {session ? (
-              <div className="srow one">
-                <span className="sline">
-                  <span className="m">{session.session_id}</span>
-                  <span className="when">
-                    {session.ticket_id ? `${session.ticket_id} · ` : ''}
-                    {dateTime(session.checked_at)}
-                  </span>
-                </span>
-                <span className="sline">
+              // Тот же порядок, что у строки проверки на экране истории: номер и результат, под ними дата и оценка
+              <div className="inchat">
+                <span className="cid m">{session.session_id}</span>
+                <span className="r">
                   <StatusBadge status={session.status} code={session.anomaly_type} />
-                  <span className="m">{num(session.anomaly_score)}</span>
                 </span>
+                <span className="cmeta m">{dateTime(session.checked_at)}</span>
+                <span className="cmeta r">
+                  {session.anomaly_score !== null ? (
+                    <>
+                      оценка <b className="m">{num(session.anomaly_score)}</b>
+                    </>
+                  ) : null}
+                </span>
+                {session.ticket_id ? (
+                  <span className="cmeta ex">
+                    <Icon name="clipboard-check" size="s" />
+                    заявка <b className="m">{session.ticket_id}</b>
+                  </span>
+                ) : null}
               </div>
             ) : (
               <div className="trow mut">Проверок нет</div>
