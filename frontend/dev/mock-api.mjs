@@ -201,7 +201,34 @@ http.createServer(async (req, res) => {
   const p = url.pathname;
   let m;
   if (p === '/api/health') return jsonRes(res, 200, { status: 'ok', ml: true, toir: true, kb: { manuals: 6, pages: 1743, chunks: 0 } });
-  if (p === '/api/config') return jsonRes(res, 200, { llm: { provider: 'mock', model: 'mock-llm', mock: true }, thresholds: { confidence_min: 0.5 }, priority_actions: ACTIONS });
+  if (p === '/api/config') return jsonRes(res, 200, {
+    llm: { provider: 'mock', model: 'mock-llm', mock: true }, thresholds: { confidence_min: 0.5 }, priority_actions: ACTIONS,
+    languages: [{ code: 'ru', label: 'Русский' }, { code: 'uz', label: 'Oʻzbekcha' }, { code: 'tg', label: 'Тоҷикӣ' }, { code: 'hi', label: 'हिन्दी' }],
+    levels: [{ code: 'expert', label: 'Опытный', hint: 'Коротко, только суть' }, { code: 'novice', label: 'Новичок', hint: 'С пояснениями и простыми словами' }],
+  });
+  if (p === '/api/audit') {
+    // Журнал обращений: вопрос механика и следующий за ним ответ агента
+    const items = [];
+    for (const [vehicleId, list] of conversations) {
+      const v = V.find((x) => x.vehicle_id === vehicleId);
+      list.forEach((msg, i) => {
+        if (msg.role !== 'assistant') return;
+        const question = [...list.slice(0, i)].reverse().find((x) => x.role === 'user');
+        const refs = [...(msg.answer?.checks || []), ...(msg.answer?.repair || []), ...(msg.draft?.operations || [])].flatMap((it) => it.refs || []);
+        const seen = new Set();
+        const sources = refs.filter((r) => { const k = r.manual_id + ':' + r.pdf_page; if (seen.has(k)) return false; seen.add(k); return true; })
+          .map((r) => ({ manual_id: r.manual_id, short: r.short, pdf_page: r.pdf_page }));
+        items.push({
+          id: msg.id, created_at: msg.created_at, vehicle_id: vehicleId, vehicle_title: v ? v.title : vehicleId, session_id: msg.session_id,
+          question: question ? question.text : '', kind: msg.kind, answer: msg.text || '', sources,
+          tools: (msg.steps || []).map((st) => st.tool), ticket_id: msg.ticket ? msg.ticket.ticket_id : null, usage: msg.usage || null,
+        });
+      });
+    }
+    items.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
+    const limit = Number(url.searchParams.get('limit') || 100);
+    return jsonRes(res, 200, { items: items.slice(0, limit) });
+  }
   if (p === '/api/fleet') {
     const order = { quarantine: 0, attention: 1, ok: 2 };
     const list = V.map(brief).sort((a, b) => order[a.fleet_status] - order[b.fleet_status]);

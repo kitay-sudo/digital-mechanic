@@ -2,31 +2,22 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
+import { SettingsPanel } from './SettingsPanel';
 
 export function Header() {
   const pathname = usePathname();
   const [config, setConfig] = useState<Config | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   useEffect(() => {
-    setTheme(document.documentElement.dataset.theme === 'dark' ? 'dark' : 'light');
     api.config().then(setConfig).catch(() => setConfig(null));
   }, []);
 
-  const toggleTheme = () => {
-    const next = theme === 'dark' ? 'light' : 'dark';
-    document.documentElement.dataset.theme = next;
-    try {
-      localStorage.setItem('dm-theme', next);
-    } catch {
-      /* хранилище недоступно: тема действует до перезагрузки */
-    }
-    setTheme(next);
-  };
+  const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
   return (
     <header className="top">
@@ -38,6 +29,10 @@ export function Header() {
         <Link href="/" className={pathname === '/' ? 'on' : ''}>
           <Icon name="list-details" size="s" />
           Парк
+        </Link>
+        <Link href="/log" className={pathname === '/log' ? 'on' : ''}>
+          <Icon name="history" size="s" />
+          Журнал
         </Link>
       </nav>
       <div className="r">
@@ -54,14 +49,16 @@ export function Header() {
         ) : null}
         <button
           type="button"
-          className="hb"
-          onClick={toggleTheme}
-          aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
-          title={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+          className={`hb${settingsOpen ? ' on' : ''}`}
+          onClick={() => setSettingsOpen((v) => !v)}
+          aria-label="Настройки: размер текста, подача, язык, тема"
+          aria-expanded={settingsOpen}
+          title="Настройки"
         >
-          <Icon name={theme === 'dark' ? 'sun' : 'moon'} />
+          <Icon name="adjustments-horizontal" />
         </button>
       </div>
+      {settingsOpen ? <SettingsPanel config={config} onClose={closeSettings} /> : null}
     </header>
   );
 }

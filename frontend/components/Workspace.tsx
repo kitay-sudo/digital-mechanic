@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, chatStream, confirmDraftStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
+import { profileOf, speechLang, useSettings } from '@/lib/settings';
 import type { ManualTarget, Message, Step, StreamEvent, VehicleDetail } from '@/lib/types';
 import { Composer } from './Composer';
 import { Icon } from './Icon';
@@ -36,6 +37,10 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
   const [manual, setManual] = useState<ManualTarget | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  const settings = useSettings();
+  const profile = profileOf(settings);
+  const profileRef = useRef(profile);
+  profileRef.current = profile;
 
   const loadVehicle = useCallback(
     () =>
@@ -50,7 +55,15 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
   const loadAll = useCallback(() => {
     setLoadError(null);
     Promise.all([loadVehicle(), api.conversation(vehicleId)])
-      .then(([, conv]) => setMessages(conv.messages))
+      .then(([v, conv]) => {
+        setMessages(conv.messages);
+        // Чат продолжается по той проверке, о которой шёл разговор: иначе кнопка «Создать заявку»
+        // из старого вердикта ушла бы с другой, последней проверкой.
+        const last = [...conv.messages].reverse().find((m) => m.session_id);
+        if (last?.session_id && v.sessions.some((s) => s.session_id === last.session_id)) {
+          setSessionId(last.session_id);
+        }
+      })
       .catch((e: Error) => setLoadError(e.message));
   }, [loadVehicle, vehicleId]);
 
@@ -103,14 +116,14 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
       const clean = text.trim();
       if (!clean) return;
       setMessages((list) => list.filter((m) => !m.localError));
-      void runTurn((cb) => chatStream({ vehicle_id: vehicleId, session_id: sessionId, text: clean }, cb));
+      void runTurn((cb) => chatStream({ vehicle_id: vehicleId, session_id: sessionId, text: clean, profile: profileRef.current }, cb));
     },
     [runTurn, sessionId, vehicleId],
   );
 
   const confirmDraft = useCallback(
     (draftId: string, warningAck: boolean) => {
-      void runTurn((cb) => confirmDraftStream(draftId, { warning_ack: warningAck }, cb));
+      void runTurn((cb) => confirmDraftStream(draftId, { warning_ack: warningAck, profile: profileRef.current }, cb));
     },
     [runTurn],
   );
@@ -208,7 +221,13 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
           {busy ? <PendingSteps steps={steps} /> : null}
         </div>
 
-        <Composer busy={busy} canDiagnose={Boolean(session)} onDiagnose={() => send(DIAGNOSE_TEXT)} onSend={send} />
+        <Composer
+          busy={busy}
+          canDiagnose={Boolean(session)}
+          speechLang={speechLang(settings.language)}
+          onDiagnose={() => send(DIAGNOSE_TEXT)}
+          onSend={send}
+        />
       </section>
 
       {manual ? <ManualPanel target={manual} onNavigate={setManual} onClose={() => setManual(null)} /> : null}

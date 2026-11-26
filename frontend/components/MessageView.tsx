@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { PRIORITY_LABEL, QUALITY_LABEL, capitalize, dateTime, int, num, plural, timeShort } from '@/lib/format';
+import { toggleStep, useDoneSteps } from '@/lib/settings';
 import type {
   Answer,
   AnswerItem,
@@ -104,9 +105,7 @@ function StepsFold({ steps, usage }: { steps?: Step[]; usage?: Usage | null }) {
         <Icon name="chevron-right" />
         <span>
           Ход разбора{count ? ` · ${count} ${plural(count, 'шаг', 'шага', 'шагов')}` : ''}
-          <span className="only-m" style={{ display: 'block', font: '12px/16px var(--mono)', color: 'var(--tx3)' }}>
-            {usageLine(usage)}
-          </span>
+          <span className="usub only-m">{usageLine(usage)}</span>
         </span>
         <span className="rt">
           {usageLine(usage)}
@@ -127,23 +126,78 @@ function StepsFold({ steps, usage }: { steps?: Step[]; usage?: Usage | null }) {
 
 /* ---------- Блоки ответа: наблюдения, гипотезы, проверки, ремонт, ограничения ---------- */
 
-function ItemList({ items, ctx }: { items: AnswerItem[]; ctx: Ctx }) {
+/** Шаги по руководству с отметкой «сделано»: механик идёт по списку и отмечает. */
+function StepItems({
+  title,
+  icon,
+  items,
+  ctx,
+  storeKey,
+  after,
+}: {
+  title: string;
+  icon: string;
+  items: AnswerItem[];
+  ctx: Ctx;
+  storeKey: string;
+  after?: (allDone: boolean) => ReactNode;
+}) {
+  const done = useDoneSteps(storeKey);
+  const doneCount = done.filter((i) => i < items.length).length;
+  const allDone = doneCount === items.length;
   return (
-    <div className="items">
-      {items.map((it, i) => (
-        <div className="item" key={i}>
-          <span className="n">{i + 1}</span>
-          <div>
-            <div className="tx">{it.text}</div>
-            <Chips refs={it.refs} ctx={ctx} />
-          </div>
-        </div>
-      ))}
-    </div>
+    <section className="ab cdiv">
+      <div className="sec">
+        <b>
+          <Icon name={icon} size="s" />
+          {title}
+        </b>
+        <span className={`prog${allDone ? ' all' : ''}`}>
+          Сделано {doneCount} из {items.length}
+        </span>
+      </div>
+      <div className="items">
+        {items.map((it, i) => {
+          const isDone = done.includes(i);
+          return (
+            <div className={`item${isDone ? ' done' : ''}`} key={i}>
+              <button
+                type="button"
+                className="chk"
+                aria-pressed={isDone}
+                aria-label={isDone ? `Шаг ${i + 1} сделан. Снять отметку` : `Отметить шаг ${i + 1} сделанным`}
+                title={isDone ? 'Сделано. Нажмите, чтобы снять отметку' : 'Отметить, что шаг сделан'}
+                onClick={() => toggleStep(storeKey, i)}
+              >
+                {isDone ? <Icon name="check" /> : i + 1}
+              </button>
+              <div>
+                <div className="tx">{it.text}</div>
+                <Chips refs={it.refs} ctx={ctx} />
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      {after ? after(allDone) : null}
+    </section>
   );
 }
 
-function AnswerBlocks({ answer, ctx, showSummary }: { answer: Answer; ctx: Ctx; showSummary?: boolean }) {
+function AnswerBlocks({
+  answer,
+  ctx,
+  showSummary,
+  messageId,
+  onCreateTicket,
+}: {
+  answer: Answer;
+  ctx: Ctx;
+  showSummary?: boolean;
+  messageId: string;
+  /** Задан, когда заявку можно создавать: после всех проверок появится подсказка */
+  onCreateTicket?: () => void;
+}) {
   return (
     <>
       {showSummary && answer.summary ? (
@@ -198,26 +252,28 @@ function AnswerBlocks({ answer, ctx, showSummary }: { answer: Answer; ctx: Ctx; 
         </div>
       ) : null}
       {answer.checks.length ? (
-        <section className="ab cdiv">
-          <div className="sec">
-            <b>
-              <Icon name="list-check" size="s" />
-              Проверки по руководству
-            </b>
-          </div>
-          <ItemList items={answer.checks} ctx={ctx} />
-        </section>
+        <StepItems
+          title="Проверки по руководству"
+          icon="list-check"
+          items={answer.checks}
+          ctx={ctx}
+          storeKey={`${messageId}:checks`}
+          after={(allDone) =>
+            allDone && onCreateTicket ? (
+              <div className="nextstep">
+                <Icon name="circle-check" />
+                <span>Все проверки отмечены. Можно оформлять заявку на дефектовку.</span>
+                <button type="button" className="btn pri" onClick={onCreateTicket} disabled={ctx.busy}>
+                  <Icon name="clipboard-list" />
+                  Создать заявку
+                </button>
+              </div>
+            ) : null
+          }
+        />
       ) : null}
       {answer.repair.length ? (
-        <section className="ab cdiv">
-          <div className="sec">
-            <b>
-              <Icon name="tool" size="s" />
-              Возможный ремонт
-            </b>
-          </div>
-          <ItemList items={answer.repair} ctx={ctx} />
-        </section>
+        <StepItems title="Возможный ремонт" icon="tool" items={answer.repair} ctx={ctx} storeKey={`${messageId}:repair`} />
       ) : null}
       {answer.limitations.length ? (
         <section className="ab cdiv">
@@ -308,9 +364,10 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
         <div className="cdiv">
           <div className="cpad" style={{ paddingBottom: 4 }}>
             <div className="pact">
-              <Icon name="flag" className={a.priority === 'high' ? 'c-h' : a.priority === 'low' ? 'c-l' : 'c-m'} />
+              <Icon name="flag" size="l" className={a.priority === 'high' ? 'c-h' : a.priority === 'low' ? 'c-l' : 'c-m'} />
               <div>
-                <b>Что делать:</b> {a.priority_action}
+                <div className="pl">Что делать</div>
+                <div className="pa">{a.priority_action}</div>
               </div>
             </div>
           </div>
@@ -371,7 +428,9 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
         </div>
       ) : null}
 
-      {m.answer ? <AnswerBlocks answer={m.answer} ctx={ctx} /> : null}
+      {m.answer ? (
+        <AnswerBlocks answer={m.answer} ctx={ctx} messageId={m.id} onCreateTicket={a?.ticket_allowed ? onCreateTicket : undefined} />
+      ) : null}
 
       {m.answer?.recommendation_text ? (
         <div className="cdiv" style={{ paddingTop: 16 }}>
@@ -692,7 +751,7 @@ export function MessageView({
   } else if (m.kind === 'answer' && m.answer) {
     body = (
       <div className="card">
-        <AnswerBlocks answer={m.answer} ctx={ctx} showSummary />
+        <AnswerBlocks answer={m.answer} ctx={ctx} showSummary messageId={m.id} />
         {m.answer.recommendation_text ? (
           <div className="cdiv" style={{ paddingTop: 16 }}>
             <CopyBlock text={m.answer.recommendation_text} />

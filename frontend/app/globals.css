@@ -27,6 +27,12 @@
   --sans: 'IBM Plex Sans', system-ui, 'Segoe UI', Arial, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Consolas, monospace;
   color-scheme: light;
+  /* Масштаб текста и высоты элементов: «Крупный» в настройках ставит 1.2 */
+  --k: 1;
+}
+
+html[data-size='large'] {
+  --k: 1.2;
 }
 
 [data-theme='dark'] {
@@ -68,8 +74,8 @@ body {
   background: var(--bg);
   color: var(--tx);
   font-family: var(--sans);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
   -webkit-text-size-adjust: 100%;
 }
 
@@ -105,27 +111,27 @@ a {
 }
 
 .st {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
   color: var(--tx3);
 }
 
 .ti {
-  font-size: 20px;
+  font-size: calc(20px * var(--k));
   line-height: 1;
   flex: none;
 }
 
 .ti.s {
-  font-size: 16px;
+  font-size: calc(16px * var(--k));
 }
 
 .ti.l {
-  font-size: 24px;
+  font-size: calc(24px * var(--k));
 }
 
 .ti.xl {
-  font-size: 40px;
+  font-size: calc(40px * var(--k));
 }
 
 .spin {
@@ -167,7 +173,7 @@ a {
   align-items: center;
   gap: 10px;
   font-weight: 600;
-  font-size: 17px;
+  font-size: calc(17px * var(--k));
   white-space: nowrap;
 }
 
@@ -185,7 +191,7 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  font-size: calc(15px * var(--k));
   color: var(--tx2);
   border-bottom: 2px solid transparent;
   border-top: 2px solid transparent;
@@ -201,7 +207,7 @@ a {
   display: flex;
   gap: 16px;
   align-items: center;
-  font-size: 14px;
+  font-size: calc(14px * var(--k));
   color: var(--tx2);
   min-width: 0;
 }
@@ -214,13 +220,13 @@ a {
 }
 
 .mockbadge {
-  height: 28px;
+  height: calc(28px * var(--k));
   padding: 0 10px;
   border: 1px solid var(--warn);
   border-radius: 4px;
   color: var(--warn-tx);
   font-weight: 600;
-  font-size: 13px;
+  font-size: calc(13px * var(--k));
 }
 
 .page {
@@ -246,23 +252,23 @@ a {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 18px;
+  font-size: calc(18px * var(--k));
   font-weight: 600;
   min-width: 0;
 }
 
 .hdr .h1 {
-  font-size: 22px;
+  font-size: calc(22px * var(--k));
   font-weight: 600;
-  line-height: 28px;
+  line-height: calc(28px * var(--k));
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
 .hdr .sub {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
   color: var(--tx2);
   white-space: nowrap;
   overflow: hidden;
@@ -303,13 +309,13 @@ a {
 /* ---------- Кнопки и мелкие элементы ---------- */
 
 .btn {
-  height: 48px;
+  height: calc(48px * var(--k));
   padding: 0 20px;
   border-radius: 4px;
   border: 1px solid var(--line2);
   background: var(--panel);
   color: var(--tx);
-  font: 600 16px/1 var(--sans);
+  font: 600 calc(16px * var(--k))/1 var(--sans);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -346,14 +352,14 @@ a {
 }
 
 .btn.ic {
-  width: 48px;
+  width: calc(48px * var(--k));
   padding: 0;
 }
 
 .btn.sm {
-  height: 32px;
+  height: calc(32px * var(--k));
   padding: 0 12px;
-  font: 500 14px/1 var(--sans);
+  font: 500 calc(14px * var(--k))/1 var(--sans);
   gap: 6px;
 }
 
@@ -381,13 +387,13 @@ a {
 }
 
 .src {
-  height: 32px;
+  height: calc(32px * var(--k));
   padding: 0 10px;
   border-radius: 4px;
   border: 1px solid var(--line2);
   background: var(--panel);
   color: var(--acc);
-  font: 500 14px/1 var(--mono);
+  font: 500 calc(14px * var(--k))/1 var(--mono);
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -405,13 +411,13 @@ a {
 }
 
 .n {
-  width: 28px;
-  height: 28px;
+  width: calc(28px * var(--k));
+  height: calc(28px * var(--k));
   border-radius: 4px;
   border: 1px solid var(--line2);
   background: var(--panel2);
   color: var(--tx2);
-  font: 500 14px/1 var(--mono);
+  font: 500 calc(14px * var(--k))/1 var(--mono);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -422,9 +428,9 @@ a {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 15px;
+  font-size: calc(15px * var(--k));
   font-weight: 600;
-  line-height: 20px;
+  line-height: calc(20px * var(--k));
   white-space: nowrap;
 }
 
@@ -463,8 +469,8 @@ a {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  font-size: 13px;
-  line-height: 18px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
   color: var(--tx3);
 }
 
@@ -472,7 +478,7 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 12px;
+  font-size: calc(12px * var(--k));
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -493,7 +499,7 @@ a {
 }
 
 .alert {
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   display: flex;
   gap: 12px;
   align-items: center;
@@ -501,8 +507,8 @@ a {
   border: 1px solid var(--line);
   border-left: 4px solid var(--crit);
   padding: 10px 16px;
-  font-size: 15px;
-  line-height: 22px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
 }
 
 .alert > .ti {
@@ -543,7 +549,7 @@ a {
 }
 
 .center .e1 {
-  font-size: 18px;
+  font-size: calc(18px * var(--k));
   font-weight: 600;
   color: var(--tx);
 }
@@ -566,15 +572,15 @@ a {
 }
 
 .fbar .h1 {
-  font-size: 22px;
+  font-size: calc(22px * var(--k));
   font-weight: 600;
-  line-height: 28px;
+  line-height: calc(28px * var(--k));
 }
 
 .search {
   margin-left: auto;
-  width: 340px;
-  height: 40px;
+  width: calc(340px * var(--k));
+  height: calc(40px * var(--k));
   border: 1px solid var(--line2);
   border-radius: 4px;
   background: var(--panel);
@@ -592,7 +598,7 @@ a {
   border: none;
   outline: none;
   background: transparent;
-  font-size: 15px;
+  font-size: calc(15px * var(--k));
   color: var(--tx);
 }
 
@@ -608,7 +614,7 @@ a {
 }
 
 .tile {
-  height: 80px;
+  height: calc(80px * var(--k));
   display: flex;
   align-items: center;
   gap: 16px;
@@ -641,20 +647,20 @@ a {
 }
 
 .tile .cnt {
-  font: 600 32px/40px var(--mono);
+  font: 600 calc(32px * var(--k))/calc(40px * var(--k)) var(--mono);
   min-width: 48px;
 }
 
 .tile .lbl {
-  font-size: 16px;
+  font-size: calc(16px * var(--k));
   font-weight: 600;
-  line-height: 22px;
+  line-height: calc(22px * var(--k));
 }
 
 .tile .hint {
   display: block;
-  font-size: 13px;
-  line-height: 18px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
   color: var(--tx3);
 }
 
@@ -679,15 +685,15 @@ a {
 .fhead,
 .frow {
   display: grid;
-  grid-template-columns: 170px minmax(150px, 1fr) 160px 150px minmax(210px, 1.3fr) 140px 130px;
+  grid-template-columns: calc(170px * var(--k)) minmax(150px, 1fr) calc(160px * var(--k)) calc(150px * var(--k)) minmax(210px, 1.3fr) calc(140px * var(--k)) calc(130px * var(--k));
   align-items: center;
   column-gap: 16px;
   padding: 0 16px 0 20px;
 }
 
 .fhead {
-  height: 36px;
-  font-size: 12px;
+  height: calc(36px * var(--k));
+  font-size: calc(12px * var(--k));
   font-weight: 500;
   color: var(--tx3);
   background: var(--panel2);
@@ -695,8 +701,8 @@ a {
 }
 
 .frow {
-  height: 48px;
-  font-size: 16px;
+  height: calc(48px * var(--k));
+  font-size: calc(16px * var(--k));
   border-bottom: 1px solid var(--line);
   position: relative;
 }
@@ -731,7 +737,7 @@ a {
 
 .frow .gno {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: calc(13px * var(--k));
   color: var(--tx3);
   margin-left: 8px;
 }
@@ -756,11 +762,11 @@ a {
   flex: 1;
   min-height: 0;
   display: grid;
-  grid-template-columns: 384px minmax(0, 1fr);
+  grid-template-columns: calc(384px * var(--k)) minmax(0, 1fr);
 }
 
 .ws.with-manual {
-  grid-template-columns: 384px minmax(0, 1fr) minmax(0, 42%);
+  grid-template-columns: calc(384px * var(--k)) minmax(0, 1fr) minmax(0, 42%);
 }
 
 .col {
@@ -781,25 +787,25 @@ a {
 
 .info {
   display: grid;
-  grid-template-columns: 124px minmax(0, 1fr);
+  grid-template-columns: calc(124px * var(--k)) minmax(0, 1fr);
   background: var(--panel);
   border: 1px solid var(--line);
 }
 
 .info > div {
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 16px;
   border-bottom: 1px solid var(--line);
-  font-size: 16px;
-  line-height: 22px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(22px * var(--k));
   min-width: 0;
 }
 
 .info > div:nth-child(odd) {
-  font-size: 14px;
+  font-size: calc(14px * var(--k));
   color: var(--tx3);
 }
 
@@ -822,7 +828,7 @@ a {
 
 .srow {
   width: 100%;
-  min-height: 56px;
+  min-height: calc(56px * var(--k));
   display: grid;
   grid-template-columns: 18px minmax(0, 1fr);
   align-items: center;
@@ -832,8 +838,8 @@ a {
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  line-height: 20px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(20px * var(--k));
 }
 
 .sbody {
@@ -865,25 +871,25 @@ a {
 }
 
 .srow .when {
-  font: 13px/20px var(--mono);
+  font: calc(13px * var(--k))/calc(20px * var(--k)) var(--mono);
   color: var(--tx3);
   white-space: nowrap;
 }
 
 .trow .when {
-  font: 13px/16px var(--mono);
+  font: calc(13px * var(--k))/calc(16px * var(--k)) var(--mono);
   color: var(--tx3);
   display: block;
   white-space: nowrap;
 }
 
 .srow .sev {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
 }
 
 .srow .sev .ti {
-  font-size: 18px;
+  font-size: calc(18px * var(--k));
 }
 
 .radio {
@@ -912,8 +918,8 @@ a {
 }
 
 .chart .cap {
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
   color: var(--tx2);
   padding: 8px 4px 4px;
   border-top: 1px solid var(--line);
@@ -924,14 +930,14 @@ a {
 }
 
 .trow {
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 6px 16px;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  line-height: 20px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(20px * var(--k));
 }
 
 .trow:last-child {
@@ -940,7 +946,7 @@ a {
 
 .trow .rt {
   margin-left: auto;
-  font: 13px var(--mono);
+  font: calc(13px * var(--k)) var(--mono);
   color: var(--tx3);
   white-space: nowrap;
 }
@@ -968,14 +974,14 @@ a {
   border: 1px solid var(--line2);
   border-radius: 4px;
   padding: 12px 16px;
-  font-size: 17px;
-  line-height: 24px;
+  font-size: calc(17px * var(--k));
+  line-height: calc(24px * var(--k));
   overflow-wrap: anywhere;
 }
 
 .q .mt {
   margin-top: 4px;
-  font: 12px/16px var(--mono);
+  font: calc(12px * var(--k))/calc(16px * var(--k)) var(--mono);
   color: var(--tx3);
   text-align: right;
 }
@@ -990,8 +996,8 @@ a {
 }
 
 .who {
-  font-size: 12px;
-  line-height: 16px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
   color: var(--tx3);
   display: flex;
   align-items: center;
@@ -1041,16 +1047,16 @@ a {
 }
 
 .vtitle {
-  font-size: 28px;
+  font-size: calc(28px * var(--k));
   font-weight: 600;
-  line-height: 36px;
+  line-height: calc(36px * var(--k));
   margin: 8px 0 4px;
   overflow-wrap: anywhere;
 }
 
 .vtext {
-  font-size: 17px;
-  line-height: 24px;
+  font-size: calc(17px * var(--k));
+  line-height: calc(24px * var(--k));
   color: var(--tx2);
   overflow-wrap: anywhere;
 }
@@ -1066,8 +1072,8 @@ a {
   display: flex;
   align-items: flex-start;
   gap: 10px;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
 }
 
 .pact .ti {
@@ -1079,13 +1085,13 @@ a {
 }
 
 details.fold > summary {
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 20px;
-  font-size: 15px;
-  line-height: 20px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(20px * var(--k));
   color: var(--tx2);
   cursor: pointer;
   list-style: none;
@@ -1107,7 +1113,7 @@ details.fold[open] > summary > .ti:first-child {
 
 details.fold > summary .rt {
   margin-left: auto;
-  font: 13px/18px var(--mono);
+  font: calc(13px * var(--k))/calc(18px * var(--k)) var(--mono);
   color: var(--tx3);
   text-align: right;
 }
@@ -1118,8 +1124,8 @@ details.fold > .fin {
 
 .basis {
   list-style: none;
-  font-size: 15px;
-  line-height: 22px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
   color: var(--tx2);
 }
 
@@ -1132,7 +1138,7 @@ details.fold > .fin {
   content: '';
   position: absolute;
   left: 0;
-  top: 13px;
+  top: calc(13px * var(--k));
   width: 6px;
   height: 2px;
   background: var(--tx3);
@@ -1140,24 +1146,24 @@ details.fold > .fin {
 
 .kv {
   display: grid;
-  grid-template-columns: 200px minmax(0, 1fr);
+  grid-template-columns: calc(200px * var(--k)) minmax(0, 1fr);
 }
 
 .kv > div {
-  min-height: 44px;
+  min-height: calc(44px * var(--k));
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 20px;
   border-bottom: 1px solid var(--line);
-  font-size: 16px;
-  line-height: 22px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(22px * var(--k));
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .kv > div:nth-child(odd) {
-  font-size: 14px;
+  font-size: calc(14px * var(--k));
   color: var(--tx3);
   background: var(--panel2);
 }
@@ -1181,8 +1187,8 @@ details.fold > .fin {
 
 .plain {
   list-style: none;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
 }
 
 .plain li {
@@ -1195,7 +1201,7 @@ details.fold > .fin {
   content: '';
   position: absolute;
   left: 0;
-  top: 13px;
+  top: calc(13px * var(--k));
   width: 6px;
   height: 2px;
   background: var(--tx3);
@@ -1212,7 +1218,7 @@ details.fold > .fin {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: calc(13px * var(--k));
   color: var(--tx2);
 }
 
@@ -1222,9 +1228,9 @@ details.fold > .fin {
 }
 
 .item {
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: calc(28px * var(--k)) minmax(0, 1fr);
   column-gap: 14px;
   align-items: start;
   padding: 10px 14px;
@@ -1236,8 +1242,8 @@ details.fold > .fin {
 }
 
 .item .tx {
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
   padding-top: 2px;
   overflow-wrap: anywhere;
 }
@@ -1254,8 +1260,8 @@ details.fold > .fin {
   gap: 12px;
   align-items: flex-start;
   padding: 14px 20px;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
   color: var(--tx2);
 }
 
@@ -1270,7 +1276,7 @@ details.fold > .fin {
 }
 
 .cfoot {
-  min-height: 72px;
+  min-height: calc(72px * var(--k));
   display: flex;
   align-items: center;
   gap: 16px;
@@ -1282,8 +1288,8 @@ details.fold > .fin {
 .cfoot .cap {
   flex: 1;
   min-width: 0;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
   color: var(--tx2);
   display: flex;
   gap: 10px;
@@ -1312,7 +1318,7 @@ details.fold > .fin {
 
 .reco pre {
   padding: 12px 14px;
-  font: 14px/22px var(--mono);
+  font: calc(14px * var(--k))/calc(22px * var(--k)) var(--mono);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   color: var(--tx);
@@ -1323,15 +1329,15 @@ details.fold > .fin {
 }
 
 .steps li {
-  min-height: 40px;
+  min-height: calc(40px * var(--k));
   display: grid;
-  grid-template-columns: 20px minmax(0, 1fr);
+  grid-template-columns: calc(20px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
   align-items: center;
   padding: 6px 0;
   border-bottom: 1px solid var(--line);
-  font-size: 15px;
-  line-height: 20px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(20px * var(--k));
 }
 
 .steps li:last-child {
@@ -1340,7 +1346,7 @@ details.fold > .fin {
 
 .steps .dt {
   display: block;
-  font: 12px/16px var(--mono);
+  font: calc(12px * var(--k))/calc(16px * var(--k)) var(--mono);
   color: var(--tx3);
   overflow-wrap: anywhere;
 }
@@ -1362,7 +1368,7 @@ details.fold > .fin {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 15px;
+  font-size: calc(15px * var(--k));
   color: var(--tx2);
 }
 
@@ -1401,13 +1407,13 @@ details.fold > .fin {
 /* Заявка */
 
 .chead {
-  min-height: 56px;
+  min-height: calc(56px * var(--k));
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 8px 20px;
   border-bottom: 1px solid var(--line);
-  font-size: 17px;
+  font-size: calc(17px * var(--k));
   font-weight: 600;
 }
 
@@ -1421,7 +1427,7 @@ details.fold > .fin {
 
 .frm {
   display: grid;
-  grid-template-columns: 176px minmax(0, 1fr);
+  grid-template-columns: calc(176px * var(--k)) minmax(0, 1fr);
 }
 
 .frm > div {
@@ -1431,15 +1437,15 @@ details.fold > .fin {
 }
 
 .frm > .k {
-  font-size: 14px;
-  line-height: 24px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(24px * var(--k));
   color: var(--tx3);
   background: var(--panel2);
 }
 
 .frm > .v {
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
   overflow-wrap: anywhere;
 }
 
@@ -1452,21 +1458,21 @@ details.fold > .fin {
   border: 1px solid var(--line2);
   border-radius: 4px;
   background: var(--panel);
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
 }
 
 .frm .sub2 {
   display: block;
-  font-size: 14px;
-  line-height: 20px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
   color: var(--tx3);
   margin-top: 6px;
 }
 
 .seg {
   display: inline-flex;
-  height: 40px;
+  height: calc(40px * var(--k));
   border: 1px solid var(--line2);
   border-radius: 4px;
   overflow: hidden;
@@ -1478,7 +1484,7 @@ details.fold > .fin {
   align-items: center;
   gap: 6px;
   padding: 0 14px;
-  font-size: 15px;
+  font-size: calc(15px * var(--k));
   border: none;
   border-right: 1px solid var(--line2);
   background: transparent;
@@ -1505,9 +1511,9 @@ details.fold > .fin {
 }
 
 .wk {
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr);
+  grid-template-columns: calc(28px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
   padding: 9px 10px;
@@ -1518,19 +1524,19 @@ details.fold > .fin {
 
 .wk .tx {
   padding-top: 2px;
-  font-size: 16px;
-  line-height: 24px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
 }
 
 .ack {
   display: flex;
   gap: 12px;
   align-items: center;
-  min-height: 48px;
+  min-height: calc(48px * var(--k));
   padding: 8px 20px;
   border-top: 1px solid var(--line);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
   cursor: pointer;
 }
 
@@ -1549,9 +1555,9 @@ details.fold > .fin {
 }
 
 .okline .big {
-  font-size: 19px;
+  font-size: calc(19px * var(--k));
   font-weight: 600;
-  line-height: 26px;
+  line-height: calc(26px * var(--k));
 }
 
 /* Панель ввода */
@@ -1563,12 +1569,12 @@ details.fold > .fin {
 .inp {
   flex: 1;
   min-width: 0;
-  height: 48px;
+  height: calc(48px * var(--k));
   border: 1px solid var(--line2);
   border-radius: 4px;
   background: var(--panel);
   padding: 0 16px;
-  font-size: 16px;
+  font-size: calc(16px * var(--k));
   outline: none;
 }
 
@@ -1644,15 +1650,15 @@ details.fold > .fin {
   border: 1px solid var(--line);
   border-left: 3px solid var(--hl-line);
   background: var(--panel);
-  font-size: 15px;
-  line-height: 22px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
   overflow-wrap: anywhere;
 }
 
 .quote .ql {
   display: block;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
   color: var(--tx3);
   margin-bottom: 4px;
 }
@@ -1694,7 +1700,7 @@ details.fold > .fin {
   }
 
   .logo {
-    font-size: 16px;
+    font-size: calc(16px * var(--k));
   }
 
   .hdr {
@@ -1704,13 +1710,13 @@ details.fold > .fin {
   }
 
   .hdr .h1 {
-    font-size: 18px;
-    line-height: 24px;
+    font-size: calc(18px * var(--k));
+    line-height: calc(24px * var(--k));
   }
 
   .hdr .sub {
-    font-size: 13px;
-    line-height: 18px;
+    font-size: calc(13px * var(--k));
+    line-height: calc(18px * var(--k));
   }
 
   .body {
@@ -1732,7 +1738,7 @@ details.fold > .fin {
   .search {
     width: auto;
     margin: 0;
-    height: 48px;
+    height: calc(48px * var(--k));
   }
 
   .tiles {
@@ -1741,7 +1747,7 @@ details.fold > .fin {
   }
 
   .tile {
-    height: 80px;
+    height: calc(80px * var(--k));
     padding: 0 10px;
     gap: 2px;
     flex-direction: column;
@@ -1750,15 +1756,15 @@ details.fold > .fin {
   }
 
   .tile .cnt {
-    font-size: 24px;
-    line-height: 28px;
+    font-size: calc(24px * var(--k));
+    line-height: calc(28px * var(--k));
     min-width: 0;
   }
 
   .tile .lbl {
     display: block;
-    font-size: 13px;
-    line-height: 16px;
+    font-size: calc(13px * var(--k));
+    line-height: calc(16px * var(--k));
   }
 
   .tile .hint,
@@ -1772,7 +1778,7 @@ details.fold > .fin {
 
   .frow {
     height: auto;
-    min-height: 64px;
+    min-height: calc(64px * var(--k));
     grid-template-columns: minmax(0, 1fr) auto;
     row-gap: 2px;
     padding: 10px 12px 10px 16px;
@@ -1784,7 +1790,7 @@ details.fold > .fin {
 
   .frow .m2 {
     display: block;
-    font: 13px/18px var(--mono);
+    font: calc(13px * var(--k))/calc(18px * var(--k)) var(--mono);
     color: var(--tx3);
   }
 
@@ -1854,7 +1860,7 @@ details.fold > .fin {
 
   .q {
     max-width: 88%;
-    font-size: 16px;
+    font-size: calc(16px * var(--k));
   }
 
   .cpad {
@@ -1862,12 +1868,12 @@ details.fold > .fin {
   }
 
   .vtitle {
-    font-size: 22px;
-    line-height: 28px;
+    font-size: calc(22px * var(--k));
+    line-height: calc(28px * var(--k));
   }
 
   .vtext {
-    font-size: 16px;
+    font-size: calc(16px * var(--k));
   }
 
   details.fold > summary {
@@ -1883,12 +1889,12 @@ details.fold > .fin {
   }
 
   .kv {
-    grid-template-columns: 124px minmax(0, 1fr);
+    grid-template-columns: calc(124px * var(--k)) minmax(0, 1fr);
   }
 
   .kv > div {
     padding: 8px 14px;
-    font-size: 15px;
+    font-size: calc(15px * var(--k));
   }
 
   .ab {
@@ -1906,11 +1912,11 @@ details.fold > .fin {
   }
 
   .src {
-    height: 40px;
+    height: calc(40px * var(--k));
   }
 
   .btn.sm {
-    height: 40px;
+    height: calc(40px * var(--k));
   }
 
   .notfound {
@@ -1947,12 +1953,12 @@ details.fold > .fin {
   .frm > .k {
     padding: 6px 14px;
     border-bottom: none;
-    line-height: 18px;
-    font-size: 13px;
+    line-height: calc(18px * var(--k));
+    font-size: calc(13px * var(--k));
   }
 
   .seg {
-    height: 48px;
+    height: calc(48px * var(--k));
     width: 100%;
   }
 
@@ -1989,4 +1995,559 @@ details.fold > .fin {
 /* Первый блок карточки не дублирует верхнюю рамку */
 .card > .cdiv:first-child {
   border-top: none;
+}
+
+/* ====================================================================
+   Дополнения после кик-оффа 26.11: голос, настройки, шаги с отметкой,
+   согласие на обработку данных, журнал обращений.
+   ==================================================================== */
+
+.hb.on {
+  border-color: var(--acc);
+  color: var(--acc);
+  background: var(--acc-bg);
+}
+
+/* ---------- Настройки ---------- */
+
+.sp-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.sp {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  width: calc(400px * var(--k));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 80px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  overflow: hidden;
+}
+
+.sp-h {
+  height: 56px;
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 8px 0 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(17px * var(--k));
+  font-weight: 600;
+}
+
+.sp-h .hb {
+  margin-left: auto;
+}
+
+.sp-b {
+  overflow: auto;
+  padding: 16px 20px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.sp-l {
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tx2);
+  margin-bottom: 8px;
+}
+
+.sp-s {
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx3);
+  margin-top: 6px;
+}
+
+.seg.full {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: 1px;
+  width: 100%;
+  height: auto;
+  background: var(--line2);
+}
+
+.seg.full[style] {
+  grid-auto-flow: row;
+}
+
+.seg.full button {
+  min-height: calc(48px * var(--k));
+  justify-content: center;
+  padding: 0 8px;
+  border: none;
+  background: var(--panel);
+  font-size: calc(16px * var(--k));
+}
+
+.seg.full button.on {
+  background: var(--tx);
+  color: var(--panel);
+}
+
+.sp-link {
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+}
+
+.sp-link span {
+  flex: 1;
+}
+
+.sp-link:hover {
+  border-color: var(--tx3);
+}
+
+/* ---------- Согласие на обработку данных ---------- */
+
+.consent-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: var(--dim);
+}
+
+.consent {
+  width: min(calc(480px * var(--k)), 100%);
+  background: var(--panel);
+  border: 1px solid var(--line2);
+}
+
+.consent-h {
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(18px * var(--k));
+  font-weight: 600;
+}
+
+.consent-h .ti {
+  color: var(--acc);
+}
+
+.consent-b {
+  padding: 16px 20px 8px;
+}
+
+.consent-b p {
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  color: var(--tx2);
+}
+
+.consent .ack {
+  padding: 8px 0;
+  border-top: none;
+  margin-top: 8px;
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+}
+
+.consent-f {
+  display: flex;
+  padding: 8px 20px 20px;
+}
+
+/* ---------- Голосовой ввод ---------- */
+
+.composer {
+  position: relative;
+}
+
+.verr {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--panel);
+  border-top: 1px solid var(--line2);
+  color: var(--crit);
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+}
+
+.btn.mic {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.btn.mic:disabled {
+  border-color: var(--line);
+  color: var(--tx3);
+}
+
+.btn.mic.live {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: #ffffff;
+  animation: micpulse 1.4s ease-out infinite;
+}
+
+@keyframes micpulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.5);
+  }
+  70% {
+    box-shadow: 0 0 0 12px rgba(198, 40, 40, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(198, 40, 40, 0);
+  }
+}
+
+.inp.live {
+  border-color: var(--crit);
+}
+
+/* ---------- Шаги с отметкой «сделано» ---------- */
+
+.item {
+  grid-template-columns: calc(36px * var(--k)) minmax(0, 1fr);
+}
+
+.item .tx {
+  padding-top: calc(6px * var(--k));
+}
+
+.chk {
+  width: calc(36px * var(--k));
+  height: calc(36px * var(--k));
+  flex: none;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--line2);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--tx);
+  font: 600 calc(15px * var(--k)) / 1 var(--mono);
+}
+
+.chk:hover {
+  border-color: var(--acc);
+}
+
+.item.done .chk {
+  background: var(--acc);
+  border-color: var(--acc);
+  color: var(--acc-tx);
+}
+
+.item.done .tx {
+  color: var(--tx3);
+}
+
+.prog {
+  font: 500 calc(13px * var(--k)) / calc(18px * var(--k)) var(--mono);
+  color: var(--tx3);
+  white-space: nowrap;
+}
+
+.prog.all {
+  color: var(--tx);
+  font-weight: 600;
+}
+
+.nextstep {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
+  padding: 10px 12px 10px 14px;
+  border: 1px solid var(--acc);
+  background: var(--acc-bg);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+}
+
+.nextstep > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.nextstep > .ti {
+  color: var(--acc);
+}
+
+/* ---------- Вердикт: действие крупно ---------- */
+
+.pact {
+  align-items: center;
+  gap: 12px;
+}
+
+.pact .ti {
+  margin-top: 0;
+}
+
+.pact .pl {
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+
+.pact .pa {
+  font-size: calc(20px * var(--k));
+  line-height: calc(28px * var(--k));
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Журнал обращений ---------- */
+
+.lbar .lrefresh {
+  margin-left: auto;
+}
+
+.lhead,
+.lrow {
+  display: grid;
+  grid-template-columns:
+    calc(112px * var(--k)) calc(180px * var(--k)) minmax(140px, 1fr) minmax(200px, 1.5fr)
+    calc(220px * var(--k)) calc(230px * var(--k));
+  column-gap: 16px;
+  padding: 0 16px 0 20px;
+}
+
+.lhead {
+  height: calc(36px * var(--k));
+  align-items: center;
+  font-size: calc(12px * var(--k));
+  font-weight: 500;
+  color: var(--tx3);
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+}
+
+.lrow {
+  min-height: calc(64px * var(--k));
+  align-items: start;
+  padding-top: 10px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+}
+
+.lrow:last-child {
+  border-bottom: none;
+}
+
+.lrow > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.lrow .lt {
+  font-size: calc(13px * var(--k));
+  color: var(--tx3);
+}
+
+.lrow .l2 {
+  display: block;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+.lrow .lq,
+.lrow .la .l2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.llink {
+  color: var(--acc);
+  font-weight: 600;
+}
+
+.llink:hover {
+  text-decoration: underline;
+}
+
+.lkind {
+  display: block;
+  font-weight: 600;
+}
+
+.ls {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font: calc(13px * var(--k)) / calc(20px * var(--k)) var(--mono);
+  color: var(--tx2);
+}
+
+.ls > span {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ls .ti {
+  color: var(--tx3);
+}
+
+.lu {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx2);
+}
+
+/* ---------- Телефон ---------- */
+
+@media (max-width: 900px) {
+  .sp-dim {
+    background: var(--dim);
+  }
+
+  .sp {
+    top: auto;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: auto;
+    max-width: none;
+    max-height: 88dvh;
+    border: none;
+    border-radius: 12px 12px 0 0;
+  }
+
+  .sp-h {
+    padding: 0 12px 0 16px;
+  }
+
+  .sp-b {
+    padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+  }
+
+  /* Голос на телефоне: крупная залитая кнопка, поле и отправка той же высоты */
+  .composer .cgroup .btn.ic,
+  .composer .inp {
+    height: calc(56px * var(--k));
+  }
+
+  .composer .cgroup .btn.ic {
+    width: calc(56px * var(--k));
+  }
+
+  .composer .cgroup .btn.mic {
+    width: calc(64px * var(--k));
+    background: var(--acc);
+    color: var(--acc-tx);
+  }
+
+  .composer .cgroup .btn.mic:disabled {
+    background: var(--panel2);
+    color: var(--tx3);
+  }
+
+  .composer .cgroup .btn.mic.live {
+    background: var(--crit);
+    color: #ffffff;
+  }
+
+  .composer .inp {
+    padding: 0 12px;
+  }
+
+  details.fold > summary .usub.only-m {
+    display: block !important;
+    font: calc(12px * var(--k)) / calc(16px * var(--k)) var(--mono);
+    color: var(--tx3);
+  }
+
+  .verr {
+    padding: 8px 12px;
+  }
+
+  .item {
+    grid-template-columns: calc(44px * var(--k)) minmax(0, 1fr);
+  }
+
+  .chk {
+    width: calc(44px * var(--k));
+    height: calc(44px * var(--k));
+    font-size: calc(16px * var(--k));
+  }
+
+  .item .tx {
+    padding-top: calc(10px * var(--k));
+  }
+
+  .nextstep {
+    flex-wrap: wrap;
+  }
+
+  .nextstep .btn {
+    width: 100%;
+  }
+
+  .pact .pa {
+    font-size: calc(18px * var(--k));
+    line-height: calc(24px * var(--k));
+  }
+
+  .lbar {
+    height: 64px;
+    flex-direction: row;
+    align-items: center;
+    padding: 0 12px;
+  }
+
+  .lhead {
+    display: none;
+  }
+
+  .lrow {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 6px;
+    padding: 12px;
+  }
 }

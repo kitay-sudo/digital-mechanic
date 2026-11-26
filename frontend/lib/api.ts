@@ -1,4 +1,4 @@
-import type { Config, Draft, Fleet, ManualPage, Message, StreamEvent, VehicleDetail } from './types';
+import type { AuditItem, Config, Draft, Fleet, ManualPage, Message, Profile, StreamEvent, VehicleDetail } from './types';
 
 export class ApiError extends Error {
   status: number;
@@ -46,6 +46,7 @@ export const api = {
     request<Draft>(`/api/drafts/${encodeURIComponent(id)}`, { method: 'PATCH', ...json(patch) }),
   manualPage: (manualId: string, page: number) =>
     request<ManualPage>(`/api/manuals/${encodeURIComponent(manualId)}/pages/${page}`),
+  audit: (limit = 100) => request<{ items: AuditItem[] }>(`/api/audit?limit=${limit}`),
 };
 
 /** Читает поток application/x-ndjson и отдаёт события по одному. */
@@ -85,12 +86,12 @@ async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => 
 }
 
 export const chatStream = (
-  body: { vehicle_id: string; session_id: string | null; text: string },
+  body: { vehicle_id: string; session_id: string | null; text: string; profile: Profile },
   onEvent: (e: StreamEvent) => void,
 ) => stream('/api/chat', body, onEvent);
 
 export const confirmDraftStream = (
   draftId: string,
-  body: { warning_ack: boolean },
+  body: { warning_ack: boolean; profile: Profile },
   onEvent: (e: StreamEvent) => void,
 ) => stream(`/api/drafts/${encodeURIComponent(draftId)}/confirm`, body, onEvent);

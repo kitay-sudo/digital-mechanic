@@ -14,6 +14,7 @@ import '@fontsource/ibm-plex-mono/latin-500.css';
 import '@fontsource/ibm-plex-mono/latin-600.css';
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import './globals.css';
+import { Consent } from '@/components/Consent';
 import { Header } from '@/components/Header';
 
 export const metadata: Metadata = {
@@ -30,8 +31,8 @@ export const viewport: Viewport = {
   ],
 };
 
-// Тема ставится до отрисовки, чтобы не было вспышки: сохранённая или системная.
-const themeScript = `(function(){try{var t=localStorage.getItem('dm-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='light'}})()`;
+// Тема и размер текста ставятся до отрисовки, чтобы не было вспышки.
+const themeScript = `(function(){try{var t=localStorage.getItem('dm-theme');if(t!=='light'&&t!=='dark'){t=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'}document.documentElement.dataset.theme=t}catch(e){document.documentElement.dataset.theme='light'}try{var s=JSON.parse(localStorage.getItem('dm-settings')||'{}');document.documentElement.dataset.size=s.size==='large'?'large':'normal'}catch(e){}})()`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -44,6 +45,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <Header />
           <main className="page">{children}</main>
         </div>
+        <Consent />
       </body>
     </html>
   );

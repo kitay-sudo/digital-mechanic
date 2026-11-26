@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Icon } from './Icon';
 
 /* Распознавание речи браузера. Типов в lib.dom нет, описываем нужное сами. */
@@ -13,9 +13,10 @@ interface Recognition {
   continuous: boolean;
   onresult: ((e: SpeechResultEvent) => void) | null;
   onend: (() => void) | null;
-  onerror: (() => void) | null;
+  onerror: ((e: { error?: string }) => void) | null;
   start: () => void;
   stop: () => void;
+  abort?: () => void;
 }
 type RecognitionCtor = new () => Recognition;
 
@@ -25,26 +26,73 @@ function getRecognition(): RecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+function voiceErrorText(code: string | undefined): string | null {
+  switch (code) {
+    case 'aborted':
+      return null;
+    case 'not-allowed':
+    case 'service-not-allowed':
+      return 'Нет доступа к микрофону. Разрешите его в настройках браузера.';
+    case 'no-speech':
+      return 'Не расслышал. Нажмите микрофон и повторите.';
+    case 'audio-capture':
+      return 'Микрофон не найден.';
+    case 'network':
+      return 'Распознавание речи недоступно без сети.';
+    case 'language-not-supported':
+      return 'Браузер не распознаёт речь на выбранном языке.';
+    default:
+      return 'Не получилось распознать речь. Повторите или введите текст.';
+  }
+}
+
+/**
+ * Панель ввода. Голос — главный способ: механик говорит, фраза сама уходит в чат.
+ * Любая фраза идёт агенту как обычное сообщение, инструмент выбирает он.
+ */
 export function Composer({
   busy,
   canDiagnose,
+  speechLang,
   onDiagnose,
   onSend,
 }: {
   busy: boolean;
   canDiagnose: boolean;
+  speechLang: string;
   onDiagnose: () => void;
   onSend: (text: string) => void;
 }) {
   const [text, setText] = useState('');
   const [voice, setVoice] = useState(false);
   const [listening, setListening] = useState(false);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
   const recRef = useRef<Recognition | null>(null);
+  const heardRef = useRef('');
+  const busyRef = useRef(busy);
+  const sendRef = useRef(onSend);
+  busyRef.current = busy;
+  sendRef.current = onSend;
 
   useEffect(() => {
     setVoice(Boolean(getRecognition()));
-    return () => recRef.current?.stop();
+    return () => {
+      const rec = recRef.current;
+      if (rec) {
+        rec.onend = null;
+        rec.onerror = null;
+        rec.onresult = null;
+        rec.stop();
+      }
+    };
   }, []);
+
+  // Сообщение об ошибке голоса само исчезает
+  useEffect(() => {
+    if (!voiceError) return;
+    const timer = setTimeout(() => setVoiceError(null), 6000);
+    return () => clearTimeout(timer);
+  }, [voiceError]);
 
   const submit = () => {
     if (busy || !text.trim()) return;
@@ -52,32 +100,60 @@ export function Composer({
     setText('');
   };
 
-  const toggleVoice = () => {
-    if (listening) {
-      recRef.current?.stop();
+  const toggleVoice = useCallback(() => {
+    if (recRef.current) {
+      recRef.current.stop(); // фраза закончена: сработает onend и отправит распознанное
       return;
     }
     const Ctor = getRecognition();
     if (!Ctor) return;
     const rec = new Ctor();
-    rec.lang = 'ru-RU';
+    rec.lang = speechLang;
     rec.interimResults = true;
     rec.continuous = false;
+    heardRef.current = '';
+    setVoiceError(null);
+    setText('');
     rec.onresult = (e) => {
       let out = '';
       for (let i = 0; i < e.results.length; i++) out += e.results[i][0].transcript;
+      heardRef.current = out;
       setText(out);
     };
-    rec.onend = () => setListening(false);
-    rec.onerror = () => setListening(false);
+    rec.onerror = (e) => {
+      const message = voiceErrorText(e?.error);
+      if (message) setVoiceError(message);
+    };
+    rec.onend = () => {
+      recRef.current = null;
+      setListening(false);
+      const heard = heardRef.current.trim();
+      heardRef.current = '';
+      if (!heard) return;
+      if (busyRef.current) return; // агент ещё отвечает: текст остаётся в поле
+      sendRef.current(heard);
+      setText('');
+    };
     recRef.current = rec;
     setListening(true);
-    rec.start();
-  };
+    try {
+      rec.start();
+    } catch {
+      recRef.current = null;
+      setListening(false);
+      setVoiceError('Не получилось включить микрофон. Повторите.');
+    }
+  }, [speechLang]);
 
   return (
-    <div className="ftr composer">
-      <button type="button" className="btn pri" onClick={onDiagnose} disabled={busy || !canDiagnose}>
+    <div className={`ftr composer${voice ? ' has-voice' : ''}`}>
+      {voiceError ? (
+        <div className="verr" role="alert">
+          <Icon name="microphone-off" size="s" />
+          {voiceError}
+        </div>
+      ) : null}
+      <button type="button" className="btn pri diag" onClick={onDiagnose} disabled={busy || !canDiagnose}>
         <Icon name="wave-sine" />
         Получить результат диагностики
       </button>
@@ -91,24 +167,26 @@ export function Composer({
         {voice ? (
           <button
             type="button"
-            className={`btn ic${listening ? ' on' : ''}`}
+            className={`btn ic mic${listening ? ' live' : ''}`}
             onClick={toggleVoice}
-            disabled={busy}
-            aria-label={listening ? 'Остановить запись голоса' : 'Задать вопрос голосом'}
-            title={listening ? 'Слушаю… нажмите, чтобы остановить' : 'Задать вопрос голосом'}
+            disabled={busy && !listening}
+            aria-label={listening ? 'Закончить и отправить' : 'Сказать голосом'}
+            aria-pressed={listening}
+            title={listening ? 'Слушаю… нажмите, чтобы закончить и отправить' : 'Сказать голосом: фраза сама уйдёт агенту'}
           >
-            <Icon name={listening ? 'player-stop' : 'microphone'} />
+            <Icon name={listening ? 'player-stop' : 'microphone'} size="l" />
           </button>
         ) : null}
         <input
-          className="inp"
+          className={`inp${listening ? ' live' : ''}`}
           value={text}
           onChange={(e) => setText(e.target.value)}
-          placeholder={listening ? 'Слушаю…' : 'Вопрос по руководству или команда'}
+          placeholder={listening ? 'Слушаю…' : voice ? 'Ваш вопрос' : 'Вопрос по руководству или команда'}
           aria-label="Вопрос агенту"
           enterKeyHint="send"
+          readOnly={listening}
         />
-        <button type="submit" className="btn ic" disabled={busy || !text.trim()} aria-label="Отправить">
+        <button type="submit" className="btn ic" disabled={busy || listening || !text.trim()} aria-label="Отправить">
           <Icon name="arrow-up" />
         </button>
       </form>

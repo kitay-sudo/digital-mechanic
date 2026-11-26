@@ -9,6 +9,30 @@ export interface Config {
   llm: { provider: string; model: string; mock: boolean };
   thresholds: { confidence_min: number };
   priority_actions: Record<Priority, string>;
+  /** Языки ответов агента и уровни подачи: могут отсутствовать у старого сервера */
+  languages?: { code: string; label: string }[];
+  levels?: { code: string; label: string; hint: string }[];
+}
+
+/** Профиль механика, уходит с каждым сообщением в чат */
+export interface Profile {
+  language: string;
+  level: string;
+}
+
+export interface AuditItem {
+  id: string;
+  created_at: string;
+  vehicle_id: string;
+  vehicle_title: string;
+  session_id: string | null;
+  question: string;
+  kind: MessageKind;
+  answer: string;
+  sources: { manual_id: string; short: string; pdf_page: number }[];
+  tools: string[];
+  ticket_id: string | null;
+  usage: Partial<Usage> | null;
 }
 
 export interface SessionBrief {
