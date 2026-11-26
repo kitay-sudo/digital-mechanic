@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 import time
 
 from .. import conflicts, rules
@@ -86,6 +87,7 @@ async def run_turn(
 
     totals = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cost": 0.0, "cost_rub": 0.0, "llm_calls": 0}
     answer, problems, retried, counter = None, [], False, 0
+    first_problems: list[str] = []
     try:
         for _ in range(settings.max_agent_steps):
             call_started = time.monotonic()
@@ -123,6 +125,7 @@ async def run_turn(
 
             raw = _parse(response.text)
             answer, problems = ctx.verifier().verify_answer(raw)
+            _cap(answer)
             if _unsourced(ctx, answer):
                 problems.append(
                     "Ответ без ссылок: каждый факт из руководства должен стоять в checks или repair со страницей "
@@ -130,6 +133,7 @@ async def run_turn(
                 )
             failed = ctx.assessment and ctx.assessment["outcome"] == "check_failed"
             if problems and not retried and not failed:
+                first_problems = list(problems)
                 # Одна попытка исправиться: модель видит, какие пункты не прошли сверку со страницей.
                 retried = True
                 messages.append({"role": "assistant", "content": response.content})
@@ -159,6 +163,8 @@ async def run_turn(
     answer = answer or dict(EMPTY_ANSWER)
     _apply_conflicts(ctx, answer, text)
     payload = _build_message(ctx, answer, problems, confirmed_draft_id)
+    # Что не прошло сверку: видно в журнале, по этому списку правится инструкция агента.
+    payload["verification"] = {"retried": retried, "first_attempt": first_problems[:8], "final": problems[:8]}
     usage = _usage(totals, started, llm)
     payload["steps"] = ctx.steps
     payload["usage"] = usage
@@ -176,6 +182,15 @@ def _usage(totals: dict, started: float, llm: LLM) -> dict:
         "duration_ms": int((time.monotonic() - started) * 1000),
         "llm_calls": totals["llm_calls"], "model": llm.model, "mock": llm.is_mock,
     }
+
+
+LIMITS = {"observations": 4, "hypotheses": 3, "checks": 6, "repair": 4, "limitations": 3, "conflicts": 3}
+
+
+def _cap(answer: dict) -> None:
+    """Ответ должен помещаться на экран телефона: длинные списки обрезаются до главного."""
+    for key, limit in LIMITS.items():
+        answer[key] = answer[key][:limit]
 
 
 def _unsourced(ctx: TurnContext, answer: dict) -> bool:
@@ -215,7 +230,7 @@ def _apply_conflicts(ctx: TurnContext, answer: dict, question: str) -> None:
         # Механик должен узнать о расхождении из первой же фразы, а не из блока ниже.
         if answer["not_found"] or not answer["summary"]:
             answer["summary"] = CONFLICT_LEAD
-        elif "расхожд" not in answer["summary"].lower() and "противореч" not in answer["summary"].lower():
+        elif not re.search(r"расхо[дж]|противореч|по-разному|разн\w+ (требован|услов|формулиров)", answer["summary"].lower()):
             answer["summary"] = f"{answer['summary'].rstrip()} {CONFLICT_LEAD}"
         answer["not_found"] = False
 

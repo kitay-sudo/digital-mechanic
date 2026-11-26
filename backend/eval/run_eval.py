@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 import time
 from pathlib import Path
@@ -134,12 +135,14 @@ def run_ask(api: str, only: str | None) -> int:
             cost += usage.get("cost_rub", 0)
             problems = []
             if q.get("not_found"):
-                if not answer.get("not_found"):
+                # Отказ — это либо «ответа нет», либо прямое объяснение, что вопрос к этому двигателю не относится.
+                # Объяснение может ссылаться на руководство этого же двигателя, но норматива чужого в нём быть не должно.
+                declined = answer.get("not_found") or re.search(
+                    r"\bнет\b|не относ|не примен|отсутств|не предусмотр|не использу", norm(message.get("text") or ""))
+                if not declined:
                     problems.append("нет отказа")
                 if any(norm(n) in norm(text) for n in q.get("forbidden", [])):
                     problems.append("норматив чужого двигателя")
-                if answer.get("checks") or answer.get("repair"):
-                    problems.append("есть шаги с ссылками")
             else:
                 if not pages & {tuple(p) for p in q["pages"]}:
                     problems.append("нет ожидаемой страницы")

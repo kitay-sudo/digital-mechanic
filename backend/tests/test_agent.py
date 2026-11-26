@@ -482,3 +482,20 @@ async def test_empty_knowledge_base_is_reported_as_setup_problem(store, services
     assert message["assessment"]["ticket_allowed"] is False
     message, _ = await turn(store, empty, "T792HO98", "S-0043", "Какое давление масла допускается?")
     assert message["kind"] == "notice" and "не загружены в базу знаний" in message["text"]
+
+
+# --- числа, которые нормативом не являются ---
+def test_page_and_figure_references_are_not_norms(index):
+    from app.agent.verify import stray_numbers
+
+    text = ("Затянуть в порядке, показанном на рисунке 142 (стр. 181), болты М16(х2)-6h×145-10.9 по п. 6.4.1, "
+            "см. таблицу 22 и страницы 319 и 302, ОСТ 37.001.031-72, проверка от 28.10 14:20.")
+    assert stray_numbers(text, set(), strict=True) == []
+    # Норматив при этом по-прежнему ловится, в том числе записанный через точку.
+    assert stray_numbers("Момент затяжки 135 Н·м, зазор 0.25 мм", set(), strict=True) == ["135", "0.25"]
+
+
+def test_number_inside_designation_on_page_is_accepted(index):
+    from app.agent.verify import page_numbers
+
+    assert {"145", "17", "26"} <= page_numbers("Отвернуть 26 болтов M15x2.0-6gx145-10.9 ключом S=17")

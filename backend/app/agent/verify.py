@@ -28,8 +28,13 @@ def _norm(raw: str) -> str:
     return value or "0"
 
 
+_ANY_NUM = re.compile(r"\d+(?:[.,]\d+)?")
+
+
 def page_numbers(text: str) -> set[str]:
-    return {_norm(m.group(1)) for m in _NUM.finditer(clean_page_text(text))}
+    """Все числа страницы, включая стоящие внутри обозначений («6hx145»): со страницей сверяем щедро,
+    чтобы не отбрасывать верный пункт из-за формы записи. Строго проверяется текст ответа."""
+    return {_norm(m.group(0)) for m in _ANY_NUM.finditer(clean_page_text(text))}
 
 
 def stray_numbers(text: str, allowed: set[str], strict: bool) -> list[str]:

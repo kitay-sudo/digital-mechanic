@@ -61,7 +61,8 @@ CONFLICT_SCHEMA = {
 ANSWER_SCHEMA = {
     "type": "object",
     "properties": {
-        "summary": {"type": "string", "description": "Короткий вывод для механика, одна-три фразы, без нормативов"},
+        "summary": {"type": "string", "description": "Короткий вывод для механика, одна-три фразы. Число допустимо, "
+                                                      "только если оно же стоит в пункте checks или repair с цитатой"},
         "observations": {"type": "array", "items": {"type": "string"},
                          "description": "Наблюдения: что показала проверка и история машины"},
         "hypotheses": {"type": "array", "items": {"type": "string"},
@@ -350,7 +351,18 @@ async def search_manuals(ctx: TurnContext, args: dict, step_id: str) -> tuple[st
         await ctx.step(step_id, "search_manuals", title, "done", "ничего не найдено")
         note = (f"В руководствах двигателя {engine} по этому запросу ничего не найдено. "
                 "Попробуй другие слова. Если и так пусто, честно скажи, что данных нет.")
-    return _dump({"results": results, "note": note}), False
+    payload = {"results": results, "note": note}
+    known = conflicts.from_registry(ctx.index, ctx.allowed_manuals, query, [])
+    if known:
+        # П18: по этой теме расхождение документов подтверждено. Модель должна знать о нём до ответа.
+        payload["known_conflicts"] = [
+            {"topic": block["topic"],
+             "pages": [f"{s['ref']['manual_id']} стр. {s['ref']['pdf_page']}" for s in block["statements"]]}
+            for block in known
+        ]
+        payload["note"] += (" По теме из known_conflicts документы расходятся, это подтверждено: не пиши, что источники "
+                            "согласны, и не выбирай одну формулировку. Блок расхождения система покажет сама.")
+    return _dump(payload), False
 
 
 async def read_manual_page(ctx: TurnContext, args: dict, step_id: str) -> tuple[str, bool]:
