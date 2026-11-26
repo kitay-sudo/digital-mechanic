@@ -273,10 +273,14 @@ async def get_vehicle_history(ctx: TurnContext, args: dict, step_id: str) -> tup
                                "anomaly_score", "confidence", "signal_quality")}
         for s in ctx.vehicle["sessions"]
     ]
-    trend = rules.trend(ctx.vehicle["sessions"])
+    # Тенденция считается до выбранной проверки включительно: более поздние проверки на неё не влияют.
+    upto = fleet.previous_sessions(ctx.vehicle, ctx.session_id)
+    current = fleet.get_session(ctx.vehicle, ctx.session_id)
+    trend = rules.trend(upto + ([current] if current else []))
     await ctx.step(step_id, "get_vehicle_history", title, "done",
                    f"проверок: {len(sessions)}, заявок: {len(tickets)} · {trend['text']}")
     return _dump({
+        "selected_session": ctx.session_id,
         "sessions": sessions,
         "trend": trend["text"],
         "tickets": [
