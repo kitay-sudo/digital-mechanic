@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Session } from '@/lib/types';
 import { Icon } from './Icon';
@@ -9,6 +10,17 @@ import { ScoreChart } from './ScoreChart';
 const SWIPE_CLOSE = 72;
 /** Запас на случай, если событие конца анимации не пришло */
 const CLOSE_TIMEOUT = 400;
+
+/** Что показывает график и куда из него можно уйти. Общее для панели на телефоне и блока под строкой на компьютере. */
+interface ChartProps {
+  sessions: Session[];
+  /** Проверка, строку которой нажали: она выделена на графике */
+  selected: string;
+  trendIcon: string;
+  trendText: string;
+  /** Адрес чата с этой проверкой */
+  chatHref: string;
+}
 
 /** Ширина блока под график: график рисуется в настоящих пикселях, подписи не мельчают и не раздуваются. */
 function useWidth(ref: React.RefObject<HTMLDivElement | null>, active: boolean): number {
@@ -25,10 +37,74 @@ function useWidth(ref: React.RefObject<HTMLDivElement | null>, active: boolean):
   return width;
 }
 
+function Legend() {
+  return (
+    <div className="cs-leg">
+      <span>
+        <i className="cs-dot cs-dot-a" />
+        отклонение
+      </span>
+      <span>
+        <i className="cs-dot" />
+        норма
+      </span>
+      <span>
+        <Icon name="x" size="s" />
+        сбой записи
+      </span>
+      <span>
+        <i className="cs-bar" />
+        эта проверка
+      </span>
+      <span>
+        <i className="cs-dash" />
+        порог 0,5
+      </span>
+    </div>
+  );
+}
+
+function Chart({ sessions, selected, active, max }: { sessions: Session[]; selected: string; active: boolean; max: number }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const width = useWidth(ref, active);
+  const w = Math.max(280, Math.min(width || 340, max));
+  const h = Math.round(Math.max(150, Math.min(w * 0.36, 240)));
+  return (
+    // Ширину меряем у блока без отступов: график рисуется точно в свой размер
+    <div ref={ref}>{active && width ? <ScoreChart sessions={sessions} selected={selected} width={w} height={h} /> : null}</div>
+  );
+}
+
 /**
- * График оценки отклонения в выдвижной панели поверх размытого экрана.
- * На компьютере панель выезжает сверху, на телефоне снизу. Закрывается касанием пустого места,
- * клавишей Esc, кнопкой или движением вниз.
+ * Компьютер: график выпадает под строкой проверки, без затемнения и без модального окна.
+ * closing включается на время сворачивания, чтобы блок ушёл плавно.
+ */
+export function ChartDrop({ sessions, selected, trendIcon, trendText, chatHref, closing }: ChartProps & { closing: boolean }) {
+  return (
+    <div className={`cdrop${closing ? ' closing' : ''}`} role="region" aria-label={`График оценки отклонения, проверка ${selected}`}>
+      <div className="cdrop-clip">
+        <div className="cdrop-in">
+          <Chart sessions={sessions} selected={selected} active max={760} />
+          <div className="cd-side">
+            <div className="cs-cap">
+              <Icon name={trendIcon} size="s" />
+              <span>{trendText}</span>
+            </div>
+            <Legend />
+            <Link href={chatHref} className="btn pri" tabIndex={closing ? -1 : undefined}>
+              <Icon name="message-2" />
+              Разобрать {selected} в чате
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Телефон и планшет: график в панели, которая выезжает снизу поверх размытого экрана.
+ * Закрывается касанием пустого места, кнопкой, клавишей Esc или движением вниз.
  */
 export function ChartSheet({
   open,
@@ -37,18 +113,10 @@ export function ChartSheet({
   selected,
   trendIcon,
   trendText,
-}: {
-  open: boolean;
-  onClose: () => void;
-  sessions: Session[];
-  selected: string | null;
-  trendIcon: string;
-  trendText: string;
-}) {
+  chatHref,
+}: ChartProps & { open: boolean; onClose: () => void }) {
   const dialogRef = useRef<HTMLDialogElement>(null);
-  const chartRef = useRef<HTMLDivElement>(null);
   const drag = useRef<{ id: number; y: number; dy: number } | null>(null);
-  const width = useWidth(chartRef, open);
 
   /** Плавное закрытие: сначала уезжает панель, потом диалог закрывается на самом деле. */
   const requestClose = useCallback(() => {
@@ -127,9 +195,6 @@ export function ChartSheet({
     else dialog.style.translate = '';
   };
 
-  const chartWidth = Math.max(280, Math.min(width || 340, 760));
-  const chartHeight = Math.round(Math.max(150, Math.min(chartWidth * 0.36, 260)));
-
   return (
     <dialog
       ref={dialogRef}
@@ -144,38 +209,24 @@ export function ChartSheet({
       <div className="cs-grab" aria-hidden="true" />
       <div className="cs-h">
         <b id="csheet-title">Оценка отклонения</b>
-        <span className="cs-note">пунктир: порог 0,5</span>
+        <span className="cs-note m">{selected}</span>
         <button type="button" className="hb" onClick={requestClose} aria-label="Закрыть график" title="Закрыть">
           <Icon name="x" />
         </button>
       </div>
       <div className="cs-chart">
-        {/* Ширину меряем у блока без отступов: график рисуется точно в свой размер */}
-        <div ref={chartRef}>
-          {open && width ? <ScoreChart sessions={sessions} selected={selected} width={chartWidth} height={chartHeight} /> : null}
-        </div>
+        <Chart sessions={sessions} selected={selected} active={open} max={760} />
       </div>
       <div className="cs-cap">
         <Icon name={trendIcon} size="s" />
         <span>{trendText}</span>
       </div>
-      <div className="cs-leg">
-        <span>
-          <i className="cs-dot cs-dot-a" />
-          отклонение
-        </span>
-        <span>
-          <i className="cs-dot" />
-          норма
-        </span>
-        <span>
-          <Icon name="x" size="s" />
-          сбой записи
-        </span>
-        <span>
-          <i className="cs-bar" />
-          в чате
-        </span>
+      <Legend />
+      <div className="cs-foot">
+        <Link href={chatHref} className="btn pri">
+          <Icon name="message-2" />
+          Разобрать {selected} в чате
+        </Link>
       </div>
     </dialog>
   );

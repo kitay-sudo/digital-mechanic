@@ -3034,25 +3034,17 @@ details.fold > .fin {
 /* ---------- Экран проверок: строка тенденции и график в выдвижной панели ---------- */
 
 .trendbar {
-  width: 100%;
-  min-height: calc(48px * var(--k));
+  min-height: calc(44px * var(--k));
   display: flex;
   align-items: center;
   gap: 12px;
   margin-bottom: 12px;
-  padding: 8px 12px 8px 20px;
+  padding: 8px var(--sx);
   background: var(--panel);
   border: 1px solid var(--line);
-  color: var(--tx2);
   font-size: calc(15px * var(--k));
   line-height: calc(22px * var(--k));
-  text-align: left;
-  cursor: pointer;
-}
-
-.trendbar:hover,
-.trendbar:focus-visible {
-  border-color: var(--acc);
+  color: var(--tx);
 }
 
 .trendbar > .ti {
@@ -3063,37 +3055,144 @@ details.fold > .fin {
 .trendbar .tb-t {
   flex: 1;
   min-width: 0;
-  color: var(--tx);
 }
 
-.trendbar .tb-a {
-  flex: none;
-  height: calc(32px * var(--k));
+/* Строка проверки нажимается целиком: показывает график оценки */
+.crow {
+  cursor: pointer;
+}
+
+.crow:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+
+.crow.open {
+  background: var(--panel2);
+}
+
+/* Кнопки строки: график и переход в чат */
+.frow > .acts {
   display: flex;
-  align-items: center;
+  justify-content: flex-end;
   gap: 8px;
-  padding: 0 12px;
-  border: 1px solid var(--line2);
-  border-radius: 4px;
-  color: var(--acc);
-  font-weight: 500;
-  white-space: nowrap;
+  overflow: visible;
 }
 
-/* Панель: на компьютере выезжает сверху по центру, на телефоне снизу на всю ширину */
+@media (min-width: 901px) {
+  /* Восьмая колонка под кнопки. Гибкие по-прежнему только номер проверки и результат */
+  .ctable .fhead,
+  .ctable .frow {
+    grid-template-columns:
+      minmax(calc(144px * var(--k)), 1fr) calc(108px * var(--k)) minmax(calc(132px * var(--k)), 3fr)
+      calc(56px * var(--k)) calc(88px * var(--k)) calc(92px * var(--k)) calc(84px * var(--k)) calc(204px * var(--k));
+  }
+}
+
+/* Окно поуже: у кнопок остаются значки, слова не помещаются */
+@media (min-width: 901px) and (max-width: 1279px) {
+  .ctable .fhead,
+  .ctable .frow {
+    grid-template-columns:
+      minmax(calc(144px * var(--k)), 1fr) calc(108px * var(--k)) minmax(calc(132px * var(--k)), 3fr)
+      calc(56px * var(--k)) calc(88px * var(--k)) calc(92px * var(--k)) calc(84px * var(--k)) calc(84px * var(--k));
+  }
+
+  .frow > .acts .bt {
+    display: none;
+  }
+
+  .frow > .acts .btn.sm {
+    width: calc(36px * var(--k));
+    padding: 0;
+  }
+}
+
+@media (min-width: 901px) and (max-width: 1100px) {
+  .ctable .fhead,
+  .ctable .frow {
+    grid-template-columns:
+      minmax(calc(144px * var(--k)), 1fr) calc(108px * var(--k)) minmax(calc(132px * var(--k)), 3fr)
+      calc(56px * var(--k)) calc(92px * var(--k)) calc(84px * var(--k)) calc(84px * var(--k));
+  }
+}
+
+/* Компьютер: график выпадает под строкой проверки. Высота раскрывается плавно, окно не модальное */
+.cdrop {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  background: var(--bg);
+  border-bottom: 1px solid var(--line);
+  box-shadow: inset 4px 0 0 var(--acc);
+  transition-property: grid-template-rows, opacity;
+  transition-duration: 0.26s;
+  transition-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@starting-style {
+  .cdrop {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+}
+
+.cdrop.closing {
+  grid-template-rows: 0fr;
+  opacity: 0;
+}
+
+.cdrop-clip {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.cdrop-in {
+  display: grid;
+  grid-template-columns: minmax(0, 760px) minmax(280px, 1fr);
+  align-items: center;
+  gap: 32px;
+  padding: var(--sy) var(--sx);
+}
+
+.cdrop-in svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.cd-side {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cd-side .cs-cap,
+.cd-side .cs-leg {
+  margin: 0;
+  padding: 0;
+  border-top: none;
+}
+
+/* Телефон и планшет: панель выезжает снизу поверх размытого экрана */
 .csheet {
   position: fixed;
-  inset: 88px 0 auto 0;
-  width: min(760px, calc(100vw - 48px));
-  max-height: calc(100dvh - 120px);
-  margin: 0 auto;
+  inset: auto 0 0 0;
+  width: 100%;
+  max-width: none;
+  max-height: 88dvh;
+  margin: 0;
   padding: 0;
   overflow: auto;
   overscroll-behavior: contain;
   background: var(--panel);
   color: var(--tx);
   border: 1px solid var(--line2);
-  box-shadow: 0 24px 64px rgb(0 0 0 / 0.28);
+  border-width: 1px 0 0;
+  border-radius: 12px 12px 0 0;
+  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
   touch-action: none;
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
@@ -3137,7 +3236,7 @@ details.fold > .fin {
 
 @media (prefers-reduced-motion: no-preference) {
   .csheet {
-    transform: translateY(-24px);
+    transform: translateY(100%);
   }
 
   .csheet[open]:where(:not([data-closing])) {
@@ -3146,28 +3245,33 @@ details.fold > .fin {
 
   @starting-style {
     .csheet[open]:where(:not([data-closing])) {
-      transform: translateY(-24px);
+      transform: translateY(100%);
     }
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .csheet,
-  .csheet::backdrop {
+  .csheet::backdrop,
+  .cdrop {
     transition-duration: 0.1s;
   }
 }
 
 .cs-grab {
-  display: none;
+  width: 40px;
+  height: 4px;
+  margin: 8px auto 0;
+  border-radius: 2px;
+  background: var(--line2);
 }
 
 .cs-h {
-  height: calc(52px * var(--k));
+  height: calc(48px * var(--k));
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 0 8px 0 20px;
+  padding: 0 6px 0 var(--sx);
   border-bottom: 1px solid var(--line);
 }
 
@@ -3178,13 +3282,13 @@ details.fold > .fin {
 
 .cs-note {
   margin-right: auto;
-  font-size: calc(13px * var(--k));
-  color: var(--tx3);
+  font-size: calc(14px * var(--k));
+  color: var(--tx2);
   white-space: nowrap;
 }
 
 .cs-chart {
-  padding: 16px 20px 4px;
+  padding: 12px var(--sx) 4px;
 }
 
 .cs-chart svg {
@@ -3197,7 +3301,7 @@ details.fold > .fin {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  margin: 0 20px;
+  margin: 0 var(--sx);
   padding: 12px 0;
   border-top: 1px solid var(--line);
   font-size: calc(16px * var(--k));
@@ -3213,8 +3317,8 @@ details.fold > .fin {
 .cs-leg {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px 20px;
-  padding: 12px 20px 16px;
+  gap: 8px 16px;
+  padding: 12px var(--sx);
   border-top: 1px solid var(--line);
   font-size: calc(13px * var(--k));
   line-height: calc(18px * var(--k));
@@ -3249,73 +3353,32 @@ details.fold > .fin {
   background: var(--acc);
 }
 
+.cs-dash {
+  flex: none;
+  display: block;
+  width: 18px;
+  border-top: 1px dashed var(--tx3);
+}
+
 .cs-leg .ti {
   color: var(--tx3);
 }
 
-@media (max-width: 900px) {
-  .trendbar {
-    padding: 8px 8px 8px 14px;
-  }
-
-  /* На телефоне кнопка графика без слова: тексту тенденции нужна ширина */
-  .trendbar .tb-a {
-    width: calc(40px * var(--k));
-    height: calc(40px * var(--k));
-    justify-content: center;
-    padding: 0;
-  }
-
-  .csheet {
-    inset: auto 0 0 0;
-    width: 100%;
-    max-width: none;
-    max-height: 88dvh;
-    border-width: 1px 0 0;
-    border-radius: 12px 12px 0 0;
-    box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
-  }
-
-  .cs-grab {
-    display: block;
-    width: 40px;
-    height: 4px;
-    margin: 8px auto 0;
-    border-radius: 2px;
-    background: var(--line2);
-  }
-
-  .cs-h {
-    height: calc(48px * var(--k));
-    padding: 0 6px 0 14px;
-  }
-
-  .cs-chart {
-    padding: 12px 14px 4px;
-  }
-
-  .cs-cap {
-    margin: 0 14px;
-  }
-
-  .cs-leg {
-    gap: 8px 12px;
-    padding: 12px 14px calc(16px + env(safe-area-inset-bottom));
-  }
+.cs-foot {
+  padding: 4px var(--sx) calc(16px + env(safe-area-inset-bottom));
 }
 
-@media (max-width: 900px) and (prefers-reduced-motion: no-preference) {
-  .csheet {
-    transform: translateY(100%);
+.cs-foot .btn {
+  width: 100%;
+}
+
+@media (max-width: 900px) {
+  .trendbar {
+    padding: 10px var(--sx);
   }
 
-  .csheet[open]:where(:not([data-closing])) {
-    transform: translateY(0);
-  }
-
-  @starting-style {
-    .csheet[open]:where(:not([data-closing])) {
-      transform: translateY(100%);
-    }
+  /* На телефоне кнопок в строке нет: нажатие открывает панель, переход в чат внутри неё */
+  .frow > .acts {
+    display: none;
   }
 }

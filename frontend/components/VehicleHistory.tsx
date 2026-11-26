@@ -1,13 +1,13 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { PRIORITY_LABEL, QUALITY_LABEL, dateTime, num } from '@/lib/format';
 import type { Session, Ticket, VehicleDetail } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
-import { ChartSheet } from './ChartSheet';
+import { ChartDrop, ChartSheet } from './ChartSheet';
 import { ErrorState, Loading } from './States';
 
 export type HistoryTab = 'checks' | 'tickets';
@@ -26,12 +26,51 @@ export function historyHref(vehicleId: string, tab: HistoryTab, sessionId?: stri
   return sessionId ? `${base}?session=${encodeURIComponent(sessionId)}` : base;
 }
 
-function CheckRow({ vehicleId, s, current }: { vehicleId: string; s: Session; current: boolean }) {
+/** Узкий экран: график открывается панелью снизу, на широком выпадает под строкой. */
+function useNarrow(): boolean {
+  const [narrow, setNarrow] = useState(false);
+  useEffect(() => {
+    const query = window.matchMedia('(max-width: 900px)');
+    const update = () => setNarrow(query.matches);
+    update();
+    query.addEventListener('change', update);
+    return () => query.removeEventListener('change', update);
+  }, []);
+  return narrow;
+}
+
+/**
+ * Строка проверки. Нажатие на строку показывает график оценки здесь же, а в чат ведёт отдельная кнопка:
+ * механик сначала смотрит, как менялась оценка, и только потом решает, разбирать ли проверку.
+ */
+function CheckRow({
+  vehicleId,
+  s,
+  current,
+  open,
+  onToggle,
+}: {
+  vehicleId: string;
+  s: Session;
+  current: boolean;
+  open: boolean;
+  onToggle: () => void;
+}) {
   const flawed = s.signal_quality !== 'good';
   return (
-    <Link
-      href={chatHref(vehicleId, s.session_id)}
-      className={`frow${s.status === 'anomaly' ? ' s-attention' : ''}${current ? ' cur' : ''}`}
+    <div
+      className={`frow crow${s.status === 'anomaly' ? ' s-attention' : ''}${current ? ' cur' : ''}${open ? ' open' : ''}`}
+      role="button"
+      tabIndex={0}
+      aria-expanded={open}
+      aria-label={`Проверка ${s.session_id}: показать график оценки`}
+      onClick={onToggle}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) {
+          e.preventDefault();
+          onToggle();
+        }
+      }}
     >
       <span>
         <span className="vid">{s.session_id}</span>
@@ -46,6 +85,25 @@ function CheckRow({ vehicleId, s, current }: { vehicleId: string; s: Session; cu
       <span className="d m cf">{num(s.confidence)}</span>
       <span className={`d${s.signal_quality === 'bad' ? ' c-h' : flawed ? ' c-m' : ''}`}>{QUALITY_LABEL[s.signal_quality]}</span>
       <span className="d">{s.ticket_id ? <span className="m">{s.ticket_id}</span> : <span className="mut">—</span>}</span>
+      <span className="d acts">
+        <button
+          type="button"
+          className={`btn sm${open ? ' on' : ''}`}
+          aria-expanded={open}
+          title="График оценки отклонения"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggle();
+          }}
+        >
+          <Icon name="chart-line" size="s" />
+          <span className="bt">График</span>
+        </button>
+        <Link href={chatHref(vehicleId, s.session_id)} className="btn sm" title="Разобрать проверку в чате" onClick={(e) => e.stopPropagation()}>
+          <Icon name="message-2" size="s" />
+          <span className="bt">В чат</span>
+        </Link>
+      </span>
       {/* Телефон и планшет: дата под номером, оценка под результатом, редкие пометки отдельной строкой */}
       <span className="m2 m">{dateTime(s.checked_at)}</span>
       <span className="m2 r">
@@ -71,7 +129,7 @@ function CheckRow({ vehicleId, s, current }: { vehicleId: string; s: Session; cu
           ) : null}
         </span>
       ) : null}
-    </Link>
+    </div>
   );
 }
 
@@ -132,8 +190,40 @@ function TicketRow({ vehicleId, t }: { vehicleId: string; t: Ticket }) {
 export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string; tab: HistoryTab; current: string | null }) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [chartOpen, setChartOpen] = useState(false);
-  const closeChart = useCallback(() => setChartOpen(false), []);
+  // Проверка, для которой открыт график. closingId держит блок на экране, пока он плавно сворачивается
+  const [openId, setOpenId] = useState<string | null>(null);
+  const [closingId, setClosingId] = useState<string | null>(null);
+  const prevOpen = useRef<string | null>(null);
+  const lastOpen = useRef('');
+  const narrow = useNarrow();
+  const closeChart = useCallback(() => setOpenId(null), []);
+  const toggleChart = useCallback((id: string) => setOpenId((cur) => (cur === id ? null : id)), []);
+
+  useEffect(() => {
+    const prev = prevOpen.current;
+    prevOpen.current = openId;
+    if (prev && prev !== openId) {
+      setClosingId(prev);
+      window.setTimeout(() => setClosingId((cur) => (cur === prev ? null : cur)), 300);
+    }
+  }, [openId]);
+
+  // Компьютер: блок не модальный, поэтому закрываем его сами — нажатием на пустое место или клавишей Esc
+  useEffect(() => {
+    if (!openId || narrow) return;
+    const onDown = (event: PointerEvent) => {
+      if (!(event.target as HTMLElement).closest('.cdrop, .crow')) setOpenId(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpenId(null);
+    };
+    document.addEventListener('pointerdown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('pointerdown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [openId, narrow]);
 
   const load = useCallback(() => {
     setError(null);
@@ -153,6 +243,8 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
   const tickets = [...vehicle.tickets].reverse();
   // Проверка, которая сейчас в чате. Без неё в адресе чат откроется на последней
   const inChat = current && vehicle.sessions.some((s) => s.session_id === current) ? current : null;
+  if (openId) lastOpen.current = openId;
+  const trendIcon = TREND_ICON[vehicle.trend.direction];
 
   return (
     <>
@@ -183,7 +275,7 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
           </Link>
         </nav>
         <span className="st only-d hhint">
-          {tab === 'checks' ? 'Нажмите строку, чтобы разобрать проверку в чате' : tickets.length ? 'Нажмите строку, чтобы увидеть состав заявки' : ''}
+          {tab === 'checks' ? 'Нажмите строку, чтобы увидеть график оценки' : tickets.length ? 'Нажмите строку, чтобы увидеть состав заявки' : ''}
         </span>
       </div>
 
@@ -192,15 +284,10 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
           <div className="hgrid">
             <div>
               {sessions.length ? (
-                // Тенденция одной строкой над таблицей, сам график открывается по нажатию
-                <button type="button" className="trendbar" onClick={() => setChartOpen(true)} aria-haspopup="dialog" title="Открыть график оценки отклонения">
-                  <Icon name={TREND_ICON[vehicle.trend.direction]} />
+                <div className="trendbar">
+                  <Icon name={trendIcon} />
                   <span className="tb-t">{vehicle.trend.text}</span>
-                  <span className="tb-a">
-                    <Icon name="chart-line" size="s" />
-                    <span className="only-d">График</span>
-                  </span>
-                </button>
+                </div>
               ) : null}
               {sessions.length ? (
                 <div className="ftable ctable">
@@ -212,9 +299,28 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                     <span className="cf">Уверенность</span>
                     <span>Запись</span>
                     <span>Заявка</span>
+                    <span />
                   </div>
                   {sessions.map((s) => (
-                    <CheckRow key={s.session_id} vehicleId={vehicleId} s={s} current={s.session_id === inChat} />
+                    <Fragment key={s.session_id}>
+                      <CheckRow
+                        vehicleId={vehicleId}
+                        s={s}
+                        current={s.session_id === inChat}
+                        open={openId === s.session_id}
+                        onToggle={() => toggleChart(s.session_id)}
+                      />
+                      {!narrow && (openId === s.session_id || closingId === s.session_id) ? (
+                        <ChartDrop
+                          sessions={vehicle.sessions}
+                          selected={s.session_id}
+                          trendIcon={trendIcon}
+                          trendText={vehicle.trend.text}
+                          chatHref={chatHref(vehicleId, s.session_id)}
+                          closing={openId !== s.session_id}
+                        />
+                      ) : null}
+                    </Fragment>
                   ))}
                 </div>
               ) : (
@@ -225,12 +331,13 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
               )}
             </div>
             <ChartSheet
-              open={chartOpen}
+              open={narrow && openId !== null}
               onClose={closeChart}
               sessions={vehicle.sessions}
-              selected={inChat}
-              trendIcon={TREND_ICON[vehicle.trend.direction]}
+              selected={lastOpen.current}
+              trendIcon={trendIcon}
               trendText={vehicle.trend.text}
+              chatHref={chatHref(vehicleId, lastOpen.current)}
             />
           </div>
         ) : (
