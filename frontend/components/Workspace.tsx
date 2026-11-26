@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
 import { api, chatStream, confirmDraftStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
 import { profileOf, useSettings } from '@/lib/settings';
@@ -37,6 +37,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const [steps, setSteps] = useState<Step[]>([]);
   const [manual, setManual] = useState<ManualTarget | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
+  /** Место выпадающего подтверждения очистки чата: под кнопкой. null — закрыто */
+  const [clearAt, setClearAt] = useState<{ top: number; right: number } | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   const settings = useSettings();
   const profile = profileOf(settings);
@@ -134,13 +136,28 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   );
 
   const clearChat = useCallback(() => {
+    setClearAt(null);
     if (busy) return;
-    if (!window.confirm('Очистить чат по этой машине? Заявки и история проверок останутся.')) return;
     api
       .clearConversation(vehicleId)
       .then(() => setMessages([]))
       .catch((e: Error) => setMessages((list) => [...list, localNotice(e.message)]));
   }, [busy, vehicleId]);
+
+  // Подтверждение очистки выпадает под кнопкой, отдельного окна браузера нет
+  const askClear = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    setClearAt((cur) => (cur ? null : { top: Math.round(r.bottom + 8), right: Math.max(12, Math.round(window.innerWidth - r.right)) }));
+  }, []);
+
+  useEffect(() => {
+    if (!clearAt) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setClearAt(null);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [clearAt]);
 
   // Повторное нажатие на ту же ссылку закрывает страницу руководства
   const openManual = useCallback((target: ManualTarget) => {
@@ -190,7 +207,15 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
             </div>
           </div>
           <div className="rt">
-            <button type="button" className="hb" onClick={clearChat} disabled={busy} aria-label="Очистить чат" title="Очистить чат">
+            <button
+              type="button"
+              className={`hb${clearAt ? ' on' : ''}`}
+              onClick={askClear}
+              disabled={busy}
+              aria-label="Очистить чат"
+              aria-expanded={Boolean(clearAt)}
+              title="Очистить чат"
+            >
               <Icon name="eraser" />
             </button>
             <button type="button" className="hb only-m" onClick={() => setSideOpen(true)} aria-label="Машина и проверки" title="Машина и проверки">
@@ -234,6 +259,25 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
       </section>
 
       {manual ? <ManualPanel target={manual} onNavigate={setManual} onClose={() => setManual(null)} /> : null}
+
+      {clearAt ? (
+        <>
+          <button type="button" className="veil" aria-label="Отмена" onClick={() => setClearAt(null)} />
+          <div className="pop" role="dialog" aria-label="Очистить чат" style={{ top: clearAt.top, right: clearAt.right }}>
+            <div className="pop-t">Очистить чат по этой машине?</div>
+            <div className="pop-s">Заявки и история проверок останутся.</div>
+            <div className="pop-f">
+              <button type="button" className="btn sm" onClick={() => setClearAt(null)}>
+                Отмена
+              </button>
+              <button type="button" className="btn sm pri" onClick={clearChat} autoFocus>
+                <Icon name="eraser" size="s" />
+                Очистить
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

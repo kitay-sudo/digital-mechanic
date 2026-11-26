@@ -3382,3 +3382,226 @@ details.fold > .fin {
     display: none;
   }
 }
+
+/* ---------- Плавное открытие ----------
+   Всё, что появляется на экране, появляется плавно: руководство, шторки, настройки,
+   раскрывающиеся блоки, новые сообщения. Время и кривая те же, что у панели графика. */
+
+:root {
+  --mo: 0.28s;
+  --ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  /* Разрешает плавно менять высоту до auto у раскрывающихся блоков */
+  interpolate-size: allow-keywords;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes in-right {
+  from {
+    opacity: 0;
+    transform: translateX(28px);
+  }
+}
+
+@keyframes in-up {
+  from {
+    opacity: 0;
+    transform: translateY(40px);
+  }
+}
+
+@keyframes in-down {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+@keyframes in-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+@keyframes in-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+}
+
+/* Появление без движения: работает и там, где движение отключено в системе */
+.dimmer.open,
+.consent-dim,
+.steps li,
+.viewer img:not(.pending),
+.viewer .quote,
+.page > * {
+  animation: fade-in var(--mo) ease-out;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  /* Руководство на компьютере выезжает справа */
+  .col.manual {
+    animation: in-right var(--mo) var(--ease);
+  }
+
+  /* Настройки выпадают из-под кнопки */
+  .sp {
+    animation: in-down var(--mo) var(--ease);
+  }
+
+  .consent {
+    animation: in-pop var(--mo) var(--ease);
+  }
+
+  /* Новые сообщения в чате и подсказки под шагами */
+  .chat > .a,
+  .chat > .q,
+  .nextstep,
+  .verr {
+    animation: in-rise var(--mo) var(--ease);
+  }
+
+  /* Раскрытие «Хода разбора», «На чём основан приоритет», состава заявки */
+  details.fold[open] > .fin,
+  .trec[open] > .tin {
+    animation: in-down var(--mo) var(--ease);
+  }
+
+  details.fold::details-content,
+  .trec::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size var(--mo) var(--ease),
+      content-visibility var(--mo) allow-discrete;
+  }
+
+  details.fold[open]::details-content,
+  .trec[open]::details-content {
+    block-size: auto;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
+  /* На телефоне панели поднимаются снизу */
+  .col.side.open,
+  .col.manual.open,
+  .sp {
+    animation: in-up var(--mo) var(--ease);
+  }
+}
+
+/* ---------- Без модальных окон ----------
+   Всё, что перекрывает экран, выпадает панелью, а фон за ней размыт.
+   Один и тот же фон у шторок, настроек, согласия и подтверждений. */
+
+:root {
+  --veil: rgb(8 10 14 / 0.42);
+  --veil-blur: blur(6px);
+}
+
+.veil,
+.sp-dim,
+.dimmer.open,
+.consent-dim {
+  background: var(--veil);
+  -webkit-backdrop-filter: var(--veil-blur);
+  backdrop-filter: var(--veil-blur);
+}
+
+.veil {
+  position: fixed;
+  inset: 0;
+  z-index: 59;
+  border: none;
+  cursor: default;
+  animation: fade-in var(--mo) ease-out;
+}
+
+.sp-dim {
+  animation: fade-in var(--mo) ease-out;
+}
+
+/* Выпадающее подтверждение под кнопкой */
+.pop {
+  position: fixed;
+  z-index: 60;
+  width: min(calc(340px * var(--k)), calc(100vw - 24px));
+  padding: var(--sy) var(--sx);
+  background: var(--panel);
+  border: 1px solid var(--line2);
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.28);
+}
+
+.pop-t {
+  font-size: calc(17px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+}
+
+.pop-s {
+  margin-top: 4px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--tx2);
+}
+
+.pop-f {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: var(--by);
+}
+
+/* Согласие выпадает сверху экрана, а не висит окном по центру */
+.consent-dim {
+  place-items: start center;
+  padding: 0 16px;
+}
+
+.consent {
+  border-top: none;
+  box-shadow: 0 16px 48px rgb(0 0 0 / 0.28);
+}
+
+@keyframes in-drop {
+  from {
+    transform: translateY(-100%);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .consent {
+    animation: in-drop var(--mo) var(--ease);
+  }
+
+  .pop {
+    animation: in-down var(--mo) var(--ease);
+  }
+}
+
+@media (max-width: 900px) {
+  /* На телефоне подтверждение занимает ширину экрана: кнопка не у края, панель вылезла бы влево */
+  .pop {
+    left: 12px;
+    right: 12px !important;
+    width: auto;
+  }
+
+  .consent-dim {
+    padding: 0;
+  }
+
+  .consent {
+    width: 100%;
+    border-left: none;
+    border-right: none;
+  }
+}
