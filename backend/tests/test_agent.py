@@ -161,8 +161,31 @@ async def test_ticket_with_made_up_references_is_refused(store, index, services)
 
 async def test_engine_mismatch_is_reported(store, index, services):  # П16
     message, _ = await turn(store, index, "Y652CK98", "S-0132", "Получи результат диагностики")
-    assert message["assessment"]["flags"]["engine_mismatch"] and not message["assessment"]["ticket_allowed"]
-    assert message["answer"]["recommendation_text"]
+    assessment, answer = message["assessment"], message["answer"]
+    assert assessment["flags"]["engine_mismatch"] and not assessment["ticket_allowed"]
+    assert assessment["priority"] is None and "ТОиР не оформляется" in assessment["ticket_block_reason"]
+    # Ошибка модели, а не диагноз: ни гипотез, ни шагов, ни нормативов по этому типу.
+    assert "ошибка модели" in message["text"] and "Повторите проверку" in message["text"]
+    assert not (answer["hypotheses"] or answer["checks"] or answer["repair"] or answer["observations"])
+    assert "повторить проверку" in answer["recommendation_text"] and "топливной аппаратуры" not in answer["recommendation_text"]
+    assert services == []
+
+
+async def test_ticket_for_engine_mismatch_is_refused(store, index, services):  # П16
+    await turn(store, index, "Y652CK98", "S-0132", "Получи результат диагностики")
+    message, _ = await turn(store, index, "Y652CK98", "S-0132", "Создай заявку на дефектовку")
+    assert message["kind"] != "ticket_draft" and services == []
+
+
+async def test_mechanic_priority_choice_is_final(store, index, services):  # П13
+    message, _ = await turn(store, index, "T792HO98", "S-0043", "Создай заявку на дефектовку")
+    draft = message["draft"]
+    chosen = "low" if draft["urgency"] != "low" else "high"
+    draft["urgency"] = chosen
+    store.save_draft(draft)
+    message, _ = await turn(store, index, "T792HO98", "S-0043", f"Подтверждаю заявку {draft['draft_id']}",
+                            confirmed_draft_id=draft["draft_id"], warning_ack=True)
+    assert message["kind"] == "ticket_created" and services[-1]["urgency"] == chosen
 
 
 async def test_question_outside_knowledge_base_is_declined(store, index, services):  # С2, F4

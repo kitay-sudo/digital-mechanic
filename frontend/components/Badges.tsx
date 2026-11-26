@@ -6,7 +6,17 @@ const STATUS_CLASS: Record<Status, string> = { anomaly: 'c-dev', check_failed: '
 const PRIORITY_CLASS: Record<Priority, string> = { high: 'c-h', medium: 'c-m', low: 'c-l' };
 
 /** Статус проверки: значок, слово и цвет. */
-export function StatusBadge({ status, code }: { status: Status; code?: string | null }) {
+export function StatusBadge({ status, code, mismatch }: { status: Status; code?: string | null; mismatch?: boolean }) {
+  // Результат модели не подходит двигателю машины: это ошибка данных, а не отклонение
+  if (mismatch) {
+    return (
+      <span className="sev c-fail">
+        <Icon name="alert-triangle" />
+        Ошибка данных
+        {code ? <span className="code">{code}</span> : null}
+      </span>
+    );
+  }
   return (
     <span className={`sev ${STATUS_CLASS[status]}`}>
       <Icon name={STATUS_ICON[status]} />

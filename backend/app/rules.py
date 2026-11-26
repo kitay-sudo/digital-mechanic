@@ -159,17 +159,21 @@ def assess(diag: dict, vehicle: dict, previous: list[dict], confidence_min: floa
         result["ticket_block_reason"] = f"Тип неисправности {code} отсутствует в справочнике."
         return result
 
-    # П16: тип неисправности невозможен для этого топлива.
+    # П16: тип неисправности невозможен для этого топлива. Карточка машины важнее результата модели:
+    # это ошибка модели, а не диагноз. Приоритета и заявки нет.
     fuels = fault.get("fuels")
     if fuels and vehicle.get("fuel") not in fuels:
         flags["engine_mismatch"] = True
-        text = (
-            f"Тип «{title}» не соответствует двигателю {vehicle.get('engine_model')} ({vehicle.get('fuel')}). "
-            "Проверьте данные проверки и карточку машины."
+        engine = vehicle.get("engine_model")
+        result["warnings"].append(
+            f"Модель диагностики вернула тип «{title}» ({code}). Он не подходит двигателю {engine} "
+            f"({vehicle.get('fuel')}). Карточка машины важнее результата модели."
         )
-        result["warnings"].append(text)
-        result["basis"].append("Приоритет не назначен: тип неисправности не соответствует двигателю машины")
-        result["ticket_block_reason"] = text + " Заявка не оформляется до уточнения данных."
+        result["basis"].append("Приоритет не назначен: результат считается ошибкой модели, а не диагнозом")
+        result["ticket_block_reason"] = (
+            f"До уточнения данных заявка в ТОиР не оформляется: в руководстве на двигатель {engine} "
+            "нет инструкции по такому типу неисправности."
+        )
         return result
 
     # П12: базовая критичность типа и ограниченная поправка по оценке отклонения.
@@ -240,6 +244,8 @@ def fleet_status(vehicle: dict, confidence_min: float) -> dict:
             a = assess(decisive, vehicle, sessions[:decisive_index], confidence_min)
             priority = a["priority"]
             status = "quarantine" if priority == "high" else "attention"
+            # Результат не подходит двигателю: это ошибка модели, нужна повторная проверка.
+            needs_recheck = needs_recheck or a["flags"]["engine_mismatch"]
     if needs_recheck and status == "ok":
         status = "attention"
     return {"fleet_status": status, "needs_recheck": needs_recheck, "priority": priority}

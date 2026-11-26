@@ -339,7 +339,7 @@ function AnswerBlocks({
   );
 }
 
-function CopyBlock({ text }: { text: string }) {
+function CopyBlock({ text, title = 'Рекомендация на дефектовку' }: { text: string; title?: string }) {
   const [copied, setCopied] = useState(false);
   const copy = async () => {
     try {
@@ -356,7 +356,7 @@ function CopyBlock({ text }: { text: string }) {
         <span className="sec" style={{ minHeight: 0 }}>
           <b>
             <Icon name="clipboard-text" size="s" />
-            Рекомендация на дефектовку
+            {title}
           </b>
         </span>
         <button type="button" className="btn sm" onClick={copy}>
@@ -372,7 +372,7 @@ function CopyBlock({ text }: { text: string }) {
 /* ---------- Вердикт ---------- */
 
 function verdictTone(a: Assessment | null | undefined): string {
-  if (!a || a.outcome !== 'anomaly') return '';
+  if (!a || a.outcome !== 'anomaly' || a.flags.engine_mismatch) return '';
   return a.priority === 'high' ? ' v-h' : a.priority === 'low' ? ' v-l' : ' v-m';
 }
 
@@ -380,15 +380,21 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
   const d = m.diagnosis;
   const a = m.assessment;
   const outcome = a?.outcome ?? d?.status ?? 'normal';
-  const title =
-    outcome === 'anomaly' ? (d?.anomaly_title ?? 'Отклонение') : outcome === 'check_failed' ? 'Запись непригодна для анализа' : 'Отклонений не найдено';
+  const mismatch = Boolean(a?.flags.engine_mismatch);
+  const title = mismatch
+    ? 'Результат не подходит двигателю машины'
+    : outcome === 'anomaly'
+      ? (d?.anomaly_title ?? 'Отклонение')
+      : outcome === 'check_failed'
+        ? 'Запись непригодна для анализа'
+        : 'Отклонений не найдено';
   const lowConf = d && a && d.confidence !== null && d.confidence < a.confidence_min;
 
   return (
     <div className={`card strip${verdictTone(a)}`}>
       <div className="cpad">
         <div className="row1">
-          <StatusBadge status={outcome} code={d?.anomaly_type} />
+          <StatusBadge status={outcome} code={d?.anomaly_type} mismatch={mismatch} />
           {a?.priority ? <PriorityBadge priority={a.priority} long /> : null}
         </div>
         <div className="vtitle">{title}</div>
@@ -441,7 +447,7 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
                 <span className="only-d">&nbsp;отклонения</span>
               </span>
             </div>
-            <div className={`m${outcome === 'anomaly' ? ' over' : ''}`}>{num(d.anomaly_score)}</div>
+            <div className={`m${outcome === 'anomaly' && !mismatch ? ' over' : ''}`}>{num(d.anomaly_score)}</div>
             <div>
               <span>
                 Уверенность
@@ -479,7 +485,7 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
 
       {m.answer?.recommendation_text ? (
         <div className="cdiv" style={{ paddingTop: 16 }}>
-          <CopyBlock text={m.answer.recommendation_text} />
+          <CopyBlock text={m.answer.recommendation_text} title={mismatch ? 'Сообщение о расхождении данных' : undefined} />
         </div>
       ) : null}
 
@@ -639,6 +645,9 @@ function DraftCard({ m, ctx, onConfirm }: { m: Message; ctx: Ctx; onConfirm: (dr
           ) : (
             <PriorityBadge priority={draft.urgency} />
           )}
+          {draft.status === 'draft' ? (
+            <span className="sub2">Приоритет предложил агент. Его можно изменить: окончательный выбор за вами.</span>
+          ) : null}
           {draft.urgency_basis.length ? <span className="sub2">{draft.urgency_basis.join(' · ')}</span> : null}
         </div>
         <div className="k">Работы</div>

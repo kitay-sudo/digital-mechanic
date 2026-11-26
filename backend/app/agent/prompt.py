@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+from datetime import datetime
 
 from .. import fleet, rules
 from ..manuals import manuals_for_engine
@@ -56,6 +57,10 @@ SYSTEM = """Ты «Цифровой механик»: помощник меха�
 обязательно.
 - Сбой записи или плохое качество: запись непригодна. Не делай никаких выводов о двигателе, не называй причин, \
 не ищи в руководствах. Попроси повторить запись.
+- Тип неисправности не подходит двигателю машины (например, дизельная топливоподача у бензинового двигателя): \
+карточка машины важнее результата модели. Это ошибка модели диагностики, а не диагноз. Сообщи о расхождении, \
+диагноз по этому типу не ставь, нормативы и процедуры из руководства другого двигателя не подставляй, тип на \
+«похожий» для этого двигателя не заменяй. Рекомендуй повторить проверку или провести дефектовку. Заявки нет.
 - Запрет выпуска в рейс формулируй, только если в руководстве на этот двигатель прямо сказано, что эксплуатация \
 запрещена, и дай ссылку на эту страницу. В остальных случаях это рекомендация, а не запрет.
 
@@ -144,13 +149,33 @@ def render_for_history(message: dict) -> str:
     return "\n".join(p for p in parts if p)
 
 
+def _when(value: str | None) -> str:
+    """Дата проверки для текста механику: 28.10.2026 14:20."""
+    try:
+        return datetime.fromisoformat(value).strftime("%d.%m.%Y %H:%M")
+    except (TypeError, ValueError):
+        return str(value or "")
+
+
+def mismatch_text(vehicle: dict, diagnosis: dict) -> str:
+    """Текст для передачи дальше, когда результат модели не подходит двигателю машины (П16)."""
+    return (
+        f"Расхождение данных диагностики. Машина {fleet.title_of(vehicle)}, госномер {vehicle['vehicle_id']}, "
+        f"двигатель {vehicle['engine_model']} ({vehicle.get('fuel')}). Проверка {diagnosis.get('session_id')} "
+        f"от {_when(diagnosis.get('checked_at'))}. Модель диагностики вернула тип «{diagnosis.get('anomaly_title')}» "
+        f"({diagnosis.get('anomaly_type')}), который не подходит этому двигателю. Результат считается ошибкой модели, "
+        "а не диагнозом. Рекомендуется повторить проверку. Если сомнения в состоянии двигателя остаются, "
+        "провести дефектовку без привязки к этому типу. Заявка в ТОиР до уточнения данных не оформлена."
+    )
+
+
 def recommendation_text(vehicle: dict, diagnosis: dict, reason: str) -> str:
     """Текст рекомендации на дефектовку, когда заявку в ТОиР отправить нельзя (П10)."""
     code = diagnosis.get("anomaly_type")
     unit = rules.FAULTS.get(code or "", {}).get("unit", "узел по типу неисправности")
     return (
         f"Рекомендация на дефектовку. Машина {fleet.title_of(vehicle)}, госномер {vehicle['vehicle_id']}, "
-        f"двигатель {vehicle['engine_model']}. Проверка {diagnosis.get('session_id')} от {diagnosis.get('checked_at')}. "
+        f"двигатель {vehicle['engine_model']}. Проверка {diagnosis.get('session_id')} от {_when(diagnosis.get('checked_at'))}. "
         f"Результат акустической проверки: {diagnosis.get('anomaly_title')} ({code}), "
         f"оценка отклонения {rules.fmt(diagnosis.get('anomaly_score'))}, уверенность {rules.fmt(diagnosis.get('confidence'))}, "
         f"качество записи: {rules.QUALITY_LABELS.get(diagnosis.get('signal_quality'), diagnosis.get('signal_quality'))}. "

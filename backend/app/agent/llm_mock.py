@@ -207,9 +207,8 @@ class MockLLM:
             )
         if assessment["flags"]["engine_mismatch"]:
             return self._answer(
-                summary=f"Проверка показала тип «{diagnosis.get('anomaly_title')}», но он не соответствует двигателю этой машины. "
-                        "Уточните данные проверки и карточку машины.",
-                observations=observations,
+                summary=f"Модель вернула тип «{diagnosis.get('anomaly_title')}», он не подходит двигателю этой машины. "
+                        "Это ошибка модели, а не диагноз. Повторите проверку или проведите дефектовку.",
                 limitations=["Нормативы другого двигателя не используются.", MOCK_NOTE], not_found=True,
             )
         if "search_manuals" not in results:

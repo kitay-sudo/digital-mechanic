@@ -21,6 +21,8 @@ STEP_LABELS = {
 EMPTY_ANSWER = {"summary": "", "observations": [], "hypotheses": [], "checks": [], "repair": [],
                 "limitations": [], "conflicts": [], "not_found": False}
 HIDDEN_NOTE = "Часть ответа скрыта: её не удалось подтвердить страницей руководства."
+MISMATCH_TEXT = ("Это ошибка модели диагностики, а не диагноз: по этому типу выводов о двигателе нет. "
+                 "Повторите проверку или проведите дефектовку.")
 CONFLICT_LEAD = "В руководствах есть расхождение, формулировки показаны ниже."
 
 
@@ -224,12 +226,20 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
             payload["answer"] = {**EMPTY_ANSWER, "summary": payload["text"], "observations": answer["observations"],
                                  "limitations": answer["limitations"]}
             return payload
+        if assessment["flags"]["engine_mismatch"]:
+            # П16: карточка машины важнее результата модели. Текст задаёт код: диагноза, гипотез и шагов
+            # по этому типу нет, даже если модель их написала.
+            payload["text"] = MISMATCH_TEXT
+            payload["answer"] = {
+                **EMPTY_ANSWER, "summary": MISMATCH_TEXT, "not_found": True,
+                "limitations": [f"Нормативы и процедуры для типа «{ctx.diagnosis.get('anomaly_title')}» есть только "
+                                "в руководствах других двигателей. Агент их не подставляет и тип на похожий не заменяет."],
+                "recommendation_text": prompt.mismatch_text(vehicle, ctx.diagnosis),
+            }
+            return payload
         payload["text"] = answer["summary"] or f"Проверка показала отклонение: {ctx.diagnosis.get('anomaly_title')}."
         reason = None
-        if assessment["flags"]["engine_mismatch"]:
-            reason = "Тип неисправности не соответствует двигателю машины, заявка в ТОиР не отправлена."
-            answer["not_found"] = True
-        elif not _has_instruction(ctx, answer):
+        if not _has_instruction(ctx, answer):
             # П10: применимой инструкции нет. Заявку не предлагаем, даём текст рекомендации на дефектовку.
             reason = (f"В руководстве на двигатель {engine} нет применимой инструкции по этой неисправности, "
                       "заявка в ТОиР не отправлена.")
