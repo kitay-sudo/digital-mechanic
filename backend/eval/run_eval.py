@@ -152,7 +152,26 @@ def run_ask(api: str, only: str | None) -> int:
             rows.append((q["id"], "ok" if not problems else "; ".join(problems), cited, seconds))
             print(f"{'ok  ' if not problems else 'FAIL'} {q['id']} {seconds:5.1f} с  {'; '.join(problems)}\n     {message.get('text', '')[:160]}\n     {cited}", flush=True)
     print(f"\nИтог: прошло {len(rows) - failed} из {len(rows)}. Токены: вход {tokens_in}, выход {tokens_out}. Стоимость: {cost:.2f} ₽")
+    _save(llm, rows, failed, tokens_in, tokens_out, cost)
     return failed
+
+
+def _save(llm: dict, rows: list, failed: int, tokens_in: int, tokens_out: int, cost: float) -> None:
+    import re
+    from datetime import datetime
+
+    from app.config import get_settings
+
+    folder = get_settings().data_dir / "eval"
+    folder.mkdir(parents=True, exist_ok=True)
+    name = re.sub(r"[^0-9A-Za-z._-]+", "-", str(llm.get("model") or "model"))
+    lines = [f"# Контрольные вопросы: {llm.get('model')} ({llm.get('provider')})", "",
+             f"Прошло {len(rows) - failed} из {len(rows)}. Токены: вход {tokens_in}, выход {tokens_out}. Стоимость: {cost:.2f} ₽.",
+             "", "| Вопрос | Итог | Ссылки | Время, с |", "|---|---|---|---|"]
+    lines += [f"| {r[0]} | {r[1]} | {r[2]} | {r[3]:.1f} |" for r in rows]
+    path = folder / f"questions-{name}-{datetime.now():%Y%m%d-%H%M}.md"
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    print(f"Отчёт: {path}")
 
 
 def main() -> int:

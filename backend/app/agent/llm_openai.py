@@ -33,7 +33,7 @@ class OpenAICompatLLM:
 
     def __init__(self, model: str, base_url: str, api_key: str = "", tools_mode: str = "json",
                  structured: str = "schema", max_tokens: int = 6000, temperature: float | None = 0.0,
-                 timeout: float = 600.0, transport: httpx.AsyncBaseTransport | None = None):
+                 timeout: float = 600.0, project: str = "", transport: httpx.AsyncBaseTransport | None = None):
         self.model = model
         self.base_url = base_url.rstrip("/")
         self.tools_mode = tools_mode if tools_mode in ("json", "native") else "json"
@@ -41,6 +41,8 @@ class OpenAICompatLLM:
         self.max_tokens = max_tokens
         self.temperature = temperature
         headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        if project:
+            headers["OpenAI-Project"] = project
         self.client = httpx.AsyncClient(base_url=self.base_url, headers=headers, timeout=timeout, transport=transport)
 
     # --- запрос ---

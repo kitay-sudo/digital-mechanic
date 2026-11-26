@@ -61,6 +61,7 @@ def build_llm() -> LLM:
         return OpenAICompatLLM(
             settings.llm_model, settings.llm_base_url, settings.llm_api_key, settings.llm_tools,
             settings.llm_structured, settings.llm_max_tokens, settings.llm_temperature, settings.llm_timeout,
+            settings.llm_project,
         )
     if settings.llm_provider == "claude_code":
         from .llm_claude_code import ClaudeCodeLLM

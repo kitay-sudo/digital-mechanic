@@ -53,6 +53,7 @@ class Settings:
     # Сервер с форматом OpenAI (локальная модель): адрес, ключ, способ вызова инструментов и формы ответа
     llm_base_url: str
     llm_api_key: str
+    llm_project: str
     llm_tools: str
     llm_structured: str
     llm_max_tokens: int
@@ -108,6 +109,7 @@ def get_settings() -> Settings:
         llm_fallbacks=os.environ.get("LLM_FALLBACKS", "1") not in ("0", "false", "no"),
         llm_base_url=os.environ.get("LLM_BASE_URL", "http://127.0.0.1:11434/v1").rstrip("/"),
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
+        llm_project=os.environ.get("LLM_PROJECT", ""),
         llm_tools=os.environ.get("LLM_TOOLS", "json").strip().lower(),
         llm_structured=os.environ.get("LLM_STRUCTURED", "schema").strip().lower(),
         llm_max_tokens=int(_float("LLM_MAX_TOKENS", 16000 if provider == "anthropic" else 6000)),
