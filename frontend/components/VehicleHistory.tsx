@@ -214,7 +214,7 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
             {sessions.length ? (
               <div>
                 {/* Шапка графика того же вида, что шапка таблицы: два блока стоят на одной линии */}
-                <div className="chead">
+                <div className="ghead">
                   <span>Оценка отклонения</span>
                   <span>пунктир: порог 0,5</span>
                 </div>

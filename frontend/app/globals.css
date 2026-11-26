@@ -465,6 +465,8 @@ a {
 
 .sec {
   min-height: 28px;
+  /* Подпись раздела не прилипает к блоку под ней */
+  margin-bottom: 8px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1210,10 +1212,6 @@ details.fold > .fin {
   padding: 12px 20px 16px;
 }
 
-.ab .sec {
-  margin-bottom: 4px;
-}
-
 .plain {
   list-style: none;
   font-size: calc(16px * var(--k));
@@ -1343,6 +1341,11 @@ details.fold > .fin {
   gap: 12px;
   padding: 6px 8px 6px 14px;
   border-bottom: 1px solid var(--line);
+}
+
+/* Подпись стоит в одной строке с кнопкой: нижний отступ ей не нужен */
+.reco .rh .sec {
+  margin-bottom: 0;
 }
 
 .reco pre {
@@ -1622,22 +1625,24 @@ details.fold > .fin {
   gap: 8px;
 }
 
-/* Узкая колонка чата (открыта страница руководства): панель ввода в две строки */
+/* Узкая колонка чата на компьютере (открыта страница руководства): панель ввода остаётся в одну строку,
+   от кнопки диагностики остаётся значок. Низ чата и низ руководства одной высоты.
+   На телефоне своя раскладка: крупная кнопка отдельной строкой */
 .chatcol {
   container-type: inline-size;
 }
 
-@container (max-width: 700px) {
-  .composer {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 8px;
-    padding-top: 8px;
-    padding-bottom: 8px;
-  }
+@media (min-width: 901px) {
+  @container (max-width: 700px) {
+    .composer .diag {
+      width: calc(48px * var(--k));
+      padding: 0;
+      flex: none;
+    }
 
-  .composer .btn.pri {
-    width: 100%;
+    .composer .diag .lbl {
+      display: none;
+    }
   }
 }
 
@@ -1667,6 +1672,13 @@ details.fold > .fin {
   height: auto;
   background: #fbfaf5;
   box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
+}
+
+.viewer img.pending {
+  height: 0;
+  visibility: hidden;
+  background: transparent;
+  box-shadow: none;
 }
 
 [data-theme='dark'] .viewer img {
@@ -2813,7 +2825,7 @@ details.fold > .fin {
 }
 
 /* Шапка графика: тот же вид, что у шапки таблицы */
-.chead {
+.ghead {
   height: calc(36px * var(--k));
   display: flex;
   align-items: center;

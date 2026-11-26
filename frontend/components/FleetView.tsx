@@ -121,7 +121,7 @@ export function FleetView() {
             </button>
           ))}
         </div>
-        <div className="sec" style={{ marginBottom: 8 }}>
+        <div className="sec">
           <b>
             <Icon name="list-details" size="s" />
             {filter ? TILES.find((t) => t.key === filter)?.label : 'Все машины'} · {rows.length}

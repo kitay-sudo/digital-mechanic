@@ -91,6 +91,8 @@ export function ManualPanel({
               // eslint-disable-next-line @next/next/no-img-element
               <img
                 key={src}
+                // Пока картинка грузится, у неё нет высоты: рамка и фон дали бы тёмную полосу
+                className={imgState === 'loading' ? 'pending' : undefined}
                 src={src}
                 alt={`Страница ${target.page} руководства`}
                 onLoad={() => setImgState('ok')}

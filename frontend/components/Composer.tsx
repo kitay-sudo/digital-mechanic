@@ -154,9 +154,17 @@ export function Composer({
           {voiceError}
         </div>
       ) : null}
-      <button type="button" className="btn pri diag" onClick={onDiagnose} disabled={busy || !canDiagnose}>
+      {/* В узкой колонке (открыто руководство) от кнопки остаётся значок: подпись дублируют title и aria-label */}
+      <button
+        type="button"
+        className="btn pri diag"
+        onClick={onDiagnose}
+        disabled={busy || !canDiagnose}
+        aria-label="Получить результат диагностики"
+        title="Получить результат диагностики"
+      >
         <Icon name="wave-sine" />
-        Получить результат диагностики
+        <span className="lbl">Получить результат диагностики</span>
       </button>
       <form
         className="cgroup"
