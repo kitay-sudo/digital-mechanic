@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="bg">#101215</color>
+    <color name="panel">#171a1e</color>
+    <color name="line">#3a424b</color>
+    <color name="text">#e6e9ec</color>
+    <color name="text2">#a9b1ba</color>
+    <color name="accent">#1d5fc4</color>
+    <color name="accent_text">#ffffff</color>
+    <color name="error">#ff6b6b</color>
+
+    <!-- Тёмное окно без заголовка: цвета те же, что у сайта -->
+    <style name="AppTheme" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <item name="android:windowBackground">@color/bg</item>
+        <item name="android:statusBarColor">@color/panel</item>
+        <item name="android:navigationBarColor">@color/panel</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+</resources>

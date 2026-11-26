@@ -31,3 +31,7 @@ Thumbs.db
 # Файлы, которые Next.js создаёт сам
 frontend/AGENTS.md
 next-env.d.ts
+
+# Android: результат сборки и ключ подписи приложения
+/android/out/
+/android/keystore/

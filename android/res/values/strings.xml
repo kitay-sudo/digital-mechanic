@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Цифровой механик</string>
+    <string name="setup_title">Цифровой механик</string>
+    <string name="setup_text">Укажите адрес сервера системы. Его даёт администратор, например https://mechanic.example.ru или http://192.168.1.10:3210</string>
+    <string name="setup_hint">Адрес сервера</string>
+    <string name="setup_connect">Подключиться</string>
+    <string name="setup_bad_address">Адрес записан неверно. Пример: http://192.168.1.10:3210</string>
+    <string name="setup_no_connection">Не удалось подключиться к серверу. Проверьте адрес и сеть, затем повторите.</string>
+    <string name="exit_hint">Нажмите «Назад» ещё раз, чтобы выйти</string>
+</resources>
