@@ -1,7 +1,8 @@
 """Слой модели: единый интерфейс, за которым стоит конкретный поставщик.
 
 Агент не знает, какая модель отвечает. Поставщик выбирается переменной LLM_PROVIDER:
-`anthropic` (Claude через официальный SDK) или `mock` (заглушка для работы без ключа).
+`anthropic` (Claude через официальный SDK, напрямую или через шлюз с тем же форматом),
+`claude_code` (локальный Claude Code, только для разработки) или `mock` (заглушка без ключа).
 Внутренний формат сообщений повторяет формат Messages API: список блоков
 text / tool_use / tool_result.
 """
@@ -49,6 +50,10 @@ def build_llm() -> LLM:
         from .llm_anthropic import AnthropicLLM
 
         return AnthropicLLM(settings.llm_model, settings.llm_effort, settings.llm_fallbacks)
+    if settings.llm_provider == "claude_code":
+        from .llm_claude_code import ClaudeCodeLLM
+
+        return ClaudeCodeLLM(settings.llm_model, settings.llm_effort)
     from .llm_mock import MockLLM
 
     return MockLLM()

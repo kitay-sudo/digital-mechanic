@@ -82,7 +82,7 @@ def get_settings() -> Settings:
         kb_dir=_path("KB_DIR", ROOT / "knowledge"),
         data_dir=_path("DATA_DIR", ROOT / "data"),
         llm_provider=provider,
-        llm_model=os.environ.get("LLM_MODEL", "claude-opus-5-5" if provider == "anthropic" else "mock-llm"),
+        llm_model=os.environ.get("LLM_MODEL", "mock-llm" if provider == "mock" else "claude-opus-5-5"),
         llm_effort=os.environ.get("LLM_EFFORT", "medium"),
         llm_fallbacks=os.environ.get("LLM_FALLBACKS", "1") not in ("0", "false", "no"),
         price_input=_float("PRICE_INPUT_PER_MTOK", 4.0),
