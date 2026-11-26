@@ -16,6 +16,8 @@ COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --no-dev --frozen
 
 COPY backend/app ./app
+# Скрипты проверки качества: предполётная проверка ключа, сценарии, контрольные вопросы
+COPY backend/eval ./eval
 COPY config /srv/config
 COPY mocks/data /srv/mocks/data
 

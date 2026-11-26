@@ -24,6 +24,13 @@ def _float(name: str, default: float) -> float:
         return default
 
 
+def _flag(name: str, default: bool = True) -> bool:
+    value = os.environ.get(name)
+    if value is None or not value.strip():
+        return default
+    return value.strip().lower() not in ("0", "false", "no", "off")
+
+
 @dataclass(frozen=True)
 class Settings:
     # Внешние сервисы
@@ -51,6 +58,10 @@ class Settings:
     llm_max_tokens: int
     llm_temperature: float | None
     llm_timeout: float
+    # Выключатели возможностей слоя Claude на случай, если шлюз их не принимает
+    llm_strict_tools: bool
+    llm_thinking: bool
+    llm_cache: bool
     # Цены для журнала стоимости
     price_input: float
     price_output: float
@@ -99,9 +110,12 @@ def get_settings() -> Settings:
         llm_api_key=os.environ.get("LLM_API_KEY", ""),
         llm_tools=os.environ.get("LLM_TOOLS", "json").strip().lower(),
         llm_structured=os.environ.get("LLM_STRUCTURED", "schema").strip().lower(),
-        llm_max_tokens=int(_float("LLM_MAX_TOKENS", 6000)),
+        llm_max_tokens=int(_float("LLM_MAX_TOKENS", 16000 if provider == "anthropic" else 6000)),
         llm_temperature=None if os.environ.get("LLM_TEMPERATURE", "0").strip() == "" else _float("LLM_TEMPERATURE", 0.0),
         llm_timeout=_float("LLM_TIMEOUT", 600.0),
+        llm_strict_tools=_flag("LLM_STRICT_TOOLS"),
+        llm_thinking=_flag("LLM_THINKING"),
+        llm_cache=_flag("LLM_CACHE"),
         price_input=_float("PRICE_INPUT_PER_MTOK", 4.0),
         price_output=_float("PRICE_OUTPUT_PER_MTOK", 20.0),
         price_cache_read=_float("PRICE_CACHE_READ_PER_MTOK", 0.2),

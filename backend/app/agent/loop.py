@@ -8,7 +8,7 @@ from .. import conflicts, rules
 from ..config import Settings
 from ..kb.index import Index
 from ..store import Store
-from . import prompt
+from . import json_protocol, prompt
 from .llm import LLM, LLMError
 from .tools import ANSWER_SCHEMA, TOOLS, Emit, TurnContext, ensure_diagnosis, run_tool, submit_ticket
 
@@ -52,7 +52,11 @@ def _parse(text: str) -> dict:
             return {**EMPTY_ANSWER, **data}
     except ValueError:
         pass
-    return {**EMPTY_ANSWER, "summary": text.strip()}
+    try:
+        # JSON в обёртке ```json или с текстом вокруг: бывает, когда схема задана только в инструкции.
+        return {**EMPTY_ANSWER, **json_protocol.extract(text)}
+    except LLMError:
+        return {**EMPTY_ANSWER, "summary": text.strip()}
 
 
 async def run_turn(

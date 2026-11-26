@@ -247,10 +247,10 @@ async def audit(limit: int = Query(default=100, ge=1, le=500)):
 
 # --- расчёт стоимости ---
 @app.get("/api/usage/summary")
-async def usage_summary():
+async def usage_summary(since: str | None = None):
     settings = get_settings()
     return {
-        **store().usage_summary(),
+        **store().usage_summary(since),
         "prices": {"input_per_mtok": settings.price_input, "output_per_mtok": settings.price_output,
                    "cache_read_per_mtok": settings.price_cache_read, "currency": settings.price_currency,
                    "usd_rate": settings.usd_rate},

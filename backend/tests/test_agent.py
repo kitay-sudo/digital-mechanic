@@ -446,3 +446,27 @@ async def test_fact_without_source_is_not_shown(store, index, services):  # F4
     message = event["message"]
     assert message["answer"]["not_found"] and "манометром" not in message["text"]
     assert "Ответ без ссылок" in seen[2]["messages"][1]["content"]
+
+
+# --- слой Claude: выключатели возможностей для шлюза ---
+def test_claude_layer_feature_switches():
+    from app.agent.llm_anthropic import AnthropicLLM
+    from app.agent.tools import ANSWER_SCHEMA, TOOLS
+
+    full = AnthropicLLM("m", "medium", True, client=object()).params("система", [], TOOLS, ANSWER_SCHEMA)
+    assert full["output_config"]["format"]["type"] == "json_schema" and full["output_config"]["effort"] == "medium"
+    assert full["thinking"] == {"type": "adaptive"} and full["cache_control"] == {"type": "ephemeral"}
+    assert all(tool["strict"] for tool in full["tools"]) and full["max_tokens"] == 16000
+
+    bare = AnthropicLLM("m", "off", False, structured=False, strict_tools=False, thinking=False, cache=False,
+                        client=object()).params("система", [], TOOLS, ANSWER_SCHEMA)
+    assert "output_config" not in bare and "thinking" not in bare and "cache_control" not in bare
+    assert "strict" not in bare["tools"][0] and "JSON-схеме" in bare["system"]
+
+
+def test_answer_json_in_code_fence_is_parsed():
+    from app.agent.loop import _parse
+
+    parsed = _parse('Вот ответ:\n```json\n{"summary": "Готово", "not_found": true}\n```')
+    assert parsed["summary"] == "Готово" and parsed["not_found"] and parsed["checks"] == []
+    assert _parse("просто текст")["summary"] == "просто текст"

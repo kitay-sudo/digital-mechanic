@@ -226,17 +226,22 @@ class Store:
             (turn_id, step, model, input_tokens, output_tokens, cache_read_tokens, cost_rub, duration_ms, now()),
         )
 
-    def usage_summary(self) -> dict:
+    def usage_summary(self, since: str | None = None) -> dict:
+        """Сводка расхода модели. since: считать только ходы не раньше этого времени (ISO), чтобы
+        в расчёт стоимости не попали отладочные прогоны на других моделях."""
+        since = since or ""
         per_step = self._all(
             "SELECT c.step, c.model, COUNT(*) AS calls, SUM(c.input_tokens) AS inp, SUM(c.output_tokens) AS outp, "
             "SUM(c.cache_read_tokens) AS cache, SUM(c.cost_rub) AS cost, COUNT(DISTINCT t.scenario_id) AS scenarios "
-            "FROM llm_calls c JOIN turns t ON t.id=c.turn_id GROUP BY c.step, c.model ORDER BY c.step"
+            "FROM llm_calls c JOIN turns t ON t.id=c.turn_id WHERE t.created_at >= ? "
+            "GROUP BY c.step, c.model ORDER BY c.step", (since,)
         )
         scenarios = self._all(
             "SELECT t.scenario_id, COUNT(DISTINCT t.id) AS turns, COUNT(c.id) AS calls, "
             "COALESCE(SUM(c.input_tokens),0) AS inp, COALESCE(SUM(c.output_tokens),0) AS outp, "
             "COALESCE(SUM(c.cost_rub),0) AS cost, COALESCE(SUM(c.duration_ms),0) AS ms "
-            "FROM turns t LEFT JOIN llm_calls c ON c.turn_id=t.id WHERE t.scenario_id IS NOT NULL GROUP BY t.scenario_id"
+            "FROM turns t LEFT JOIN llm_calls c ON c.turn_id=t.id "
+            "WHERE t.scenario_id IS NOT NULL AND t.created_at >= ? GROUP BY t.scenario_id", (since,)
         )
         n = len(scenarios) or 1
         return {

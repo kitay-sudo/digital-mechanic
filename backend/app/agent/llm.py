@@ -50,7 +50,11 @@ def build_llm() -> LLM:
     if settings.llm_provider == "anthropic":
         from .llm_anthropic import AnthropicLLM
 
-        return AnthropicLLM(settings.llm_model, settings.llm_effort, settings.llm_fallbacks)
+        return AnthropicLLM(
+            settings.llm_model, settings.llm_effort, settings.llm_fallbacks,
+            structured=settings.llm_structured == "schema", strict_tools=settings.llm_strict_tools,
+            thinking=settings.llm_thinking, cache=settings.llm_cache, max_tokens=settings.llm_max_tokens,
+        )
     if settings.llm_provider == "openai":
         from .llm_openai import OpenAICompatLLM
 
