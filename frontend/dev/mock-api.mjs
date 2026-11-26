@@ -203,7 +203,6 @@ http.createServer(async (req, res) => {
   if (p === '/api/health') return jsonRes(res, 200, { status: 'ok', ml: true, toir: true, kb: { manuals: 6, pages: 1743, chunks: 0 } });
   if (p === '/api/config') return jsonRes(res, 200, {
     llm: { provider: 'mock', model: 'mock-llm', mock: true }, thresholds: { confidence_min: 0.5 }, priority_actions: ACTIONS,
-    languages: [{ code: 'ru', label: 'Русский' }, { code: 'uz', label: 'Oʻzbekcha' }, { code: 'tg', label: 'Тоҷикӣ' }, { code: 'hi', label: 'हिन्दी' }],
     levels: [{ code: 'expert', label: 'Опытный', hint: 'Коротко, только суть' }, { code: 'novice', label: 'Новичок', hint: 'С пояснениями и простыми словами' }],
   });
   if (p === '/api/audit') {

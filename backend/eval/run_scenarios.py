@@ -301,22 +301,10 @@ def s_adaptivity(r: Runner) -> None:
     lengths = {}
     for level in ("expert", "novice"):
         r.clear(vehicle)
-        m = r.ask(vehicle, None, question, {"language": "ru", "level": level})
+        m = r.ask(vehicle, None, question, {"level": level})
         lengths[level] = len(all_text(m))
         r.note(f"{level}: {lengths[level]} знаков · {m.get('text', '')[:160]}")
     r.check("качество", "новичку ответ подробнее, чем опытному", lengths["novice"] > lengths["expert"] * 1.15, str(lengths))
-
-    for language, pattern, name in (("uz", r"[a-zA-Zʻ’']", "узбекский"), ("hi", r"[ऀ-ॿ]", "хинди")):
-        r.start("К-язык", f"Язык ответа: {name}")
-        r.clear(vehicle)
-        m = r.ask(vehicle, None, question, {"language": language, "level": "expert"})
-        answer = m.get("answer") or {}
-        own = " ".join([answer.get("summary") or ""] + [i["text"] for i in answer.get("checks") or []])
-        letters = [c for c in own if c.isalpha()]
-        share = sum(bool(re.match(pattern, c)) for c in letters) / (len(letters) or 1)
-        r.check("качество", f"текст ответа на языке «{name}»", share > 0.5, f"доля букв языка {share:.0%}: {own[:120]}")
-        quotes = " ".join(ref["quote"] for ref in refs_of(answer))
-        r.check("качество", "цитаты остались на русском и подтверждены", bool(quotes) and bool(re.search(r"[а-яё]", quotes)), own[:120])
 
 
 def s_free_speech(r: Runner) -> None:

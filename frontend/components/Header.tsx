@@ -52,7 +52,7 @@ export function Header() {
           type="button"
           className={`hb${settingsOpen ? ' on' : ''}`}
           onClick={() => setSettingsOpen((v) => !v)}
-          aria-label="Настройки: размер текста, подача, язык, тема"
+          aria-label="Настройки: размер текста, подача, тема"
           aria-expanded={settingsOpen}
           title="Настройки"
         >

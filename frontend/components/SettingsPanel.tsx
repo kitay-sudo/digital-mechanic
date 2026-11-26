@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { FALLBACK_LANGUAGES, FALLBACK_LEVELS, setSettings, useSettings } from '@/lib/settings';
+import { FALLBACK_LEVELS, setSettings, useSettings } from '@/lib/settings';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 
@@ -42,7 +42,7 @@ function Choice<T extends string>({
   );
 }
 
-/** Настройки механика: размер текста, подача, язык ответов, тема. */
+/** Настройки механика: размер текста, подача, тема. */
 export function SettingsPanel({ config, onClose }: { config: Config | null; onClose: () => void }) {
   const settings = useSettings();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
@@ -67,7 +67,6 @@ export function SettingsPanel({ config, onClose }: { config: Config | null; onCl
   };
 
   const levels = config?.levels?.length ? config.levels : FALLBACK_LEVELS;
-  const languages = config?.languages?.length ? config.languages : FALLBACK_LANGUAGES;
   const levelHint = levels.find((l) => l.code === settings.level)?.hint;
 
   return (
@@ -101,17 +100,6 @@ export function SettingsPanel({ config, onClose }: { config: Config | null; onCl
             <div className="sp-l">Подача</div>
             <Choice label="Подача" value={settings.level} options={levels} onChange={(level) => setSettings({ level })} />
             {levelHint ? <div className="sp-s">{levelHint}</div> : null}
-          </div>
-          <div className="sp-g">
-            <div className="sp-l">Язык ответов</div>
-            <Choice
-              label="Язык ответов"
-              value={settings.language}
-              options={languages}
-              onChange={(language) => setSettings({ language })}
-              columns={2}
-            />
-            <div className="sp-s">Цитаты из руководства остаются на русском</div>
           </div>
           <div className="sp-g">
             <div className="sp-l">Тема</div>

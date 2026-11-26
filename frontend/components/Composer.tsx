@@ -40,11 +40,14 @@ function voiceErrorText(code: string | undefined): string | null {
     case 'network':
       return 'Распознавание речи недоступно без сети.';
     case 'language-not-supported':
-      return 'Браузер не распознаёт речь на выбранном языке.';
+      return 'Браузер не распознаёт русскую речь.';
     default:
       return 'Не получилось распознать речь. Повторите или введите текст.';
   }
 }
+
+/** Язык распознавания речи: система работает только на русском. */
+const SPEECH_LANG = 'ru-RU';
 
 /**
  * Панель ввода. Голос — главный способ: механик говорит, фраза сама уходит в чат.
@@ -53,13 +56,11 @@ function voiceErrorText(code: string | undefined): string | null {
 export function Composer({
   busy,
   canDiagnose,
-  speechLang,
   onDiagnose,
   onSend,
 }: {
   busy: boolean;
   canDiagnose: boolean;
-  speechLang: string;
   onDiagnose: () => void;
   onSend: (text: string) => void;
 }) {
@@ -108,7 +109,7 @@ export function Composer({
     const Ctor = getRecognition();
     if (!Ctor) return;
     const rec = new Ctor();
-    rec.lang = speechLang;
+    rec.lang = SPEECH_LANG;
     rec.interimResults = true;
     rec.continuous = false;
     heardRef.current = '';
@@ -143,7 +144,7 @@ export function Composer({
       setListening(false);
       setVoiceError('Не получилось включить микрофон. Повторите.');
     }
-  }, [speechLang]);
+  }, []);
 
   return (
     <div className={`ftr composer${voice ? ' has-voice' : ''}`}>

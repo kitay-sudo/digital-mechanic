@@ -196,12 +196,12 @@ async def test_question_outside_knowledge_base_is_declined(store, index, service
 async def test_profile_reaches_the_agent_and_audit_log_records_sources(store, index, services):  # адаптивность, журнал
     from app.agent import prompt
 
-    line = prompt.profile_line({"language": "uz", "level": "novice"})
-    assert "новичок" in line and "узбекский" in line
-    assert "опытный" in prompt.profile_line(None) and "русский" in prompt.profile_line(None)
+    assert "новичок" in prompt.profile_line({"level": "novice"})
+    assert "опытный" in prompt.profile_line(None)
+    assert "только на русском" in prompt.SYSTEM
 
     await turn(store, index, "T792HO98", "S-0043", "Получи результат диагностики",
-               profile={"language": "ru", "level": "novice"})
+               profile={"level": "novice"})
     log = store.audit(10)
     assert log[0]["question"] == "Получи результат диагностики" and log[0]["kind"] == "verdict"
     assert log[0]["sources"] and "get_diagnosis" in log[0]["tools"]

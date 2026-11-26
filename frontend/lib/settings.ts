@@ -3,16 +3,15 @@
 import { useSyncExternalStore } from 'react';
 import type { Profile } from './types';
 
-/** Настройки механика. Хранятся в браузере, на сервер уходит только профиль (язык и подача). */
+/** Настройки механика. Хранятся в браузере, на сервер уходит только профиль (подача). */
 export interface Settings {
   size: 'normal' | 'large';
   level: string;
-  language: string;
   consent: boolean;
 }
 
 const KEY = 'dm-settings';
-const DEFAULTS: Settings = { size: 'normal', level: 'expert', language: 'ru', consent: false };
+const DEFAULTS: Settings = { size: 'normal', level: 'expert', consent: false };
 
 let state: Settings = DEFAULTS;
 let loaded = false;
@@ -55,20 +54,10 @@ export function useSettings(): Settings {
 }
 
 export function profileOf(s: Settings): Profile {
-  return { language: s.language, level: s.level };
+  return { level: s.level };
 }
 
-/** Язык распознавания речи по языку ответов */
-const SPEECH: Record<string, string> = { ru: 'ru-RU', uz: 'uz-UZ', tg: 'tg-TJ', hi: 'hi-IN' };
-export const speechLang = (language: string): string => SPEECH[language] ?? 'ru-RU';
-
-/* Запасные списки, если сервер их не прислал */
-export const FALLBACK_LANGUAGES = [
-  { code: 'ru', label: 'Русский' },
-  { code: 'uz', label: 'Oʻzbekcha' },
-  { code: 'tg', label: 'Тоҷикӣ' },
-  { code: 'hi', label: 'हिन्दी' },
-];
+/* Запасной список, если сервер его не прислал */
 export const FALLBACK_LEVELS = [
   { code: 'expert', label: 'Опытный', hint: 'Коротко, только суть' },
   { code: 'novice', label: 'Новичок', hint: 'С пояснениями и простыми словами' },

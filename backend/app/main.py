@@ -78,7 +78,6 @@ async def config():
         "kb": kb_status(),
         "thresholds": {"confidence_min": settings.confidence_min},
         "priority_actions": rules.ACTIONS,
-        "languages": prompt.LANGUAGE_LABELS,
         "levels": prompt.LEVEL_LABELS,
     }
 
@@ -96,7 +95,6 @@ async def get_vehicle(vehicle_id: str):
 # --- чат ---
 class Profile(BaseModel):
     """Настройки механика: язык ответов и уровень подачи."""
-    language: str = Field(default="ru", pattern="^(ru|uz|tg|hi)$")
     level: str = Field(default="expert", pattern="^(expert|novice)$")
 
 

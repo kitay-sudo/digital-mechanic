@@ -11,14 +11,12 @@ export interface Config {
   kb?: { ready: boolean; missing: string[]; pages: number };
   thresholds: { confidence_min: number };
   priority_actions: Record<Priority, string>;
-  /** Языки ответов агента и уровни подачи: могут отсутствовать у старого сервера */
-  languages?: { code: string; label: string }[];
+  /** Уровни подачи: могут отсутствовать у старого сервера */
   levels?: { code: string; label: string; hint: string }[];
 }
 
 /** Профиль механика, уходит с каждым сообщением в чат */
 export interface Profile {
-  language: string;
   level: string;
 }
 

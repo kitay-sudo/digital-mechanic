@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, chatStream, confirmDraftStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
-import { profileOf, speechLang, useSettings } from '@/lib/settings';
+import { profileOf, useSettings } from '@/lib/settings';
 import type { ManualTarget, Message, Step, StreamEvent, VehicleDetail } from '@/lib/types';
 import { Composer } from './Composer';
 import { Icon } from './Icon';
@@ -226,7 +226,6 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         <Composer
           busy={busy}
           canDiagnose={Boolean(session)}
-          speechLang={speechLang(settings.language)}
           onDiagnose={() => send(DIAGNOSE_TEXT)}
           onSend={send}
         />
