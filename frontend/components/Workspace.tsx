@@ -10,6 +10,7 @@ import { Composer } from './Composer';
 import { Icon } from './Icon';
 import { ManualPanel } from './ManualPanel';
 import { MessageView, PendingSteps } from './MessageView';
+import { sameTarget } from './RefChip';
 import { ErrorState, Loading } from './States';
 import { VehiclePanel } from './VehiclePanel';
 
@@ -141,8 +142,9 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
       .catch((e: Error) => setMessages((list) => [...list, localNotice(e.message)]));
   }, [busy, vehicleId]);
 
+  // Повторное нажатие на ту же ссылку закрывает страницу руководства
   const openManual = useCallback((target: ManualTarget) => {
-    setManual(target);
+    setManual((cur) => (sameTarget(cur, target) ? null : target));
     setSideOpen(false);
   }, []);
 

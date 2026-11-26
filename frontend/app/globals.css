@@ -1252,10 +1252,10 @@ details.fold > .fin {
   border-bottom: none;
 }
 
+/* Текст шага начинается у верхнего края номера, без сдвига вниз */
 .item .tx {
   font-size: calc(16px * var(--k));
   line-height: calc(24px * var(--k));
-  padding-top: 2px;
   overflow-wrap: anywhere;
 }
 
@@ -1545,7 +1545,6 @@ details.fold > .fin {
 }
 
 .wk .tx {
-  padding-top: 2px;
   font-size: calc(16px * var(--k));
   line-height: calc(24px * var(--k));
 }
@@ -2276,10 +2275,6 @@ details.fold > .fin {
   grid-template-columns: calc(36px * var(--k)) minmax(0, 1fr);
 }
 
-.item .tx {
-  padding-top: calc(6px * var(--k));
-}
-
 .chk {
   width: calc(36px * var(--k));
   height: calc(36px * var(--k));
@@ -2552,10 +2547,6 @@ details.fold > .fin {
     font-size: calc(16px * var(--k));
   }
 
-  .item .tx {
-    padding-top: calc(10px * var(--k));
-  }
-
   .nextstep {
     flex-wrap: wrap;
   }
@@ -2629,7 +2620,6 @@ details.fold > .fin {
 }
 
 .cfl-say {
-  padding-top: calc(6px * var(--k));
   font-size: calc(13px * var(--k));
   line-height: calc(18px * var(--k));
   color: var(--tx2);

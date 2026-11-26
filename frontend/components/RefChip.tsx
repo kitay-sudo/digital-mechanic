@@ -18,7 +18,8 @@ export function RefChip({
       type="button"
       className={`src${active ? ' on' : ''}`}
       onClick={() => onOpen(target)}
-      title={target.quote ? `Открыть страницу. Цитата: ${target.quote}` : 'Открыть страницу руководства'}
+      aria-pressed={Boolean(active)}
+      title={active ? 'Закрыть страницу руководства' : target.quote ? `Открыть страницу. Цитата: ${target.quote}` : 'Открыть страницу руководства'}
     >
       <Icon name="file-text" size="s" />
       {label} · стр. {target.page}
