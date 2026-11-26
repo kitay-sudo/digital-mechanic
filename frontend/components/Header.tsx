@@ -20,6 +20,7 @@ export function Header() {
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
 
   return (
+    <>
     <header className="top">
       <Link href="/" className="logo">
         <Icon name="engine" size="l" />
@@ -60,5 +61,15 @@ export function Header() {
       </div>
       {settingsOpen ? <SettingsPanel config={config} onClose={closeSettings} /> : null}
     </header>
+    {config?.kb && !config.kb.ready ? (
+      <div className="kbwarn" role="alert">
+        <Icon name="alert-triangle" />
+        <span>
+          <b>Руководства не загружены в базу знаний:</b> {config.kb.missing.join(', ')}. Ответы по ним недоступны. Положите PDF в
+          папку knowledge/pdf и постройте индекс, как описано в README.
+        </span>
+      </div>
+    ) : null}
+    </>
   );
 }

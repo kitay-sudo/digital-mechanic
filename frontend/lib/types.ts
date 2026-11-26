@@ -7,6 +7,8 @@ export type FleetStatus = 'ok' | 'attention' | 'quarantine';
 
 export interface Config {
   llm: { provider: string; model: string; mock: boolean };
+  /** Состояние базы знаний: каких руководств нет в индексе. У старого сервера поля нет */
+  kb?: { ready: boolean; missing: string[]; pages: number };
   thresholds: { confidence_min: number };
   priority_actions: Record<Priority, string>;
   /** Языки ответов агента и уровни подачи: могут отсутствовать у старого сервера */

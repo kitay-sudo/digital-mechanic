@@ -23,6 +23,8 @@ EMPTY_ANSWER = {"summary": "", "observations": [], "hypotheses": [], "checks": [
 HIDDEN_NOTE = "Часть ответа скрыта: её не удалось подтвердить страницей руководства."
 MISMATCH_TEXT = ("Это ошибка модели диагностики, а не диагноз: по этому типу выводов о двигателе нет. "
                  "Повторите проверку или проведите дефектовку.")
+KB_EMPTY_TEXT = ("Руководства на двигатель {engine} не загружены в базу знаний, поэтому ответить по ним сейчас нельзя. "
+                 "Это настройка стенда, а не отсутствие инструкции: обратитесь к администратору.")
 UNSOURCED_TEXT = ("Подтвердить ответ страницей руководства на этот двигатель не удалось. "
                   "Без страницы и цитаты агент фактов и нормативов не называет.")
 CONFLICT_LEAD = "В руководствах есть расхождение, формулировки показаны ниже."
@@ -260,6 +262,14 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
                 "recommendation_text": prompt.mismatch_text(vehicle, ctx.diagnosis),
             }
             return payload
+        if ctx.kb_empty:
+            # База знаний пуста: это не «инструкции нет», а не загруженные руководства. Говорим прямо.
+            text = KB_EMPTY_TEXT.format(engine=engine)
+            payload["text"] = f"Проверка показала отклонение: {ctx.diagnosis.get('anomaly_title')}. {text}"
+            assessment["ticket_allowed"] = False
+            assessment["ticket_block_reason"] = text
+            payload["answer"] = {**EMPTY_ANSWER, "summary": payload["text"], "limitations": [text]}
+            return payload
         payload["text"] = answer["summary"] or f"Проверка показала отклонение: {ctx.diagnosis.get('anomaly_title')}."
         reason = None
         if not _has_instruction(ctx, answer):
@@ -283,6 +293,9 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
         if ctx.no_instruction and ctx.diagnosis:
             answer["recommendation_text"] = prompt.recommendation_text(vehicle, ctx.diagnosis, ctx.ticket_block)
         return {"kind": "answer", "text": answer["summary"], "answer": answer}
+
+    if ctx.kb_empty and (ctx.searched or ctx.ticket_block or answer["not_found"]):
+        return {"kind": "notice", "text": KB_EMPTY_TEXT.format(engine=engine)}
 
     if _unsourced(ctx, answer):
         # Факт без страницы и цитаты не показываем: вместо пересказа честный отказ.

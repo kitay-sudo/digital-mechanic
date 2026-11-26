@@ -196,6 +196,11 @@ class TurnContext:
     def allowed_manuals(self) -> list[str]:
         return [m.id for m in manuals_for_engine(self.vehicle["engine_model"])]
 
+    @property
+    def kb_empty(self) -> bool:
+        """Руководства этого двигателя не проиндексированы: это ошибка настройки, а не «инструкции нет»."""
+        return all(self.index.page_count(manual_id) == 0 for manual_id in self.allowed_manuals)
+
     def context_numbers(self) -> set[str]:
         """Числа, которые агент вправе назвать без страницы руководства: результат проверки и история."""
         from .verify import _norm, page_numbers
@@ -321,6 +326,12 @@ async def search_manuals(ctx: TurnContext, args: dict, step_id: str) -> tuple[st
     query = str(args.get("query", "")).strip()
     title = f"Ищу в руководствах: {query[:70]}"
     await ctx.step(step_id, "search_manuals", title, "running")
+    if ctx.kb_empty:
+        ctx.searched = True
+        await ctx.step(step_id, "search_manuals", title, "error", "руководства не загружены в базу знаний")
+        return _dump({"error": f"Руководства на двигатель {ctx.vehicle['engine_model']} не загружены в базу знаний. "
+                               "Это ошибка настройки стенда. Скажи механику, что ответить по руководству сейчас нельзя. "
+                               "Не говори, что инструкции в руководстве нет."}), True
     hits = ctx.index.search(query, ctx.allowed_manuals, limit=6, every_manual=True)
     ctx.searched = True
     results = []

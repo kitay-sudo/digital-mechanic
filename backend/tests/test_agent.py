@@ -470,3 +470,15 @@ def test_answer_json_in_code_fence_is_parsed():
     parsed = _parse('Вот ответ:\n```json\n{"summary": "Готово", "not_found": true}\n```')
     assert parsed["summary"] == "Готово" and parsed["not_found"] and parsed["checks"] == []
     assert _parse("просто текст")["summary"] == "просто текст"
+
+
+# --- пустая база знаний: ошибка настройки, а не «инструкции нет» ---
+async def test_empty_knowledge_base_is_reported_as_setup_problem(store, services):
+    from app.kb.index import get_index
+
+    empty = get_index()
+    message, _ = await turn(store, empty, "T792HO98", "S-0043", "Получи результат диагностики")
+    assert "не загружены в базу знаний" in message["text"] and "инструкции" not in message["text"].split("Это настройка")[0]
+    assert message["assessment"]["ticket_allowed"] is False
+    message, _ = await turn(store, empty, "T792HO98", "S-0043", "Какое давление масла допускается?")
+    assert message["kind"] == "notice" and "не загружены в базу знаний" in message["text"]

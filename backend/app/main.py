@@ -60,12 +60,22 @@ async def health():
             "llm": {"provider": state["llm"].name, "model": state["llm"].model}}
 
 
+def kb_status() -> dict:
+    """Какие руководства проиндексированы. Пустая база — ошибка настройки, интерфейс предупреждает о ней."""
+    from .manuals import all_manuals
+
+    index = state["index"]
+    missing = [m.short for m in all_manuals() if index.page_count(m.id) == 0]
+    return {"ready": not missing, "missing": missing, "pages": index.stats()["pages"]}
+
+
 @app.get("/api/config")
 async def config():
     settings = get_settings()
     llm = state["llm"]
     return {
         "llm": {"provider": llm.name, "model": llm.model, "mock": llm.is_mock},
+        "kb": kb_status(),
         "thresholds": {"confidence_min": settings.confidence_min},
         "priority_actions": rules.ACTIONS,
         "languages": prompt.LANGUAGE_LABELS,
