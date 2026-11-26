@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#171a1e" />
+    <title>Нет связи · Цифровой механик</title>
+    <style>
+      :root {
+        color-scheme: dark light;
+        --bg: #101215;
+        --panel: #171a1e;
+        --line: #3a424b;
+        --tx: #e6e9ec;
+        --tx2: #a9b1ba;
+        --acc: #5c9dff;
+        --acc-tx: #0b1220;
+      }
+      @media (prefers-color-scheme: light) {
+        :root {
+          --bg: #e9ecef;
+          --panel: #ffffff;
+          --line: #b6bdc6;
+          --tx: #14181d;
+          --tx2: #46505a;
+          --acc: #1d5fc4;
+          --acc-tx: #ffffff;
+        }
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        min-height: 100dvh;
+        display: grid;
+        place-items: center;
+        padding: 24px;
+        background: var(--bg);
+        color: var(--tx);
+        font: 16px/24px system-ui, 'Segoe UI', Arial, sans-serif;
+      }
+      main {
+        width: min(440px, 100%);
+        padding: 28px 24px;
+        background: var(--panel);
+        border: 1px solid var(--line);
+        text-align: center;
+      }
+      img {
+        width: 72px;
+        height: 72px;
+      }
+      h1 {
+        margin-top: 16px;
+        font-size: 24px;
+        line-height: 32px;
+        font-weight: 600;
+      }
+      p {
+        margin-top: 10px;
+        color: var(--tx2);
+      }
+      button {
+        margin-top: 20px;
+        width: 100%;
+        height: 52px;
+        border: none;
+        border-radius: 4px;
+        background: var(--acc);
+        color: var(--acc-tx);
+        font: 600 17px/1 inherit;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="" />
+      <h1>Нет связи с сервером</h1>
+      <p>Цифровой механик работает через сеть: результат диагностики и ответы по руководству приходят с сервера. Проверьте Wi-Fi или мобильный интернет и повторите.</p>
+      <button type="button" onclick="location.reload()">Повторить</button>
+    </main>
+  </body>
+</html>

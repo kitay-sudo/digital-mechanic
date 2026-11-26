@@ -6,6 +6,7 @@ import { FALLBACK_LEVELS, setSettings, useSettings } from '@/lib/settings';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 import { openTour } from './Onboarding';
+import { appVersion, changeAppServer, installApp, usePwa } from '@/lib/pwa';
 
 function Choice<T extends string>({
   label,
@@ -43,9 +44,13 @@ function Choice<T extends string>({
   );
 }
 
-/** Настройки механика: размер текста, подача, тема. */
+/** Файл приложения для Android. Собирается скриптом android/build.sh и кладётся в public/app */
+const APK_URL = '/app/digital-mechanic.apk';
+
+/** Настройки механика: размер текста, подача, тема, установка приложения. */
 export function SettingsPanel({ config, leaving = false, onClose }: { config: Config | null; leaving?: boolean; onClose: () => void }) {
   const settings = useSettings();
+  const pwa = usePwa();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
   useEffect(() => {
@@ -113,6 +118,63 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
               ]}
               onChange={applyTheme}
             />
+          </div>
+          <div className="sp-g">
+            <div className="sp-l">Приложение на телефон</div>
+            {pwa.shell ? (
+              // Система открыта в приложении для Android: устанавливать нечего, можно сменить сервер
+              <>
+                <div className="sp-ok">
+                  <Icon name="circle-check" />
+                  Приложение для Android{appVersion() ? `, версия ${appVersion()}` : ''}
+                </div>
+                <button type="button" className="sp-link" onClick={changeAppServer}>
+                  <Icon name="server-2" />
+                  <span>Сменить адрес сервера</span>
+                  <Icon name="chevron-right" className="mut" />
+                </button>
+              </>
+            ) : pwa.installed ? (
+              <div className="sp-ok">
+                <Icon name="circle-check" />
+                Приложение установлено
+              </div>
+            ) : pwa.canInstall ? (
+              <button type="button" className="btn pri sp-inst" onClick={() => void installApp()}>
+                <Icon name="download" />
+                Установить приложение
+              </button>
+            ) : null}
+            {!pwa.shell && !pwa.secure ? (
+              <div className="sp-s">Установка из браузера доступна, когда система открыта по защищённому адресу (https). Приложение для Android работает с любым адресом.</div>
+            ) : null}
+            {pwa.shell ? null : (
+            <details className="sp-how" open={pwa.ios && !pwa.installed}>
+              <summary>
+                <Icon name="chevron-right" />
+                Как установить
+              </summary>
+              <ol>
+                <li>
+                  <b>Android, Chrome.</b> Меню «⋮» → «Установить приложение» или «Добавить на главный экран».
+                </li>
+                <li>
+                  <b>iPhone, Safari.</b> Кнопка «Поделиться» → «На экран „Домой“».
+                </li>
+                <li>
+                  <b>Компьютер, Chrome или Edge.</b> Значок установки справа в адресной строке.
+                </li>
+              </ol>
+              <div className="sp-s">После установки система открывается со значка, как обычное приложение, без адресной строки.</div>
+            </details>
+            )}
+            {pwa.shell ? null : (
+              <a href={APK_URL} className="sp-link" download="digital-mechanic.apk">
+                <Icon name="brand-android" />
+                <span>Скачать приложение для Android (APK)</span>
+                <Icon name="download" className="mut" />
+              </a>
+            )}
           </div>
           <button
             type="button"

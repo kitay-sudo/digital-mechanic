@@ -14,5 +14,7 @@ ENV NODE_ENV=production PORT=3000 HOSTNAME=0.0.0.0
 ENV BACKEND_URL=http://backend:8000
 COPY --from=build /app/.next/standalone ./
 COPY --from=build /app/.next/static ./.next/static
+# Значки, сервис-воркер и экран «Нет связи»: самодостаточная сборка папку public не берёт сама
+COPY --from=build /app/public ./public
 EXPOSE 3000
 CMD ["node", "server.js"]

@@ -2,11 +2,15 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useFitRows, usePaged } from '@/lib/paging';
+import { setFleetQuery, useFleetQuery } from '@/lib/search';
+import { useSettings } from '@/lib/settings';
 import { api } from '@/lib/api';
 import { dateTime, vehicleIcon } from '@/lib/format';
 import type { Fleet, FleetStatus, VehicleBrief } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
+import { Pager } from './Pager';
 import { ErrorState, Loading } from './States';
 
 const TILES: { key: FleetStatus; label: string; hint: string; cls: string; icon: string }[] = [
@@ -23,7 +27,7 @@ function Row({ v }: { v: VehicleBrief }) {
   const s = v.last_session;
   const ticket = lastTicket(v);
   return (
-    <Link href={`/v/${encodeURIComponent(v.vehicle_id)}`} className={`frow s-${v.fleet_status}`}>
+    <Link href={`/v/${encodeURIComponent(v.vehicle_id)}`} className={`frow s-${v.fleet_status}`} data-row>
       <span>
         <span className="vid">{v.vehicle_id}</span>
         <span className="gno">{v.garage_no}</span>
@@ -54,7 +58,9 @@ export function FleetView() {
   const [fleet, setFleet] = useState<Fleet | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<FleetStatus | null>(null);
-  const [query, setQuery] = useState('');
+  // Строка поиска общая с верхней строкой приложения: на компьютере поле стоит там
+  const query = useFleetQuery();
+  const settings = useSettings();
 
   const load = useCallback(() => {
     setError(null);
@@ -76,6 +82,10 @@ export function FleetView() {
     });
   }, [fleet, filter, query]);
 
+  // Страница не прокручивается: в таблице столько строк, сколько помещается, остальное листается
+  const { areaRef, pageSize } = useFitRows([settings.size, fleet, rows.length === 0]);
+  const paged = usePaged(rows, pageSize, (filter ?? 'all') + '|' + query);
+
   if (error) return <ErrorState text={error} onRetry={load} />;
   if (!fleet) return <Loading text="Загружаю парк…" />;
 
@@ -83,24 +93,19 @@ export function FleetView() {
 
   return (
     <>
-      <div className="fbar">
-        <div>
-          <div className="h1">Парк</div>
-        </div>
-        <span className="st only-d">
-          Сводка главного механика · машин: <span className="m">{summary.total}</span>
-        </span>
+      {/* На компьютере поиск стоит в верхней строке приложения, отдельная полоса нужна только телефону */}
+      <div className="fbar only-m">
         <label className="search">
           <Icon name="search" />
           <input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => setFleetQuery(e.target.value)}
             placeholder="Госномер, гаражный номер или модель"
             aria-label="Поиск машины"
           />
         </label>
       </div>
-      <div className="body">
+      <div className="body fit">
         <div className="tiles">
           {TILES.map((t) => (
             <button
@@ -132,19 +137,20 @@ export function FleetView() {
               className="btn sm"
               onClick={() => {
                 setFilter(null);
-                setQuery('');
+                setFleetQuery('');
               }}
             >
               <Icon name="x" size="s" />
               Сбросить
             </button>
           ) : (
-            <span>сначала те, кому нужна дефектовка</span>
+            <span className="only-d">сначала те, кому нужна дефектовка</span>
           )}
         </div>
         {rows.length ? (
-          <div className="ftable">
-            <div className="fhead">
+          <div className="fit-area" ref={areaRef}>
+            <div className="ftable">
+              <div className="fhead" data-head>
               <span>Госномер, гаражный №</span>
               <span>Машина</span>
               <span>Двигатель</span>
@@ -153,9 +159,10 @@ export function FleetView() {
               <span>Приоритет</span>
               <span>Заявка</span>
             </div>
-            {rows.map((v) => (
-              <Row key={v.vehicle_id} v={v} />
-            ))}
+              {paged.rows.map((v) => (
+                <Row key={v.vehicle_id} v={v} />
+              ))}
+            </div>
           </div>
         ) : (
           <div className="box center" style={{ minHeight: 200 }}>
@@ -164,6 +171,7 @@ export function FleetView() {
             <div>Измените поиск или сбросьте фильтр</div>
           </div>
         )}
+        <Pager paged={paged} label="машины" />
       </div>
     </>
   );

@@ -1,14 +1,17 @@
 'use client';
 
 import Link from 'next/link';
-import { Fragment, useCallback, useEffect, useRef, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { PRIORITY_LABEL, QUALITY_LABEL, dateTime, num } from '@/lib/format';
 import type { Session, Ticket, VehicleDetail } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
 import { ChartDrop, ChartSheet } from './ChartSheet';
+import { Pager } from './Pager';
 import { ErrorState, Loading } from './States';
+import { useFitRows, usePaged } from '@/lib/paging';
+import { useSettings } from '@/lib/settings';
 
 export type HistoryTab = 'checks' | 'tickets';
 
@@ -60,6 +63,7 @@ function CheckRow({
   return (
     <div
       className={`frow crow${s.status === 'anomaly' ? ' s-attention' : ''}${current ? ' cur' : ''}${open ? ' open' : ''}`}
+      data-row
       role="button"
       tabIndex={0}
       aria-expanded={open}
@@ -136,7 +140,7 @@ function CheckRow({
 function TicketRow({ vehicleId, t }: { vehicleId: string; t: Ticket }) {
   return (
     <details className="trec">
-      <summary className="frow">
+      <summary className="frow" data-row>
         <span>
           <Icon name="chevron-right" className="chev" />
           <span className="vid">{t.ticket_id}</span>
@@ -239,12 +243,18 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
 
   useEffect(load, [load]);
 
+  // Новые сверху: механику нужна последняя
+  const sessions = useMemo(() => (vehicle ? [...vehicle.sessions].reverse() : []), [vehicle]);
+  const tickets = useMemo(() => (vehicle ? [...vehicle.tickets].reverse() : []), [vehicle]);
+  // Страница не прокручивается: в таблице столько строк, сколько помещается, остальное листается
+  const settings = useSettings();
+  const { areaRef, pageSize } = useFitRows([settings.size, tab, vehicle]);
+  const pagedChecks = usePaged(sessions, pageSize, tab);
+  const pagedTickets = usePaged(tickets, pageSize, tab);
+
   if (error) return <ErrorState text={error} onRetry={load} />;
   if (!vehicle) return <Loading text="Загружаю историю машины…" />;
 
-  // Новые сверху: механику нужна последняя
-  const sessions = [...vehicle.sessions].reverse();
-  const tickets = [...vehicle.tickets].reverse();
   // Проверка, которая сейчас в чате. Без неё в адресе чат откроется на последней
   const inChat = current && vehicle.sessions.some((s) => s.session_id === current) ? current : null;
   if (openId) lastOpen.current = openId;
@@ -283,19 +293,19 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
         </span>
       </div>
 
-      <div className="body">
+      <div className="body fit">
         {tab === 'checks' ? (
-          <div className="hgrid">
-            <div>
-              {sessions.length ? (
-                <div className="trendbar">
-                  <Icon name={trendIcon} />
-                  <span className="tb-t">{vehicle.trend.text}</span>
-                </div>
-              ) : null}
-              {sessions.length ? (
+          <>
+            {sessions.length ? (
+              <div className="trendbar">
+                <Icon name={trendIcon} />
+                <span className="tb-t">{vehicle.trend.text}</span>
+              </div>
+            ) : null}
+            {sessions.length ? (
+              <div className="fit-area" ref={areaRef}>
                 <div className="ftable ctable">
-                  <div className="fhead">
+                  <div className="fhead" data-head>
                     <span>Проверка</span>
                     <span>Дата</span>
                     <span>Результат ML</span>
@@ -305,7 +315,7 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                     <span>Заявка</span>
                     <span />
                   </div>
-                  {sessions.map((s) => (
+                  {pagedChecks.rows.map((s) => (
                     <Fragment key={s.session_id}>
                       <CheckRow
                         vehicleId={vehicleId}
@@ -327,13 +337,14 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                     </Fragment>
                   ))}
                 </div>
-              ) : (
-                <div className="box center" style={{ minHeight: 160 }}>
-                  <Icon name="history" size="xl" />
-                  <div className="e1">Проверок нет</div>
-                </div>
-              )}
-            </div>
+              </div>
+            ) : (
+              <div className="box center" style={{ minHeight: 160 }}>
+                <Icon name="history" size="xl" />
+                <div className="e1">Проверок нет</div>
+              </div>
+            )}
+            <Pager paged={pagedChecks} label="проверки" />
             <ChartSheet
               open={narrow && openId !== null}
               onClose={closeChart}
@@ -343,12 +354,13 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
               trendText={vehicle.trend.text}
               chatHref={chatHref(vehicleId, lastOpen.current)}
             />
-          </div>
+          </>
         ) : (
           <>
             {tickets.length ? (
-              <div className="ftable ttable">
-                <div className="fhead">
+              <div className="fit-area" ref={areaRef}>
+                <div className="ftable ttable">
+                  <div className="fhead" data-head>
                   <span>Заявка</span>
                   <span>Создана</span>
                   <span>Проверка</span>
@@ -356,9 +368,10 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                   <span>Приоритет</span>
                   <span>Диагноз</span>
                 </div>
-                {tickets.map((t) => (
-                  <TicketRow key={t.ticket_id} vehicleId={vehicleId} t={t} />
-                ))}
+                  {pagedTickets.rows.map((t) => (
+                    <TicketRow key={t.ticket_id} vehicleId={vehicleId} t={t} />
+                  ))}
+                </div>
               </div>
             ) : (
               <div className="box center" style={{ minHeight: 160 }}>
@@ -367,6 +380,7 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                 <div>Заявка оформляется в чате после результата с отклонением.</div>
               </div>
             )}
+            <Pager paged={pagedTickets} label="заявки" />
           </>
         )}
       </div>

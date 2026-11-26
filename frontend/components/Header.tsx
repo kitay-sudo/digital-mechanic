@@ -7,6 +7,7 @@ import { api } from '@/lib/api';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 import { usePresence } from '@/lib/presence';
+import { setFleetQuery, useFleetQuery } from '@/lib/search';
 import { SettingsPanel } from './SettingsPanel';
 
 export function Header() {
@@ -19,6 +20,11 @@ export function Header() {
   }, []);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
+  const fleetQuery = useFleetQuery();
+  // Адрес страницы на сервере и в браузере может не совпасть при первой отрисовке,
+  // поэтому поиск появляется после загрузки: так разметка сервера и браузера одинаковая
+  const [ready, setReady] = useState(false);
+  useEffect(() => setReady(true), []);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
   const settingsView = usePresence(settingsOpen ? true : null);
 
@@ -39,6 +45,21 @@ export function Header() {
           Журнал
         </Link>
       </nav>
+      {/* Поиск по парку на компьютере стоит здесь, на всю свободную ширину. На телефоне он под шапкой */}
+      {ready && pathname === '/' ? (
+        <label className="search only-d">
+          <Icon name="search" />
+          <input
+            value={fleetQuery}
+            onChange={(e) => setFleetQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Escape') setFleetQuery('');
+            }}
+            placeholder="Госномер, гаражный номер или модель"
+            aria-label="Поиск машины"
+          />
+        </label>
+      ) : null}
       <div className="r">
         {config ? (
           <span className="only-d" title="Модель, которая отвечает механику">

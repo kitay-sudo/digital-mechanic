@@ -4032,3 +4032,257 @@ button.sp-link {
     min-width: 0;
   }
 }
+
+/* ---------- Настройки: установка приложения ---------- */
+
+.sp-inst {
+  width: 100%;
+}
+
+.sp-ok {
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+}
+
+.sp-ok .ti {
+  color: var(--ok);
+}
+
+.sp-how {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+}
+
+.sp-how > summary {
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 14px;
+  font-size: calc(15px * var(--k));
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.sp-how > summary::-webkit-details-marker {
+  display: none;
+}
+
+.sp-how > summary .ti {
+  color: var(--tx3);
+  transition: transform 0.12s;
+}
+
+.sp-how[open] > summary .ti {
+  transform: rotate(90deg);
+}
+
+.sp-how ol {
+  list-style: none;
+  padding: 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--tx2);
+}
+
+.sp-how b {
+  display: block;
+  color: var(--tx);
+  font-weight: 600;
+}
+
+.sp-how > .sp-s {
+  padding: 0 14px 14px;
+  margin-top: 10px;
+}
+
+.sp-g > .sp-link {
+  margin-top: 8px;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .sp-how::details-content {
+    block-size: 0;
+    overflow: clip;
+    transition:
+      block-size var(--mo) var(--ease),
+      content-visibility var(--mo) allow-discrete;
+  }
+
+  .sp-how[open]::details-content {
+    block-size: auto;
+  }
+}
+
+/* ---------- Один экран без прокрутки страницы ----------
+   Экран со списком не прокручивается целиком: таблица получает всё свободное место
+   и показывает столько строк, сколько помещается (lib/paging.ts), остальное листается.
+   Прокрутка остаётся только внутри блока, если в нём раскрыли подробности. */
+
+.body.fit {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.body.fit > * {
+  flex: none;
+}
+
+.body.fit > .fit-area {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.body.fit > .box.center {
+  flex: 1;
+}
+
+.pager {
+  min-height: calc(40px * var(--k));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.pg-info {
+  font-size: calc(14px * var(--k));
+  color: var(--tx2);
+  white-space: nowrap;
+}
+
+.pg-info .m {
+  color: var(--tx);
+}
+
+.pg-nav,
+.pg-nums {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pg-n {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tx2);
+  font: 500 calc(15px * var(--k)) / 1 var(--mono);
+  cursor: pointer;
+}
+
+.pg-n:hover {
+  border-color: var(--line2);
+  color: var(--tx);
+}
+
+.pg-n.on {
+  background: var(--acc-bg);
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.pg-gap {
+  min-width: 24px;
+  text-align: center;
+  color: var(--tx3);
+}
+
+.pg-cur {
+  min-width: 64px;
+  text-align: center;
+  font-size: calc(15px * var(--k));
+  color: var(--tx2);
+}
+
+.pager .hb:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Поиск по парку в верхней строке: на всю свободную ширину между разделами и моделью */
+.top > .search {
+  flex: 1;
+  width: auto;
+  min-width: 0;
+  margin-left: 0;
+}
+
+/* Журнал: строки одной высоты, длинный текст обрезается, иначе страницу не посчитать */
+@media (min-width: 901px) {
+  .lrow[data-row] {
+    height: calc(92px * var(--k));
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  .lrow[data-row] > * {
+    max-height: 100%;
+    overflow: hidden;
+  }
+
+  .lrow[data-row] .lq,
+  .lrow[data-row] .la .l2 {
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+
+  .lrow[data-row] .lq {
+    -webkit-line-clamp: 3;
+  }
+
+  .lrow[data-row] .la .l2 {
+    -webkit-line-clamp: 2;
+  }
+}
+
+@media (max-width: 900px) {
+  .fbar.only-m {
+    padding: 10px 12px;
+  }
+
+  /* Журнал на телефоне: карточка одной высоты, вопрос, ответ и источники по одной строке */
+  .lrow[data-row] {
+    height: calc(188px * var(--k));
+    row-gap: 4px;
+    overflow: hidden;
+    align-content: start;
+  }
+
+  .lrow[data-row] .lq,
+  .lrow[data-row] .la .l2,
+  .lrow[data-row] .ls {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .lrow[data-row] .ls > span {
+    display: inline;
+    margin-right: 12px;
+  }
+
+  /* Инструменты и расход на телефоне не показываем: главное — вопрос, ответ и источники */
+  .lrow[data-row] .lu {
+    display: none;
+  }
+}

@@ -15,10 +15,14 @@ import '@fontsource/ibm-plex-mono/latin-600.css';
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import './globals.css';
 import { Onboarding } from '@/components/Onboarding';
+import { PwaRegister } from '@/components/PwaRegister';
 import { Header } from '@/components/Header';
 
 export const metadata: Metadata = {
   title: 'Цифровой механик',
+  applicationName: 'Цифровой механик',
+  // Установка на iPhone: имя под значком и работа без рамки браузера
+  appleWebApp: { capable: true, title: 'Механик', statusBarStyle: 'black-translucent' },
   description: 'AI-агент для диагностики ДВС: результат проверки, ответы по руководству со страницей, заявка на дефектовку',
 };
 
@@ -46,6 +50,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <main className="page">{children}</main>
         </div>
         <Onboarding />
+        <PwaRegister />
       </body>
     </html>
   );

@@ -4,8 +4,11 @@ import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
 import { dateTime, int, num, plural } from '@/lib/format';
+import { useFitRows, usePaged } from '@/lib/paging';
+import { useSettings } from '@/lib/settings';
 import type { AuditItem, MessageKind } from '@/lib/types';
 import { Icon } from './Icon';
+import { Pager } from './Pager';
 import { ErrorState, Loading } from './States';
 
 const KIND_LABEL: Record<MessageKind, string> = {
@@ -58,6 +61,10 @@ export function LogView() {
   const [items, setItems] = useState<AuditItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  // Страница не прокручивается: в таблице столько строк, сколько помещается, остальное листается
+  const settings = useSettings();
+  const { areaRef, pageSize } = useFitRows([settings.size, items]);
+  const paged = usePaged(items ?? [], pageSize);
 
   const load = useCallback(() => {
     setError(null);
@@ -92,9 +99,10 @@ export function LogView() {
           <div>Они появятся здесь после первого сообщения агенту.</div>
         </div>
       ) : (
-        <div className="body">
-          <div className="ftable">
-            <div className="lhead">
+        <div className="body fit">
+          <div className="fit-area" ref={areaRef}>
+            <div className="ftable">
+              <div className="lhead" data-head>
               <span>Время</span>
               <span>Машина</span>
               <span>Вопрос</span>
@@ -102,8 +110,8 @@ export function LogView() {
               <span>Источники</span>
               <span>Инструменты и расход</span>
             </div>
-            {items.map((it) => (
-              <div className="lrow" key={it.id}>
+              {paged.rows.map((it) => (
+                <div className="lrow" key={it.id} data-row>
                 <span className="m lt">{dateTime(it.created_at)}</span>
                 <span className="lv">
                   <Link href={`/v/${encodeURIComponent(it.vehicle_id)}`} className="llink m">
@@ -128,8 +136,10 @@ export function LogView() {
                   <span className="l2 m">{cost(it)}</span>
                 </span>
               </div>
-            ))}
+              ))}
+            </div>
           </div>
+          <Pager paged={paged} label="обращения" />
         </div>
       )}
     </>
