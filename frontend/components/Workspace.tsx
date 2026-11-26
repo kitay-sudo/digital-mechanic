@@ -27,7 +27,7 @@ const localNotice = (text: string): Message => ({
   localError: true,
 });
 
-export function Workspace({ vehicleId }: { vehicleId: string }) {
+export function Workspace({ vehicleId, initialSession = null }: { vehicleId: string; initialSession?: string | null }) {
   const [vehicle, setVehicle] = useState<VehicleDetail | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -46,10 +46,12 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
     () =>
       api.vehicle(vehicleId).then((v) => {
         setVehicle(v);
-        setSessionId((cur) => cur ?? v.sessions[v.sessions.length - 1]?.session_id ?? null);
+        // Проверку механик выбирает на экране истории машины, она приходит в адресе. Иначе берём последнюю
+        const picked = initialSession && v.sessions.some((s) => s.session_id === initialSession) ? initialSession : null;
+        setSessionId((cur) => picked ?? cur ?? v.sessions[v.sessions.length - 1]?.session_id ?? null);
         return v;
       }),
-    [vehicleId],
+    [vehicleId, initialSession],
   );
 
   const loadAll = useCallback(() => {
@@ -59,13 +61,15 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
         setMessages(conv.messages);
         // Чат продолжается по той проверке, о которой шёл разговор: иначе кнопка «Создать заявку»
         // из старого вердикта ушла бы с другой, последней проверкой.
+        // Явный выбор механика из истории машины важнее.
+        if (initialSession && v.sessions.some((s) => s.session_id === initialSession)) return;
         const last = [...conv.messages].reverse().find((m) => m.session_id);
         if (last?.session_id && v.sessions.some((s) => s.session_id === last.session_id)) {
           setSessionId(last.session_id);
         }
       })
       .catch((e: Error) => setLoadError(e.message));
-  }, [loadVehicle, vehicleId]);
+  }, [loadVehicle, vehicleId, initialSession]);
 
   useEffect(loadAll, [loadAll]);
 
@@ -162,12 +166,10 @@ export function Workspace({ vehicleId }: { vehicleId: string }) {
 
       <VehiclePanel
         vehicle={vehicle}
-        sessionId={sessionId}
-        onSelect={setSessionId}
+        session={session}
         onOpenManual={openManual}
         open={sideOpen}
         onClose={() => setSideOpen(false)}
-        busy={busy}
       />
 
       <section className="col chatcol">

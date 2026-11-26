@@ -785,40 +785,42 @@ a {
   background: var(--panel2);
 }
 
-.info {
-  display: grid;
-  grid-template-columns: calc(124px * var(--k)) minmax(0, 1fr);
+.vcard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px 16px;
   background: var(--panel);
   border: 1px solid var(--line);
 }
 
-.info > div {
-  min-height: calc(48px * var(--k));
+.vcard .eng {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
-  border-bottom: 1px solid var(--line);
-  font-size: calc(16px * var(--k));
-  line-height: calc(22px * var(--k));
-  min-width: 0;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+  font-size: calc(18px * var(--k));
+  line-height: calc(24px * var(--k));
 }
 
-.info > div:nth-child(odd) {
-  font-size: calc(14px * var(--k));
-  color: var(--tx3);
+.vcard .eng b {
+  font-weight: 600;
 }
 
-.info > div:nth-last-child(-n + 2) {
-  border-bottom: none;
+.vcard .eng span {
+  font-size: calc(15px * var(--k));
+  color: var(--tx2);
 }
 
 .mlist {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  align-items: flex-start;
-  padding: 2px 0;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mlist .src {
+  height: calc(40px * var(--k));
+  padding: 0 12px;
 }
 
 .slist {
@@ -892,17 +894,44 @@ a {
   font-size: calc(18px * var(--k));
 }
 
-.radio {
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid var(--line2);
-  display: inline-block;
+/* Одна строка «проверка в чате»: выбор проверки живёт на экране истории машины */
+.srow.one {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 2px;
 }
 
-.cur .radio {
-  border-color: var(--acc);
-  background: radial-gradient(var(--acc) 0 4px, transparent 5px);
+.srow.one:hover {
+  background: transparent;
+}
+
+/* Переход из боковой панели на экран истории машины */
+.navrow {
+  min-height: calc(48px * var(--k));
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: 10px;
+  padding: 0 10px 0 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx);
+}
+
+.navrow:last-child {
+  border-bottom: none;
+}
+
+.navrow:hover {
+  background: var(--panel2);
+}
+
+.navrow .ti {
+  color: var(--tx3);
+}
+
+.navrow .m {
+  color: var(--tx2);
 }
 
 .chart {
@@ -2712,5 +2741,329 @@ details.fold > .fin {
 @media (max-width: 900px) {
   .kbwarn {
     padding: 8px 14px;
+  }
+}
+
+/* ---------- История машины: проверки с графиком и заявки ---------- */
+
+.btn.back {
+  flex: none;
+  padding: 0 16px 0 12px;
+}
+
+/* Шапка истории: кнопка назад, машина, вкладки. Вкладки того же вида, что разделы в верхнем меню */
+.hhdr {
+  gap: 20px;
+}
+
+.hhdr .grow {
+  flex: 0 1 auto;
+}
+
+.htabs {
+  display: flex;
+  gap: 24px;
+  align-self: stretch;
+  margin-left: 12px;
+}
+
+.htabs a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: calc(16px * var(--k));
+  font-weight: 500;
+  color: var(--tx2);
+  border-top: 2px solid transparent;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+
+.htabs a:hover {
+  color: var(--tx);
+}
+
+.htabs a .ti,
+.htabs a .m {
+  color: var(--tx3);
+}
+
+.htabs a.on {
+  color: var(--tx);
+  border-bottom-color: var(--acc);
+}
+
+.htabs a.on .ti {
+  color: var(--acc);
+}
+
+.hhint {
+  margin-left: auto;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* В узком окне подсказка не должна сжимать название машины */
+@media (max-width: 1199px) {
+  .hhint {
+    display: none;
+  }
+}
+
+/* Шапка графика: тот же вид, что у шапки таблицы */
+.chead {
+  height: calc(36px * var(--k));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  font-size: calc(12px * var(--k));
+  font-weight: 500;
+  color: var(--tx3);
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  white-space: nowrap;
+}
+
+.hgrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.frow.cur {
+  background: var(--acc-bg);
+  box-shadow: inset 4px 0 0 var(--acc);
+}
+
+.frow .tag {
+  margin-left: 10px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--acc);
+  color: var(--acc);
+  font-size: calc(12px * var(--k));
+  font-weight: 500;
+}
+
+.frow .sev {
+  vertical-align: middle;
+}
+
+/* Название неисправности рядом с результатом: отделено отступом, без знаков */
+.frow .sub2 {
+  margin-left: 12px;
+  color: var(--tx3);
+}
+
+.trec {
+  border-bottom: 1px solid var(--line);
+}
+
+.trec:last-child {
+  border-bottom: none;
+}
+
+.trec > summary {
+  cursor: pointer;
+  list-style: none;
+  border-bottom: none;
+}
+
+.trec > summary::-webkit-details-marker {
+  display: none;
+}
+
+.trec .chev {
+  color: var(--tx3);
+  margin-right: 8px;
+  vertical-align: middle;
+  transition: transform 0.12s;
+}
+
+.trec[open] .chev {
+  transform: rotate(90deg);
+}
+
+.trec[open] > summary {
+  background: var(--panel2);
+}
+
+.tin {
+  padding: 12px 20px 16px 48px;
+  border-top: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+}
+
+.tin dl {
+  display: grid;
+  grid-template-columns: calc(110px * var(--k)) minmax(0, 1fr);
+  gap: 6px 16px;
+  margin-bottom: 12px;
+  max-width: 900px;
+}
+
+.tin dt {
+  color: var(--tx3);
+  font-size: calc(14px * var(--k));
+}
+
+.tin ol {
+  padding-left: 20px;
+}
+
+@media (min-width: 901px) {
+  /* Гибкие только номер проверки и результат: остальным колонкам хватает своей ширины */
+  .ctable .fhead,
+  .ctable .frow {
+    grid-template-columns:
+      minmax(calc(144px * var(--k)), 1fr) calc(108px * var(--k)) minmax(calc(132px * var(--k)), 3fr)
+      calc(56px * var(--k)) calc(88px * var(--k)) calc(92px * var(--k)) calc(84px * var(--k));
+    column-gap: 12px;
+  }
+
+  .ttable .fhead,
+  .ttable .frow {
+    grid-template-columns: calc(150px * var(--k)) calc(130px * var(--k)) calc(90px * var(--k)) calc(60px * var(--k)) calc(130px * var(--k)) minmax(160px, 1fr);
+  }
+}
+
+/* Узкое окно: уверенность модели видна в чате, здесь колонку убираем, чтобы таблица не вылезала */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .ctable .cf {
+    display: none;
+  }
+
+  .ctable .fhead,
+  .ctable .frow {
+    grid-template-columns:
+      minmax(calc(144px * var(--k)), 1fr) calc(108px * var(--k)) minmax(calc(132px * var(--k)), 3fr)
+      calc(56px * var(--k)) calc(92px * var(--k)) calc(84px * var(--k));
+  }
+}
+
+/* Узкий экран компьютера: график под таблицей на всю ширину, пояснение справа от него */
+@media (min-width: 901px) and (max-width: 1359px) {
+  .hgrid .chart {
+    display: grid;
+    grid-template-columns: minmax(0, 520px) minmax(0, 1fr);
+    align-items: center;
+    column-gap: 24px;
+    padding: 12px 24px 12px 12px;
+  }
+
+  .hgrid .chart .cap {
+    border-top: none;
+    margin-top: 0;
+    padding: 0;
+    align-items: flex-start;
+    font-size: calc(16px * var(--k));
+    line-height: calc(24px * var(--k));
+  }
+}
+
+/* Широкий экран: таблица слева, график справа, пустого места нет */
+@media (min-width: 1360px) {
+  .hgrid {
+    grid-template-columns: minmax(0, 1fr) clamp(320px, 24vw, 460px);
+    gap: 24px;
+    align-items: start;
+  }
+}
+
+@media (max-width: 900px) {
+  /* Панель машины стала короткой: шторка по высоте содержимого */
+  .col.side.open {
+    height: auto;
+    max-height: 88dvh;
+  }
+
+  /* Вкладки уходят второй строкой шапки на всю ширину */
+  .hhdr {
+    height: auto;
+    flex-wrap: wrap;
+    row-gap: 0;
+    padding-top: 8px;
+  }
+
+  .hhdr .grow {
+    flex: 1;
+  }
+
+  .htabs {
+    flex: 0 0 calc(100% + 24px);
+    margin: 8px -12px 0;
+    gap: 0;
+    border-top: 1px solid var(--line);
+  }
+
+  .htabs a {
+    flex: 1;
+    justify-content: center;
+    height: calc(48px * var(--k));
+  }
+
+  /* Строка таблицы на телефоне и планшете: две ровные линии с воздухом между ними */
+  .ctable .frow,
+  .ttable .frow {
+    row-gap: 8px;
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .ctable .frow .m2,
+  .ttable .frow .m2 {
+    font: calc(14px * var(--k)) / calc(20px * var(--k)) var(--sans);
+  }
+
+  .ctable .frow .m2.m,
+  .ctable .frow .m2 .m,
+  .ttable .frow .m2 .m {
+    font-family: var(--mono);
+  }
+
+  .ctable .frow .m2 b,
+  .ttable .frow .m2 b {
+    font-weight: 500;
+    color: var(--tx2);
+  }
+
+  /* Результат прижат к правому краю, чтобы короткие и длинные стояли ровно */
+  .frow .res {
+    justify-self: end;
+  }
+
+  /* Пометки под строкой: каждая целиком, переносится только вся пометка */
+  .frow .m2.ex {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 18px;
+    white-space: normal;
+  }
+
+  .frow .m2.ex > span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .tin {
+    padding: 12px 16px 16px;
+  }
+
+  .tin dl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .tin dd {
+    margin-bottom: 8px;
   }
 }

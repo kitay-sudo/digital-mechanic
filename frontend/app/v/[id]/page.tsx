@@ -1,6 +1,10 @@
 import { Workspace } from '@/components/Workspace';
 
-export default async function VehiclePage({ params }: { params: Promise<{ id: string }> }) {
+type Query = Promise<{ [key: string]: string | string[] | undefined }>;
+
+export default async function VehiclePage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Query }) {
   const { id } = await params;
-  return <Workspace vehicleId={decodeURIComponent(id)} />;
+  const { session } = await searchParams;
+  // Проверка в адресе приходит с экрана истории машины: её и разбираем в чате
+  return <Workspace vehicleId={decodeURIComponent(id)} initialSession={typeof session === 'string' ? session : null} />;
 }
