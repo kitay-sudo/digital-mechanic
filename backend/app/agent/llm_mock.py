@@ -58,7 +58,8 @@ class MockLLM:
         saved = self._saved(context)
         session = re.search(r"Выбрана проверка (\S+?)[ .]", context)
         session_id = session.group(1) if session else ""
-        decision = self._decide(user_text, session_id, saved, results)
+        novice = "уровень «новичок»" in context
+        decision = self._decide(user_text, session_id, saved, results, novice)
 
         size_in = sum(len(json.dumps(m["content"], ensure_ascii=False, default=str)) for m in messages) + len(system)
         if isinstance(decision, list):
@@ -104,7 +105,7 @@ class MockLLM:
         return f"{diagnosis.get('anomaly_title') or ''} {unit} проверка регулировка неисправность"
 
     # --- выбор действия ---
-    def _decide(self, text: str, session_id: str, saved: dict | None, results: dict):
+    def _decide(self, text: str, session_id: str, saved: dict | None, results: dict, novice: bool = False):
         intent = self._intent(text)
         fresh = (results.get("get_diagnosis") or [None])[-1]
         known = fresh if fresh and "diagnosis" in fresh else saved
@@ -124,7 +125,7 @@ class MockLLM:
                 return [self._call("get_diagnosis", session_id=session_id)]
             if not fresh or "diagnosis" not in fresh:
                 return self._answer(summary=f"Не удалось получить результат проверки. {(fresh or {}).get('error', '')}")
-            return self._after_diagnosis(fresh, results, passages)
+            return self._after_diagnosis(fresh, results, passages, novice)
 
         if intent == "ticket":
             if known is None:
@@ -180,7 +181,7 @@ class MockLLM:
             checks=checks, limitations=[MOCK_NOTE],
         )
 
-    def _after_diagnosis(self, fresh: dict, results: dict, passages: list[dict]):
+    def _after_diagnosis(self, fresh: dict, results: dict, passages: list[dict], novice: bool = False):
         diagnosis, assessment = fresh["diagnosis"], fresh["assessment"]
         outcome = assessment["outcome"]
         if outcome == "check_failed":
@@ -199,6 +200,11 @@ class MockLLM:
             f"Признаки по записи: {diagnosis.get('description')}",
             f"Оценка отклонения {rules.fmt(diagnosis.get('anomaly_score'))}, уверенность {rules.fmt(diagnosis.get('confidence'))}.",
         ]
+        if novice:
+            observations.append(
+                f"Простыми словами: запись услышала признаки неполадки в узле «{unit}». "
+                "Ниже по шагам, что проверить."
+            )
         if assessment["flags"]["engine_mismatch"]:
             return self._answer(
                 summary=f"Проверка показала тип «{diagnosis.get('anomaly_title')}», но он не соответствует двигателю этой машины. "

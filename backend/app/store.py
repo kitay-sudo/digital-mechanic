@@ -101,6 +101,39 @@ class Store:
     def clear_messages(self, vehicle_id: str) -> None:
         self._exec("DELETE FROM messages WHERE vehicle_id=?", (vehicle_id,))
 
+    def audit(self, limit: int = 100) -> list[dict]:
+        """Журнал обращений: ответ агента вместе с вопросом, источниками и инструментами."""
+        rows = self._all("SELECT * FROM messages WHERE role='assistant' ORDER BY id DESC LIMIT ?", (limit,))
+        out = []
+        for r in rows:
+            payload = json.loads(r["payload"])
+            question = self._all(
+                "SELECT payload FROM messages WHERE vehicle_id=? AND role='user' AND id<? ORDER BY id DESC LIMIT 1",
+                (r["vehicle_id"], r["id"]),
+            )
+            answer = payload.get("answer") or {}
+            draft = payload.get("draft") or {}
+            items = [*(answer.get("checks") or []), *(answer.get("repair") or []),
+                     *(draft.get("operations") or []), *(draft.get("spare_parts") or [])]
+            sources, seen = [], set()
+            for item in items:
+                for ref in item.get("refs", []):
+                    key = (ref["manual_id"], ref["pdf_page"])
+                    if key not in seen:
+                        seen.add(key)
+                        sources.append({"manual_id": ref["manual_id"], "short": ref["short"], "pdf_page": ref["pdf_page"]})
+            out.append({
+                "id": f"m_{r['id']}", "created_at": r["created_at"], "vehicle_id": r["vehicle_id"],
+                "session_id": r["session_id"],
+                "question": json.loads(question[0]["payload"]).get("text", "") if question else "",
+                "kind": payload.get("kind"), "answer": payload.get("text", ""),
+                "sources": sources,
+                "tools": [step["tool"] for step in payload.get("steps", [])],
+                "ticket_id": (payload.get("ticket") or {}).get("ticket_id"),
+                "usage": payload.get("usage", {}),
+            })
+        return out
+
     # --- разборы проверок (память по машине, B1) ---
     def save_analysis(self, vehicle_id: str, session_id: str, diagnosis: dict, assessment: dict) -> None:
         self._exec(

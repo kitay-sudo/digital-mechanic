@@ -118,3 +118,11 @@ def test_quote_must_be_on_page():  # П2
 def test_table_of_contents_is_not_evidence():  # П9
     toc = "\n".join(f"Глава {i} . . . . . . . . . . {i}" for i in range(1, 10))
     assert is_toc(toc) and not is_toc("Проверить давление масла контрольным манометром.")
+
+
+def test_priority_follows_customer_criteria():  # кик-офф: безопасность и готовность к рейсу — высокий приоритет
+    gearbox = rules.assess(diag(anomaly_type="F07", anomaly_title="Коробка передач"), DIESEL, [], 0.5)
+    brakes = rules.assess(diag(anomaly_type="F10", anomaly_title="Компрессор пневмотормозов, насос ГУР"), DIESEL, [], 0.5)
+    belt = rules.assess(diag(anomaly_type="F04", anomaly_title="Ремённый привод агрегатов"), DIESEL, [], 0.5)
+    assert gearbox["priority"] == "high" and brakes["priority"] == "high" and belt["priority"] == "low"
+    assert "безопасность" in brakes["basis"][0]  # основание объясняет выбор механику

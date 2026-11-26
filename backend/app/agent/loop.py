@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import time
 
-from .. import fleet, rules
+from .. import rules
 from ..config import Settings
 from ..kb.index import Index
 from ..store import Store
@@ -53,6 +53,7 @@ def _parse(text: str) -> dict:
 async def run_turn(
     *, vehicle: dict, session_id: str, text: str, store: Store, index: Index, settings: Settings,
     llm: LLM, emit: Emit, confirmed_draft_id: str | None = None, warning_ack: bool = False,
+    profile: dict | None = None,
 ) -> None:
     started = time.monotonic()
     vehicle_id = vehicle["vehicle_id"]
@@ -66,7 +67,7 @@ async def run_turn(
     user_message = store.add_message(vehicle_id, session_id, "user", {"text": text})
     await emit({"type": "user", "message": user_message})
 
-    content = prompt.turn_context(vehicle, session_id, saved)
+    content = prompt.turn_context(vehicle, session_id, saved, profile)
     if history:
         content += "\n\n[Предыдущий диалог]\n" + history
     content += "\n\n[Сообщение механика]\n" + text

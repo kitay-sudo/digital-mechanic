@@ -168,3 +168,17 @@ async def test_engine_mismatch_is_reported(store, index, services):  # П16
 async def test_question_outside_knowledge_base_is_declined(store, index, services):  # С2, F4
     message, _ = await turn(store, index, "T792HO98", "S-0043", "Какой расход топлива у самолёта на взлёте?")
     assert message["kind"] == "answer" and message["answer"]["not_found"]
+
+
+async def test_profile_reaches_the_agent_and_audit_log_records_sources(store, index, services):  # адаптивность, журнал
+    from app.agent import prompt
+
+    line = prompt.profile_line({"language": "uz", "level": "novice"})
+    assert "новичок" in line and "узбекский" in line
+    assert "опытный" in prompt.profile_line(None) and "русский" in prompt.profile_line(None)
+
+    await turn(store, index, "T792HO98", "S-0043", "Получи результат диагностики",
+               profile={"language": "ru", "level": "novice"})
+    log = store.audit(10)
+    assert log[0]["question"] == "Получи результат диагностики" and log[0]["kind"] == "verdict"
+    assert log[0]["sources"] and "get_diagnosis" in log[0]["tools"]

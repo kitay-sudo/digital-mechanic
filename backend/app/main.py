@@ -12,6 +12,7 @@ from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
 from . import clients, fleet, rules
+from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
 from .config import get_settings
@@ -67,6 +68,8 @@ async def config():
         "llm": {"provider": llm.name, "model": llm.model, "mock": llm.is_mock},
         "thresholds": {"confidence_min": settings.confidence_min},
         "priority_actions": rules.ACTIONS,
+        "languages": prompt.LANGUAGE_LABELS,
+        "levels": prompt.LEVEL_LABELS,
     }
 
 
@@ -81,14 +84,22 @@ async def get_vehicle(vehicle_id: str):
 
 
 # --- чат ---
+class Profile(BaseModel):
+    """Настройки механика: язык ответов и уровень подачи."""
+    language: str = Field(default="ru", pattern="^(ru|uz|tg|hi)$")
+    level: str = Field(default="expert", pattern="^(expert|novice)$")
+
+
 class ChatRequest(BaseModel):
     vehicle_id: str = Field(min_length=1)
     session_id: str | None = None
     text: str = Field(min_length=1, max_length=2000)
+    profile: Profile | None = None
 
 
 class ConfirmRequest(BaseModel):
     warning_ack: bool = False
+    profile: Profile | None = None
 
 
 class DraftPatch(BaseModel):
@@ -138,7 +149,8 @@ async def chat(req: ChatRequest):
     session_id = req.session_id or (vehicle["sessions"][-1]["session_id"] if vehicle["sessions"] else "")
     if fleet.get_session(vehicle, session_id) is None:
         raise HTTPException(404, f"У машины {req.vehicle_id} нет проверки {session_id}")
-    return stream_turn(vehicle, session_id=session_id, text=req.text.strip())
+    return stream_turn(vehicle, session_id=session_id, text=req.text.strip(),
+                       profile=req.profile.model_dump() if req.profile else None)
 
 
 @app.get("/api/conversations/{vehicle_id}")
@@ -187,7 +199,8 @@ async def confirm_draft(draft_id: str, req: ConfirmRequest):
     vehicle = vehicle_or_404(draft["vehicle_id"])
     return stream_turn(vehicle, session_id=draft["session_id"],
                        text=f"Подтверждаю заявку {draft_id}. Отправь её в ТОиР.",
-                       confirmed_draft_id=draft_id, warning_ack=req.warning_ack)
+                       confirmed_draft_id=draft_id, warning_ack=req.warning_ack,
+                       profile=req.profile.model_dump() if req.profile else None)
 
 
 # --- руководства ---
@@ -219,6 +232,17 @@ async def manual_page_image(manual_id: str, page: int, q: str = Query(default=""
     if png is None:
         raise HTTPException(404, "Страница недоступна: PDF руководства не подключён к серверу")
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "private, max-age=3600"})
+
+
+# --- журнал обращений ---
+@app.get("/api/audit")
+async def audit(limit: int = Query(default=100, ge=1, le=500)):
+    """Кто что спросил, что ответил агент, на какие источники сослался."""
+    items = store().audit(limit)
+    for item in items:
+        vehicle = fleet.get_vehicle(item["vehicle_id"])
+        item["vehicle_title"] = fleet.title_of(vehicle) if vehicle else item["vehicle_id"]
+    return {"items": items}
 
 
 # --- расчёт стоимости ---
