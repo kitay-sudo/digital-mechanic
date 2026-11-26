@@ -1,0 +1,553 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Цифровой механик · макет</title>
+<!--
+  Дизайн-макет для обсуждения на этапе проектирования, как картинка из Figma.
+  Это не код продукта: в спринте экраны собираются с нуля, отсюда ничего не копируем.
+  Обновлён 20.11 по ответам организаторов (docs/organizers-answers-2026-11-20.txt).
+  Все данные условные: номера машин и проверок, коды и названия неисправностей,
+  оценки, признаки, страницы. Нормы из руководства намеренно заменены на X,XX.
+  Сетка: шаг 8 px. Шапка приложения 56, шапки колонок 72, нижние панели 80,
+  строки таблиц и списков 48, кнопки 48, малые кнопки и ссылки на страницы 32.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.31.0/dist/tabler-icons.min.css">
+<style>
+:root{
+  --bg:#E9ECEF;--panel:#FFFFFF;--panel2:#F4F5F7;--line:#D3D8DE;--line2:#B6BDC6;
+  --tx:#14181D;--tx2:#46505A;--tx3:#737D88;
+  --acc:#1D5FC4;--acc-tx:#FFFFFF;--acc-bg:#E8F0FC;
+  --crit:#C62828;--warn:#D58A00;--warn-tx:#965800;--watch:#3B7D78;
+  --hl:rgba(255,196,0,.24);--hl-line:#E0A100;--dim:rgba(20,24,29,.45);
+  --board:#C8CDD3;--board-tx:#2A3036;
+  --sans:"IBM Plex Sans",system-ui,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+[data-theme=dark]{
+  --bg:#101215;--panel:#171A1E;--panel2:#1D2126;--line:#2A3037;--line2:#3A424B;
+  --tx:#E6E9EC;--tx2:#A9B1BA;--tx3:#7A848E;
+  --acc:#5C9DFF;--acc-tx:#0B1220;--acc-bg:#16263F;
+  --crit:#FF6B6B;--warn:#F2B13A;--warn-tx:#F2B13A;--watch:#67C1B9;
+  --hl:rgba(255,196,0,.20);--hl-line:#D9A21B;--dim:rgba(0,0,0,.62);
+  --board:#08090B;--board-tx:#B9C0C8;
+  color-scheme:dark;
+}
+*{box-sizing:border-box;margin:0;padding:0;scrollbar-width:thin;scrollbar-color:var(--line2) transparent}
+html,body{height:100%}
+body{background:var(--board);font-family:var(--sans);color:var(--tx);display:flex;flex-direction:column;overflow:hidden}
+.m{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.mut{color:var(--tx3)}
+.st{font-size:14px;color:var(--tx3)}
+.ti{font-size:20px;line-height:1;flex:none}
+.ti.s{font-size:16px}.ti.l{font-size:24px}.ti.xl{font-size:40px}
+
+.chrome{flex:none;height:52px;background:#1D2125;color:#E6E9EC;display:flex;align-items:center;gap:12px;padding:0 16px;font-size:13px;white-space:nowrap}
+.chrome b{font-weight:600}
+.grp{display:flex;border:1px solid #3A4148;border-radius:4px;overflow:hidden;flex:none}
+.grp button{font:inherit;color:inherit;background:transparent;border:none;border-right:1px solid #3A4148;height:32px;padding:0 10px;cursor:pointer}
+.grp button:last-child{border-right:none}
+.grp button:hover{background:#2A3036}
+.grp button.on{background:#E6E9EC;color:#14181D}
+.desc{flex:1;min-width:0;color:#9AA3AC;overflow:hidden;text-overflow:ellipsis}
+.stage{flex:1;min-height:0;overflow:auto}
+.frame{display:none;width:100%;height:100%;min-width:1280px;min-height:760px}
+.frame.on{display:flex}
+.frame.free{height:auto;min-height:100%}
+
+.app{flex:1;min-width:0;display:flex;flex-direction:column;background:var(--bg)}
+.top{height:56px;flex:none;display:flex;align-items:center;gap:32px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--line2)}
+.logo{display:flex;align-items:center;gap:10px;font-weight:600;font-size:17px;white-space:nowrap}
+.logo .ti{color:var(--acc)}
+.nav{display:flex;gap:24px;align-self:stretch}
+.nav a{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--tx2);border-bottom:2px solid transparent}
+.nav a.on{color:var(--tx);border-color:var(--acc)}
+.top .r{margin-left:auto;display:flex;gap:24px;align-items:center;font-size:14px;color:var(--tx2)}
+.top .r span{display:flex;gap:6px;align-items:center}
+
+.split{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,55fr) minmax(0,45fr)}
+.col{display:flex;flex-direction:column;min-height:0;min-width:0;position:relative}
+.col.l{border-right:1px solid var(--line2)}
+.col.r{background:var(--panel2)}
+.hdr{height:72px;flex:none;display:flex;align-items:center;gap:16px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--line2)}
+.hdr .tt{display:flex;align-items:center;gap:10px;font-size:18px;font-weight:600}
+.hdr .h1{font-size:24px;font-weight:600;line-height:28px}
+.hdr .sub{font-size:14px;line-height:20px;color:var(--tx2)}
+.hdr .rt{margin-left:auto;display:flex;align-items:center;gap:12px}
+.meta{text-align:right;font-size:13px;line-height:18px;color:var(--tx3)}
+.hb{width:40px;height:40px;flex:none;display:grid;place-items:center;border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--tx2)}
+.body{flex:1;min-height:0;overflow:auto;padding:16px 24px}
+.ftr{height:80px;flex:none;display:flex;align-items:center;gap:12px;padding:0 24px;background:var(--panel);border-top:1px solid var(--line2)}
+
+.btn{height:48px;padding:0 20px;border-radius:4px;border:1px solid var(--line2);background:var(--panel);color:var(--tx);font:600 16px/1 var(--sans);display:inline-flex;align-items:center;justify-content:center;gap:8px;white-space:nowrap;flex:none}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--acc-tx)}
+.btn.off{background:var(--panel2);border-color:var(--line);color:var(--tx3)}
+.btn.grow{flex:1}
+.btn.ic{width:48px;padding:0}
+.btn.sm{height:32px;padding:0 12px;font:500 14px/1 var(--sans);gap:6px}
+.src{height:32px;padding:0 10px;border-radius:4px;border:1px solid var(--line2);background:var(--panel);color:var(--acc);font:500 14px/1 var(--mono);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;flex:none}
+.n{width:28px;height:28px;border-radius:4px;border:1px solid var(--line2);background:var(--panel2);color:var(--tx2);font:500 14px/1 var(--mono);display:inline-flex;align-items:center;justify-content:center;flex:none}
+.cur .n{background:var(--acc);border-color:var(--acc);color:var(--acc-tx)}
+
+.sev{display:inline-flex;align-items:center;gap:6px;font-size:15px;font-weight:600;line-height:20px;white-space:nowrap}
+.c-dev{color:var(--warn-tx)}.c-fail{color:var(--tx2)}.c-norm{color:var(--tx3)}
+.c-h{color:var(--crit)}.c-m{color:var(--warn-tx)}.c-l{color:var(--watch)}
+.verdict{background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--warn);padding:16px 20px;margin-bottom:12px}
+.verdict.v-h{border-left-color:var(--crit)}
+.verdict.v-l{border-left-color:var(--watch)}
+.verdict.v-pend{border-left-color:var(--line2)}
+.verdict .row1{display:flex;align-items:center;justify-content:space-between;gap:16px}
+.verdict .t{font-size:32px;font-weight:600;line-height:40px;margin:8px 0}
+.verdict .l{font-size:17px;line-height:24px;color:var(--tx2)}
+.verdict .l b{color:var(--tx);font-weight:600}
+.verdict .risk{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:16px;align-items:center;justify-content:space-between;font-size:16px;line-height:24px}
+.verdict .done{margin-top:12px;padding-top:12px;border-top:1px solid var(--line);display:flex;gap:10px;align-items:center;font-size:16px;line-height:24px}
+
+.blk{margin-bottom:12px}
+.sec{height:28px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:13px;color:var(--tx3)}
+.sec b{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--tx2)}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed;background:var(--panel);border:1px solid var(--line)}
+table.t th{height:36px;padding:0 16px;font-size:12px;font-weight:500;color:var(--tx3);text-align:left;background:var(--panel2);border-bottom:1px solid var(--line)}
+table.t td{height:48px;padding:0 16px;font-size:17px;border-bottom:1px solid var(--line);vertical-align:middle;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+table.t td.wrap{white-space:normal;line-height:24px;padding-top:12px;padding-bottom:12px}
+table.t tr:last-child td{border-bottom:none}
+table.t tr.cur td{background:var(--acc-bg)}
+table.t tr.cur td:first-child{box-shadow:inset 3px 0 0 var(--acc)}
+.radio{width:18px;height:18px;border-radius:50%;border:2px solid var(--line2);display:inline-block;vertical-align:-3px}
+tr.cur .radio{border-color:var(--acc);background:radial-gradient(var(--acc) 0 4px,transparent 5px)}
+.list{background:var(--panel);border:1px solid var(--line)}
+.li{height:48px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:16px;align-items:center;padding:0 16px;border-bottom:1px solid var(--line);font-size:17px}
+.li:last-child{border-bottom:none}
+.li.cur{background:var(--acc-bg);box-shadow:inset 3px 0 0 var(--acc)}
+.fold{height:48px;display:flex;align-items:center;gap:12px;padding:0 16px;font-size:17px;background:var(--panel);border:1px solid var(--line)}
+.fold+.fold{border-top:none}
+.fold .ti{color:var(--tx3)}
+.fold .rt{margin-left:auto;font:13px var(--mono);color:var(--tx3)}
+.ckline{height:52px;display:flex;align-items:center;gap:12px;padding:0 16px;margin-bottom:16px;background:var(--panel);border:1px solid var(--line);font-size:16px}
+.ckline .rt{margin-left:auto;display:flex;align-items:center;gap:8px;color:var(--acc);font-size:14px}
+.info{display:grid;grid-template-columns:180px minmax(0,1fr);background:var(--panel);border:1px solid var(--line)}
+.info div{height:48px;display:flex;align-items:center;gap:8px;padding:0 16px;border-bottom:1px solid var(--line);font-size:17px}
+.info div:nth-child(odd){font-size:14px;color:var(--tx3)}
+.info div:nth-last-child(-n+2){border-bottom:none}
+.alert{min-height:56px;display:flex;gap:12px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:4px solid var(--crit);padding:8px 16px;margin-bottom:16px;font-size:16px;line-height:22px}
+.alert>.ti{color:var(--crit)}
+.alert.a-warn{border-left-color:var(--warn)}
+.alert.a-warn>.ti{color:var(--warn-tx)}
+.alert.a-info{border-left-color:var(--line2)}
+.alert.a-info>.ti{color:var(--tx3)}
+.alert .rt{margin-left:auto;display:flex;gap:12px;align-items:center}
+
+.viewer{flex:1;min-height:0;overflow:auto;padding:24px;display:flex;justify-content:center;align-items:flex-start}
+.paper{width:100%;max-width:680px;background:#FBFAF5;color:#23211D;box-shadow:0 0 0 1px rgba(0,0,0,.14);padding:32px 44px 24px;font-family:"Times New Roman",Times,serif}
+[data-theme=dark] .paper{filter:brightness(.88)}
+.rh{display:flex;justify-content:space-between;font-size:13px;color:#6B665C;border-bottom:1px solid #B9B3A7;padding-bottom:6px;margin-bottom:12px;font-style:italic}
+.tl{height:8px;background:#D5D0C5;margin:11px 0}
+.ph3{font-size:20px;font-weight:700;margin:20px 0 10px}
+.fig{text-align:center;margin:16px 0 10px}
+.cap{font-size:14px;font-style:italic;color:#4B473F;margin-top:4px}
+.hlbox{position:relative;outline:3px solid var(--hl-line);background:var(--hl);padding:10px;margin:32px -10px 16px}
+.hltag{position:absolute;top:-27px;left:-3px;height:24px;display:flex;align-items:center;background:var(--hl-line);color:#1B1500;font:600 12px var(--mono);padding:0 8px}
+.pt{width:100%;border-collapse:collapse;font-size:18px}
+.pt th,.pt td{border:1px solid #5A554C;padding:8px 12px;text-align:left}
+.pt th{font-weight:700;font-size:16px}
+.pn{text-align:center;font-size:14px;margin-top:16px;color:#4B473F}
+
+.chat{flex:1;min-height:0;overflow:auto;padding:24px;display:flex;flex-direction:column;gap:20px}
+.q{align-self:flex-end;max-width:72%;background:var(--panel);border:1px solid var(--line2);border-radius:4px;padding:12px 16px;font-size:17px;line-height:24px}
+.q .mt{margin-top:4px;font-size:12px;line-height:16px;color:var(--tx3);display:flex;gap:6px;align-items:center}
+.a{align-self:flex-start;max-width:88%;display:flex;flex-direction:column;gap:8px}
+.who{font-size:12px;line-height:16px;color:var(--tx3);display:flex;align-items:center;gap:6px}
+.a .bd{background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--tx3);font-size:17px;line-height:24px}
+.a .tx{padding:12px 16px}
+.a.none .bd{border-left-color:var(--line2);color:var(--tx2)}
+.a .bd b{color:var(--tx);font-weight:600}
+.bf{height:44px;display:flex;align-items:center;gap:8px;padding:0 6px 0 16px;border-top:1px solid var(--line);background:var(--panel2)}
+.bf .lk{flex:1;min-width:0;display:flex;align-items:center;gap:8px;color:var(--acc);font:500 14px var(--mono)}
+.bf .lk.no{color:var(--tx3);font:400 14px var(--sans)}
+.bf .lk .ti:last-child{margin-left:auto;color:var(--tx3)}
+.ib{width:32px;height:32px;flex:none;display:grid;place-items:center;border:1px solid var(--line2);border-radius:4px;background:var(--panel);color:var(--tx2)}
+.sugg{display:flex;gap:8px;flex-wrap:wrap}
+.think{height:32px;display:flex;gap:10px;align-items:center;color:var(--tx3);font-size:16px}
+.dots{display:inline-flex;gap:4px}
+.dots i{width:6px;height:6px;background:var(--tx3);border-radius:50%;animation:bl 1.2s infinite}
+.dots i:nth-child(2){animation-delay:.2s}.dots i:nth-child(3){animation-delay:.4s}
+@keyframes bl{0%,80%,100%{opacity:.25}40%{opacity:1}}
+.state{display:inline-flex;gap:8px;align-items:center;font-size:14px;color:var(--tx3)}
+.mic{width:48px;height:48px;border-radius:50%;background:var(--acc);color:var(--acc-tx);display:grid;place-items:center;flex:none}
+.mic .ti{font-size:24px}
+.inp{flex:1;min-width:0;height:48px;border:1px solid var(--line2);border-radius:4px;background:var(--panel);display:flex;align-items:center;padding:0 16px;color:var(--tx3);font-size:16px}
+
+.note{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--line2);font-size:15px;color:var(--tx2)}
+.form{flex:1;min-height:0;overflow:auto}
+.row{display:grid;grid-template-columns:180px minmax(0,1fr);gap:16px;padding:14px 24px;border-bottom:1px solid var(--line);background:var(--panel)}
+.row .k{font-size:14px;line-height:24px;color:var(--tx3)}
+.row .v{font-size:17px;line-height:24px}
+.row .v .sub2{display:block;font-size:14px;line-height:20px;color:var(--tx3);margin-top:4px}
+.row.ed{box-shadow:inset 4px 0 0 var(--acc)}
+.tag{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 8px;margin-left:8px;border:1px solid var(--acc);border-radius:4px;color:var(--acc);font:500 12px var(--mono);vertical-align:1px}
+.wks{display:flex;flex-direction:column;gap:8px}
+.wk{height:48px;display:grid;grid-template-columns:28px minmax(0,1fr) auto;gap:12px;align-items:center;padding:0 8px 0 10px;border:1px solid var(--line);border-radius:4px;background:var(--panel2);font-size:16px}
+.srcs{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.vok{display:inline-flex;align-items:center;gap:6px;font-size:14px;color:var(--tx3);margin-left:4px}
+.sentbox{flex:none;display:flex;gap:16px;align-items:center;padding:20px 24px;background:var(--panel);border-bottom:1px solid var(--line2)}
+.sentbox .big{font-size:20px;font-weight:600;line-height:28px}
+
+.qhead{height:72px;flex:none;display:flex;align-items:center;gap:24px;padding:0 24px;background:var(--panel);border-bottom:1px solid var(--line2)}
+.qhead .h1{font-size:24px;font-weight:600}
+.seg{display:flex;height:40px;border:1px solid var(--line2);border-radius:4px;overflow:hidden;background:var(--panel);flex:none}
+.seg span{display:flex;align-items:center;gap:8px;padding:0 16px;font-size:15px;border-right:1px solid var(--line2);white-space:nowrap}
+.seg span:last-child{border-right:none}
+.seg span.on{background:var(--tx);color:var(--panel)}
+.seg .c{font:13px var(--mono);opacity:.7}
+.search{margin-left:auto;width:320px;height:40px;border:1px solid var(--line2);border-radius:4px;background:var(--panel);display:flex;align-items:center;gap:8px;padding:0 12px;color:var(--tx3);font-size:15px}
+td.s-dev{box-shadow:inset 4px 0 0 var(--warn)}
+td.s-fail{box-shadow:inset 4px 0 0 var(--line2)}
+.vt{display:flex;align-items:center;gap:10px}
+.vt .ti{color:var(--tx3)}
+.newdot{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--acc);margin-left:8px;vertical-align:2px}
+
+.board{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px;padding:32px;width:100%;align-content:start}
+.bcap{font-size:15px;font-weight:500;color:var(--board-tx);margin-bottom:12px}
+.tile{height:540px;background:var(--bg);border:1px solid var(--line2);overflow:hidden;display:flex;flex-direction:column}
+.tile .body{overflow:hidden}
+.steps{margin-top:12px;border-top:1px solid var(--line)}
+.steps li{list-style:none;height:44px;display:flex;gap:12px;align-items:center;font-size:16px;border-bottom:1px solid var(--line)}
+.steps li:last-child{border-bottom:none}
+.steps li .rt{margin-left:auto;font:13px var(--mono);color:var(--tx3)}
+.steps li.wait{color:var(--tx3)}
+.steps .ti{width:20px;text-align:center}
+.empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;text-align:center;background:var(--panel);border:1px solid var(--line)}
+
+.phones{display:flex;gap:48px;justify-content:center;padding:32px;width:100%}
+.phone{width:390px;height:844px;display:flex;flex-direction:column;background:var(--bg);border:8px solid #1D2125;border-radius:36px;position:relative;overflow:hidden}
+.phone .top{height:52px;padding:0 16px;gap:12px}
+.phone .hdr{height:64px;padding:0 16px;gap:12px}
+.phone .hdr .h1{font-size:19px;line-height:24px}
+.phone .hdr .sub{font-size:13px;line-height:18px}
+.phone .body{padding:16px}
+.phone .ftr{height:76px;padding:0 16px}
+.phone .verdict{padding:12px 14px}
+.phone .verdict .t{font-size:22px;line-height:28px;margin:6px 0}
+.phone .verdict .l{font-size:15px;line-height:22px}
+.phone table.t td{height:44px;padding:0 12px;font-size:15px}
+.phone .li{height:auto;min-height:52px;gap:12px;padding:8px 12px;font-size:15px;line-height:20px}
+.phone .src{height:36px}
+.phone .btn{height:48px}
+.phone .qhead{height:auto;flex-direction:column;align-items:stretch;gap:10px;padding:12px 16px}
+.phone .search{width:auto;margin:0}
+.phone .seg{height:36px}
+.phone .seg span{flex:1;justify-content:center;padding:0 6px;font-size:13px;gap:5px}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 12px;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);font-size:16px}
+.prow .s2{font:13px var(--mono);color:var(--tx3)}
+.prow>:nth-child(even){text-align:right;justify-self:end}
+.prow.s-dev{box-shadow:inset 4px 0 0 var(--warn)}
+.prow.s-fail{box-shadow:inset 4px 0 0 var(--line2)}
+.dimmer{position:absolute;inset:0;background:var(--dim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;height:78%;background:var(--panel2);border-radius:12px 12px 0 0;display:flex;flex-direction:column;overflow:hidden}
+.handle{height:20px;flex:none;display:flex;justify-content:center;align-items:center;background:var(--panel)}
+.handle i{width:48px;height:5px;border-radius:3px;background:var(--line2)}
+.phone .chat{padding:16px;gap:14px}
+.phone .q,.phone .a .bd{font-size:15px;line-height:22px}
+.phone .q{max-width:85%}
+.phone .a{max-width:94%}
+</style>
+</head>
+<body>
+<div class="chrome">
+  <b>Цифровой механик · макет</b>
+  <span class="grp" id="frames"></span>
+  <span class="desc" id="desc"></span>
+  <span class="grp"><button id="tl">Светлая</button><button id="td">Тёмная</button></span>
+</div>
+<div class="stage" id="stage"></div>
+
+<script>
+const I=(n,c='')=>`<i class="ti ti-${n} ${c}" aria-hidden="true"></i>`;
+const ST={dev:['alert-triangle','Отклонение','c-dev'],fail:['microphone-off','Сбой записи','c-fail'],norm:['circle-check','Норма','c-norm']};
+const status=(s,code='')=>`<span class="sev ${ST[s][2]}">${I(ST[s][0])}${ST[s][1]}${code?` <span class="m" style="font-weight:500">${code}</span>`:''}</span>`;
+const PR={h:['chevrons-up','высокий'],m:['chevron-up','средний'],l:['chevron-down','низкий']};
+const prio=(p,long)=>`<span class="sev c-${p}">${I(PR[p][0])}${long?'Приоритет '+PR[p][1]:PR[p][1][0].toUpperCase()+PR[p][1].slice(1)}</span>`;
+const N=i=>`<span class="n">${i}</span>`;
+const DOC='РР ЯМЗ-236М2';
+const src=(p,short)=>`<span class="src">${I('file-text','s')}${short?'':DOC+' · '}с.${p}</span>`;
+const spark=`<svg width="150" height="32" viewBox="0 0 150 32" aria-hidden="true" style="display:block"><polyline points="8,25 52,22 96,13 140,6" fill="none" style="stroke:var(--warn)" stroke-width="2"/><circle cx="8" cy="25" r="3" style="fill:var(--tx3)"/><circle cx="52" cy="22" r="3" style="fill:var(--tx3)"/><circle cx="96" cy="13" r="3" style="fill:var(--warn)"/><circle cx="140" cy="6" r="3.5" style="fill:var(--warn)"/></svg>`;
+const STEPS=[['Измерить зазоры клапанов','112'],['Сравнить с нормой','113'],['Осмотреть толкатели и коромысла','118']];
+const VT={'МАЗ':'truck','Урал':'truck','ПАЗ':'bus','УАЗ':'car'};
+const vicon=m=>I(VT[m.split(/[- ]/)[0]]||'truck');
+
+function topBar(o={}){
+  if(o.phone) return `<div class="top"><div class="logo">${I('engine','l')}Цифровой механик</div><div class="r">${I('user')}</div></div>`;
+  return `<div class="top"><div class="logo">${I('engine','l')}Цифровой механик</div>
+  <div class="nav"><a class="${o.fleet?'on':''}">${I('list-details','s')}Парк</a></div>
+  <div class="r"><span>${I('plug-connected','s')}ML-сервис на связи</span><span>${I('user','s')}Механик · смена 2</span></div></div>`;
+}
+const V={no:'014',model:'МАЗ-5337',eng:'ЯМЗ-236М2 · дизель'};
+function vHdr(v=V){
+  return `<div class="hdr"><span class="hb">${I('arrow-left')}</span>
+  <div><div class="h1">${v.model} <span class="m">№ ${v.no}</span></div><div class="sub m">${v.eng}</div></div>
+  ${v.meta?`<div class="rt meta m">${v.meta}</div>`:''}</div>`;
+}
+
+/* ---------- Кадр: машина до запроса ---------- */
+function vehicleBody(){
+  return `<div class="blk"><div class="sec"><b>${I('truck','s')}Машина</b></div>
+  <div class="info"><div>Модель</div><div>${vicon('МАЗ')}МАЗ-5337</div><div>Двигатель</div><div class="m">ЯМЗ-236М2, дизель</div><div>Руководства</div><div>${I('book-2','s')}РЭ ЯМЗ-236М2, РР ЯМЗ-236М2</div></div></div>
+  <div class="blk"><div class="sec"><b>${I('history','s')}Проверки</b><span>из vehicles.json, выбрана последняя</span></div>
+  <table class="t"><colgroup><col style="width:52px"><col style="width:140px"><col style="width:170px"><col></colgroup>
+    <tr><th></th><th>Проверка</th><th>Дата</th><th>Результат</th></tr>
+    <tr class="cur"><td><span class="radio"></span></td><td class="m">П-0412</td><td class="m">18.11 08:12</td><td class="mut">не запрошен</td></tr>
+    <tr><td><span class="radio"></span></td><td class="m">П-0388</td><td class="m">14.11 07:58</td><td>${status('dev','F03')} <span class="m mut">· 0,61</span></td></tr>
+    <tr><td><span class="radio"></span></td><td class="m">П-0351</td><td class="m">09.11 08:20</td><td>${status('norm')} <span class="m mut">· 0,38</span></td></tr>
+    <tr><td><span class="radio"></span></td><td class="m">П-0317</td><td class="m">02.11 08:05</td><td>${status('norm')} <span class="m mut">· 0,31</span></td></tr>
+  </table></div>
+  <div class="fold">${I('chevron-right')}Заявки по машине<span class="rt">пока нет</span></div>`;
+}
+function introChat(){
+  return `<div class="col r"><div class="hdr"><div class="tt">${I('message-2')}Чат по № 014</div><span class="state">готов</span></div>
+  <div class="chat"><div class="a"><div class="who">${I('engine','s')}Цифровой механик</div>
+    <div class="bd"><div class="tx">Выбрана проверка <span class="m">П-0412</span> от 18.11. Нажмите "Получить результат диагностики", и я её разберу. Пока можно спросить по руководствам ЯМЗ-236М2: РЭ и РР.</div></div>
+    <div class="sugg"><span class="btn sm">Регулировка клапанов</span><span class="btn sm">Моменты затяжки ГБЦ</span><span class="btn sm">Объём масла</span></div></div></div>
+  <div class="ftr"><span class="mic">${I('microphone')}</span><span class="inp">Вопрос текстом</span><span class="btn ic">${I('arrow-up')}</span></div></div>`;
+}
+
+/* ---------- Разбор отклонения ---------- */
+function caseBody(o={}){
+  return `<div class="verdict v-h"><div class="row1">${status('dev','F03')}${prio('h',true)}</div>
+    <div class="t">Стук в клапанном механизме</div>
+    <div class="l">Основание приоритета: оценка <b class="m">0,74</b> растёт третью проверку подряд, уверенность <span class="m">0,86</span>, запись хорошая</div>
+    <div class="risk"><span>Чем грозит: ускоренный износ деталей привода клапанов</span>${src('98',o.short)}</div>
+  </div>
+  <div class="blk"><div class="sec"><b>${I('activity','s')}Результат ML</b><span class="m">ML-сервис · 08:14</span></div>
+  <table class="t"><colgroup><col style="width:30%"><col style="width:24%"><col></colgroup>
+    <tr><th>Параметр</th><th>Значение</th><th>Оценка по 4 проверкам</th></tr>
+    <tr><td>Оценка отклонения</td><td class="m" style="color:var(--warn-tx);font-weight:600">0,74</td><td>${spark}</td></tr>
+    <tr><td>Уверенность модели</td><td class="m">0,86</td><td class="mut">—</td></tr>
+    <tr><td>Качество записи</td><td>хорошее</td><td class="mut">—</td></tr>
+    <tr><td>Признаки</td><td colspan="2">Металлический стук в зоне ГБЦ, кратный оборотам распредвала</td></tr>
+  </table></div>
+  <div class="blk"><div class="sec"><b>${I('list-check','s')}Порядок проверки</b><span>по руководству ${DOC}</span></div>
+  <div class="list">${STEPS.map((s,i)=>`<div class="li ${o.cur===i?'cur':''}">${N(i+1)}<span>${s[0]}</span>${src(s[1],o.short)}</div>`).join('')}</div></div>
+  <div class="fold">${I('chevron-right')}Ход разбора · 7 шагов<span class="rt">61 200 токенов · 38 ₽ · 24 с</span></div>`;
+}
+function caseFtr(o={}){
+  return `<div class="ftr"><span class="btn grow">${I('microphone')}Спросить</span>${o.sent?`<span class="sev c-norm" style="flex:1.4;justify-content:center;font-weight:500">${I('circle-check')}Заявка <span class="m">TKT-0004</span> передана в ТОиР · <span class="m">08:21</span></span>`:`<span class="btn pri grow" style="flex:1.4">${I('clipboard-list')}Оформить заявку</span>`}</div>`;
+}
+const VC={...V,meta:'П-0412 · 18.11 08:12<br>модель ML v2.3'};
+const leftCase=o=>`<div class="col l">${vHdr(VC)}<div class="body">${caseBody(o)}</div>${caseFtr(o)}</div>`;
+const app=inner=>`<div class="app">${topBar()}<div class="split">${inner}</div></div>`;
+
+const FIG=`<svg width="340" height="180" viewBox="0 0 340 180" aria-hidden="true" style="max-width:100%"><g fill="none" stroke="#2A2824" stroke-width="2">
+<rect x="40" y="56" width="210" height="24" rx="12"/><circle cx="130" cy="68" r="9"/><path d="M130 77v40M114 117h32"/>
+<rect x="52" y="30" width="12" height="26"/><rect x="45" y="40" width="26" height="9"/>
+<rect x="228" y="92" width="12" height="70"/><path d="M216 100l32 6-32 6 32 6-32 6 32 6-32 6 32 6"/><path d="M210 162h48"/>
+<path d="M233 86L322 66" stroke-width="3"/><rect x="300" y="58" width="30" height="14" transform="rotate(-12 315 65)"/>
+<path d="M270 80v-14M270 92v14" stroke-width="1.4"/><path d="M266 70l4-4 4 4M266 102l4 4 4-4" stroke-width="1.4"/>
+</g><text x="276" y="92" font-family="Times New Roman" font-size="14" fill="#2A2824">δ</text></svg>`;
+function paper(){
+  const L=w=>`<div class="tl" style="width:${w}%"></div>`;
+  return `<div class="paper"><div class="rh"><span>Двигатель ЯМЗ-236М2. Руководство по ремонту</span><span>Раздел 3</span></div>
+  ${L(92)}${L(74)}
+  <div class="ph3">3.4. Регулировка тепловых зазоров в механизме привода клапанов</div>
+  ${L(95)}${L(88)}${L(60)}
+  <div class="fig">${FIG}<div class="cap">Рис. 3.12. Проверка зазора щупом</div></div>
+  ${L(93)}${L(82)}
+  <div class="hlbox"><span class="hltag">шаг 2 · источник</span>
+    <table class="pt"><tr><th colspan="2">Тепловой зазор на холодном двигателе, мм</th></tr>
+    <tr><td>Впускной клапан</td><td>X,XX–X,XX</td></tr><tr><td>Выпускной клапан</td><td>X,XX–X,XX</td></tr></table></div>
+  ${L(96)}${L(90)}${L(45)}<div class="pn">109</div></div>`;
+}
+function manual(){
+  return `<div class="col r"><div class="hdr">${I('book-2','l')}<div><div class="h1" style="font-size:18px;line-height:24px">${DOC} · Регулировка зазоров</div><div class="sub">Руководство по ремонту · в книге напечатано "109"</div></div><div class="rt m st">стр. PDF 113 / 412</div></div>
+  <div class="viewer">${paper()}</div>
+  <div class="ftr"><span class="btn">${I('arrow-left')}стр. 112</span><span class="st" style="flex:1;text-align:center">источник шага 2</span><span class="btn">стр. 114${I('arrow-right')}</span></div></div>`;
+}
+const ans=(text,foot,none)=>`<div class="a ${none?'none':''}"><div class="who">${I('engine','s')}Цифровой механик</div><div class="bd"><div class="tx">${text}</div><div class="bf">${foot}<span class="ib">${I('volume','s')}</span></div></div></div>`;
+const lk=(p)=>`<span class="lk">${I('file-text','s')}${DOC} · стр. ${p}${I('chevron-right','s')}</span>`;
+const q=(t,time)=>`<div class="q">${t}<div class="mt">${I('microphone','s')}голосом · ${time}</div></div>`;
+function chatBody(o={}){
+  return `<div class="chat">
+  ${q('Какой зазор должен быть на впуске?','08:16')}
+  ${ans('На холодном двигателе <span class="m">X,XX–X,XX мм</span>. Мерить щупом после остывания двигателя.',lk('113'))}
+  ${q('Какой ресурс у толкателей?','08:17')}
+  ${ans('<b>В руководствах ЯМЗ-236М2 этого нет.</b> Проверены РЭ и РР. Данные других двигателей не использую. Ресурс уточнит дефектовка.',`<span class="lk no">${I('search','s')}Источник не найден</span>`,true)}
+  ${o.short?'':`${q('Чем мерить, какой щуп нужен?','08:18')}
+  <div class="a"><div class="who">${I('engine','s')}Цифровой механик</div><div class="think"><span class="dots"><i></i><i></i><i></i></span>Ищу в ${DOC}, раздел 3.4…</div></div>`}
+  </div>
+  <div class="ftr"><span class="mic">${I('microphone')}</span><span class="inp">Вопрос текстом</span><span class="btn ic">${I('arrow-up')}</span></div>`;
+}
+function chat(){
+  return `<div class="col r"><div class="hdr"><div class="tt">${I('message-2')}Чат по № 014</div><span class="state"><span class="dots"><i></i><i></i><i></i></span>ищет в руководстве</span><div class="rt"><span class="hb">${I('x')}</span></div></div>${chatBody()}</div>`;
+}
+
+/* ---------- Заявка ---------- */
+const R=(k,v,cls='')=>`<div class="row ${cls}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+const WORKS=`<div class="wks">${STEPS.map((s,i)=>`<div class="wk">${N(i+1)}<span>${s[0]}</span>${src(s[1])}</div>`).join('')}</div>`;
+const SRCS=`<div class="srcs">${['98','112','113','118'].map(p=>src(p)).join('')}<span class="vok">${I('circle-check','s')}сверены по PDF</span></div>`;
+function req(o={}){
+  const base=R('Машина','МАЗ-5337 <span class="m">№ 014</span> · <span class="m">ЯМЗ-236М2</span>')+R('Проверка','<span class="m">П-0412</span> · <span class="m">18.11 08:12</span>')+R('Тип неисправности','<span class="m">F03</span> · Стук в клапанном механизме');
+  if(o.sent) return `<div class="col r"><div class="hdr"><div class="tt">${I('clipboard-check')}Заявка на дефектовку</div><span class="st">передана</span><div class="rt"><span class="hb">${I('x')}</span></div></div>
+  <div class="sentbox">${I('circle-check','xl')}<div><div class="big">Заявка <span class="m">TKT-0004</span> принята ТОиР</div><div class="st"><span class="m">18.11 08:21</span> · сохранена в истории машины № 014</div></div></div>
+  <div class="form">${base}
+  ${R('Диагноз','Вероятно увеличенный тепловой зазор клапанов цилиндров 3 и 5')}
+  ${R('Приоритет',prio('h'))}
+  ${R('Работы',WORKS)}
+  ${R('Подтвердил','Механик · смена 2 · <span class="m">08:21</span>')}</div>
+  <div class="ftr"><span class="btn grow">Закрыть</span></div></div>`;
+  return `<div class="col r"><div class="hdr"><div class="tt">${I('clipboard-list')}Заявка на дефектовку</div><span class="st">черновик</span><div class="rt"><span class="hb">${I('x')}</span></div></div>
+  <div class="note">${I('info-circle')}Заполнено агентом по проверке&nbsp;<span class="m">П-0412</span>. Проверьте состав перед отправкой.</div>
+  <div class="form">${base}
+  ${R('Диагноз',`Вероятно увеличенный тепловой зазор клапанов цилиндров 3 и 5<span class="tag">${I('pencil','s')}изменено</span>`,'ed')}
+  ${R('Приоритет',prio('h')+'<span class="sub2">оценка 0,74 растёт третью проверку подряд, уверенность 0,86, запись хорошая</span>')}
+  ${R('Работы',WORKS)}
+  ${R('Запчасти','Прокладка крышки головки цилиндров<span class="sub2">по руководству, при снятии крышки · стр. 111</span>')}
+  ${R('Источники',SRCS)}</div>
+  <div class="ftr"><span class="st" style="width:190px;line-height:18px">Уйдёт ровно этот состав. Без подтверждения не уходит</span><span class="btn pri grow">${I('send')}Подтвердить и отправить в ТОиР</span></div></div>`;
+}
+
+/* ---------- Парк ---------- */
+const FLEET=[
+ ['014','МАЗ-5337','ЯМЗ-236М2','18.11 08:12','dev','F03','','',true],
+ ['031','ПАЗ-3205','ЗМЗ-5234.10','18.11 07:55','fail','','',''],
+ ['045','УАЗ Патриот','ЗМЗ-40905.10','17.11 16:40','dev','F12','','нет источника'],
+ ['008','Урал-4320-10','ЯМЗ-236М2','17.11 15:02','norm','','',''],
+ ['027','МАЗ','ЯМЗ-536','17.11 14:30','dev','F05','h','TKT-0003'],
+ ['039','ПАЗ-3206','ЗМЗ-5234.10','17.11 11:18','dev','F11','l',''],
+ ['050','УАЗ Патриот','ЗМЗ-40904.10','17.11 10:05','norm','','',''],
+ ['003','МАЗ-5551','ЯМЗ-236М2','16.11 17:44','norm','','',''],
+ ['019','МАЗ','ЯМЗ-536','16.11 09:12','fail','','',''],
+ ['033','ПАЗ-3205','ЗМЗ-5234.10','15.11 13:20','norm','','',''],
+ ['011','Урал-5557-10','ЯМЗ-236М2','15.11 08:51','dev','F03','m','TKT-0001'],
+ ['022','МАЗ','ЯМЗ-536','14.11 16:07','norm','','',''],
+];
+const pcell=r=>r[6]?prio(r[6]):(r[4]==='dev'?'<span class="mut">не разобрано</span>':'<span class="mut">—</span>');
+const tcell=r=>r[7]?(r[7].startsWith('TKT')?`<span class="m">${r[7]}</span>`:`<span class="mut">${r[7]}</span>`):'<span class="mut">—</span>';
+function seg(on=0,n=['50','9','3','38'],short){
+  const L=short?['Все','Откл.','Сбой','Норма']:['Все','Отклонение','Сбой записи','Норма'];
+  const s=L.map((x,i)=>[x,n[i]]);
+  return `<div class="seg">${s.map((x,i)=>`<span class="${i===on?'on':''}">${x[0]}<span class="c">${x[1]}</span></span>`).join('')}</div>`;
+}
+function ftable(rows,compact){
+  if(compact) return `<table class="t"><colgroup><col style="width:80px"><col><col style="width:200px"><col style="width:120px"></colgroup>
+  <tr><th>№</th><th>Машина</th><th>Результат ML</th><th style="text-align:right">Проверка</th></tr>
+  ${rows.map(r=>`<tr><td class="s-${r[4]} m">${r[0]}</td><td><span class="vt">${vicon(r[1])}${r[1]}</span></td><td>${status(r[4],r[5])}</td><td class="m mut" style="text-align:right">${r[3].split(' ')[0]}</td></tr>`).join('')}</table>`;
+  return `<table class="t"><colgroup><col style="width:100px"><col style="width:230px"><col style="width:180px"><col style="width:190px"><col><col style="width:190px"><col style="width:190px"></colgroup>
+  <tr><th>№</th><th>Машина</th><th>Двигатель</th><th>Последняя проверка</th><th>Результат ML</th><th>Приоритет</th><th>Заявка</th></tr>
+  ${rows.map(r=>`<tr><td class="s-${r[4]} m" style="${r[8]?'font-weight:600':''}">${r[0]}${r[8]?'<span class="newdot"></span>':''}</td><td><span class="vt">${vicon(r[1])}${r[1]}</span></td><td class="m">${r[2]}</td><td class="m">${r[3]}</td><td>${status(r[4],r[5])}</td><td>${pcell(r)}</td><td>${tcell(r)}</td></tr>`).join('')}</table>`;
+}
+function fleet(){
+  return `<div class="app">${topBar({fleet:true})}
+  <div class="qhead"><div class="h1">Парк</div>${seg()}<div class="search">${I('search')}Номер или модель</div></div>
+  <div class="body">${ftable(FLEET)}</div>
+  <div class="ftr"><span class="st m">${I('refresh','s')} Результаты последних проверок запрошены у ML-сервиса в 08:14 · показано 12 из 50</span></div></div>`;
+}
+
+/* ---------- Сбой записи ---------- */
+function failCol(){
+  const v={no:'031',model:'ПАЗ-3205',eng:'ЗМЗ-5234.10 · бензин',meta:'П-0409 · 18.11 07:55<br>модель ML v2.3'};
+  return `<div class="col l">${vHdr(v)}<div class="body">
+  <div class="verdict v-pend"><div class="row1">${status('fail')}</div>
+    <div class="t">Запись непригодна для анализа</div>
+    <div class="l">О двигателе выводов не делаю. Повторите запись, после этого разберу результат.</div></div>
+  <div class="blk"><div class="sec"><b>${I('activity','s')}Результат ML</b><span class="m">ML-сервис · 08:02</span></div>
+  <table class="t"><colgroup><col style="width:30%"><col></colgroup>
+    <tr><th>Параметр</th><th>Значение</th></tr>
+    <tr><td>Статус проверки</td><td>сбой записи</td></tr>
+    <tr><td>Качество записи</td><td>плохое</td></tr>
+    <tr><td>Признаки</td><td class="wrap">Сигнал прерывается, посторонний шум перекрывает работу двигателя</td></tr>
+  </table></div>
+  <div class="alert a-info">${I('lock')}<div>Диагноз и заявка для этой проверки недоступны: при сбое записи выводы о двигателе не делаются.</div></div>
+  <div class="fold">${I('chevron-right')}Прошлая проверка 11.11: норма<span class="rt">0,29</span></div>
+  </div><div class="ftr"><span class="btn grow">${I('microphone')}Спросить</span></div></div>`;
+}
+function failChat(){
+  return `<div class="col r"><div class="hdr"><div class="tt">${I('message-2')}Чат по № 031</div><span class="state">готов</span><div class="rt"><span class="hb">${I('x')}</span></div></div>
+  <div class="chat">${q('Так что с двигателем?','08:03')}
+  ${ans('По этой записи сказать нельзя: она непригодна для анализа. Прошлая проверка 11.11 была в норме. Повторите запись, и я разберу новый результат.',`<span class="lk no">${I('info-circle','s')}Ссылки нет: вывода о двигателе нет</span>`,true)}
+  </div><div class="ftr"><span class="mic">${I('microphone')}</span><span class="inp">Вопрос текстом</span><span class="btn ic">${I('arrow-up')}</span></div></div>`;
+}
+
+/* ---------- Телефон ---------- */
+function phones(){
+  const p1=`<div class="phone">${topBar({phone:true})}<div class="qhead"><div class="h1" style="font-size:22px">Парк</div><div class="search">${I('search')}Номер или модель</div>${seg(0,['50','9','3','38'],true)}</div>
+    <div style="flex:1;overflow:hidden">${FLEET.slice(0,9).map(r=>`<div class="prow s-${r[4]}"><span>${r[1]} <span class="m">№ ${r[0]}</span>${r[8]?'<span class="newdot"></span>':''}</span>${status(r[4],r[5])}<span class="s2">${r[2]} · ${r[3]}</span><span class="s2">${r[6]?PR[r[6]][1]:''}${r[7]&&r[7].startsWith('TKT')?' · '+r[7]:''}</span></div>`).join('')}</div></div>`;
+  const pv={no:'014',model:'МАЗ-5337',eng:'ЯМЗ-236М2 · П-0412 · 18.11'};
+  const p2=`<div class="phone">${topBar({phone:true})}${vHdr(pv)}<div class="body">
+    <div class="verdict v-h"><div class="row1">${status('dev','F03')}${prio('h')}</div><div class="t">Стук в клапанном механизме</div><div class="l">Оценка <b class="m">0,74</b> растёт третью проверку, уверенность <span class="m">0,86</span></div></div>
+    <div class="blk"><div class="sec"><b>${I('list-check','s')}Порядок проверки</b></div>
+    <div class="list">${STEPS.map((s,i)=>`<div class="li">${N(i+1)}<span>${s[0]}</span>${src(s[1],true)}</div>`).join('')}</div></div>
+    <div class="fold">${I('chevron-right')}Результат ML и признаки</div><div class="fold">${I('chevron-right')}Ход разбора<span class="rt">38 ₽</span></div>
+    </div><div class="ftr"><span class="btn ic">${I('microphone')}</span><span class="btn pri grow">${I('clipboard-list')}Оформить заявку</span></div></div>`;
+  const p3=`<div class="phone">${topBar({phone:true})}${vHdr(pv)}<div class="body"><div class="verdict v-h"><div class="row1">${status('dev','F03')}${prio('h')}</div><div class="t">Стук в клапанном механизме</div></div></div>
+    <div class="dimmer"></div><div class="sheet"><div class="handle"><i></i></div><div class="hdr" style="height:56px"><div class="tt" style="font-size:16px">${I('message-2')}Чат по № 014</div><span class="state">отвечает</span><div class="rt"><span class="hb">${I('x')}</span></div></div>${chatBody({short:true})}</div></div>`;
+  return `<div class="phones"><div><div class="bcap">Телефон · парк</div>${p1}</div><div><div class="bcap">Телефон · разбор</div>${p2}</div><div><div class="bcap">Телефон · чат шторкой снизу</div>${p3}</div></div>`;
+}
+
+/* ---------- Состояния ---------- */
+function states(){
+  const tile=(cap,body)=>`<div><div class="bcap">${cap}</div><div class="tile">${body}</div></div>`;
+  const t1=`${vHdr()}<div class="body"><div class="verdict v-pend" style="margin:0"><span class="sev c-norm"><span class="dots"><i></i><i></i><i></i></span>Идёт разбор</span>
+    <ul class="steps">
+      <li>${I('check')}Получен результат <span class="m">П-0412</span>: отклонение F03<span class="rt">08:14:05</span></li>
+      <li>${I('check')}Двигатель ЯМЗ-236М2, руководства РЭ и РР<span class="rt">08:14:05</span></li>
+      <li>${I('check')}История: оценка растёт третью проверку<span class="rt">08:14:06</span></li>
+      <li>${I('loader-2')}Ищу в ${DOC}: клапанный механизм<span class="rt">08:14:09</span></li>
+      <li class="wait">${I('circle-dashed')}Сверка ссылок со страницами PDF</li>
+      <li class="wait">${I('circle-dashed')}Приоритет и основание</li>
+    </ul></div></div><div class="ftr"><span class="st m">пока: 12 400 токенов · 8 ₽ · 6 с</span></div>`;
+  const t2=`${vHdr({no:'045',model:'УАЗ Патриот',eng:'ЗМЗ-40905.10 · бензин'})}<div class="body">
+    <div class="verdict" style="margin-bottom:12px"><div class="row1">${status('dev','F12')}</div><div class="t" style="font-size:24px;line-height:32px">Шум в зоне привода агрегатов</div></div>
+    <div class="alert a-warn" style="margin:0">${I('book-off')}<div>В руководстве на ЗМЗ-40905.10 нет инструкции по этой неисправности. Рекомендую дефектовку. Данные других двигателей не использую.</div></div></div>
+    <div class="ftr"><span class="btn off grow">${I('clipboard-off')}Заявка не отправляется: нет источника</span></div>`;
+  const t3=`${vHdr({no:'039',model:'ПАЗ-3206',eng:'ЗМЗ-5234.10 · бензин'})}<div class="body">
+    <div class="alert a-warn">${I('wave-sine')}<div>Запись с помехами, уверенность модели <span class="m">0,52</span>. Выводы предварительные, лучше повторить запись.</div></div>
+    <div class="verdict v-l" style="margin:0"><div class="row1">${status('dev','F11')}${prio('l',true)}</div><div class="t" style="font-size:24px;line-height:32px">Неравномерная работа цилиндров</div><div class="l">Основание: оценка <span class="m">0,58</span>, уверенность ниже порога, запись с помехами</div></div></div>`;
+  const t4=`<div class="body"><div class="alert">${I('plug-connected-x')}<div>Нет связи с ML-сервисом с <span class="m">08:20</span>. Новые результаты не приходят.</div><div class="rt"><span class="st m">повтор через 30 с</span><span class="btn sm">${I('refresh','s')}Повторить</span></div></div>
+    ${ftable(FLEET.slice(0,5),true)}</div>`;
+  return `<div class="board">${tile('Агент разбирает проверку: шаги видны по ходу',t1)}${tile('Контрольный случай: в руководстве нет инструкции',t2)}${tile('Контрольный случай: помехи и сниженная уверенность',t3)}${tile('Нет связи с ML-сервисом',t4)}</div>`;
+}
+
+const FR=[
+ {t:'Парк',d:'Выбор машины: 50 машин, результат последней проверки, приоритет и номер заявки',h:()=>fleet()},
+ {t:'Машина',d:'Карточка машины, история проверок, кнопка "Получить результат диагностики". Справа чат по руководствам этого двигателя',h:()=>app(`<div class="col l">${vHdr()}<div class="body">${vehicleBody()}</div><div class="ftr"><span class="btn pri grow">${I('wave-sine')}Получить результат диагностики</span></div></div>`+introChat())},
+ {t:'Разбор',d:'Сценарий 1: отклонение, приоритет с основанием, чем грозит, порядок проверки. Справа страница PDF с подсветкой',h:()=>app(leftCase({cur:1})+manual())},
+ {t:'Чат',d:'Сценарий 2: ответ по руководству со страницей PDF и честное "в руководстве нет"',h:()=>app(leftCase({})+chat())},
+ {t:'Заявка',d:'Поля по ТЗ: машина, проверка, тип, диагноз, приоритет, работы, запчасти, источники',h:()=>app(leftCase({})+req())},
+ {t:'Отправлено',d:'Номер TKT от ТОиР-заглушки, заявка сохранена в истории машины',h:()=>app(leftCase({sent:true})+req({sent:true}))},
+ {t:'Сбой записи',d:'Сценарий 3: диагноза нет, просим повторить запись, заявка недоступна',h:()=>app(failCol()+failChat())},
+ {t:'Телефон',d:'Интерфейс должен работать на смартфоне: 390×844',h:()=>phones(),free:true},
+ {t:'Состояния',d:'Разбор идёт, нет инструкции в руководстве, помехи, нет связи с ML',h:()=>states(),free:true},
+];
+
+let cur=0;
+const stage=document.getElementById('stage'), nav=document.getElementById('frames');
+FR.forEach((f,i)=>{
+  const d=document.createElement('div');d.className='frame'+(f.free?' free':'');d.innerHTML=f.h();stage.appendChild(d);
+  const b=document.createElement('button');b.textContent=(i+1)+' '+f.t;b.onclick=()=>go(i);nav.appendChild(b);
+});
+function go(i){
+  cur=(i+FR.length)%FR.length;
+  [...stage.children].forEach((f,k)=>f.classList.toggle('on',k===cur));
+  [...nav.children].forEach((b,k)=>b.classList.toggle('on',k===cur));
+  document.getElementById('desc').textContent=FR[cur].d;
+  stage.scrollTop=0;
+  try{history.replaceState(null,'','#'+(cur+1))}catch(e){}
+}
+function setTheme(t){
+  document.documentElement.dataset.theme=t;
+  document.getElementById('tl').classList.toggle('on',t!=='dark');
+  document.getElementById('td').classList.toggle('on',t==='dark');
+  try{localStorage.setItem('dm-theme',t)}catch(e){}
+}
+document.getElementById('tl').onclick=()=>setTheme('light');
+document.getElementById('td').onclick=()=>setTheme('dark');
+addEventListener('keydown',e=>{if(e.key==='ArrowRight')go(cur+1);if(e.key==='ArrowLeft')go(cur-1)});
+let saved='light';try{saved=localStorage.getItem('dm-theme')||'light'}catch(e){}
+setTheme(saved);
+go((parseInt(location.hash.slice(1))||1)-1);
+</script>
+</body>
+</html>
