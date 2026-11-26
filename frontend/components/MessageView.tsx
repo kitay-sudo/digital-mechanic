@@ -4,20 +4,7 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { PRIORITY_LABEL, QUALITY_LABEL, capitalize, dateTime, int, num, plural, timeShort } from '@/lib/format';
 import { toggleStep, useDoneSteps } from '@/lib/settings';
-import type {
-  Answer,
-  AnswerItem,
-  Assessment,
-  Draft,
-  ManualTarget,
-  Message,
-  Priority,
-  Ref,
-  Step,
-  Ticket,
-  Usage,
-  VehicleDetail,
-} from '@/lib/types';
+import type { Answer, AnswerItem, Assessment, Conflict, Draft, ManualTarget, Message, Priority, Ref, Step, Ticket, Usage, VehicleDetail } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
 import { RefChip, sameTarget } from './RefChip';
@@ -40,6 +27,62 @@ function Chips({ refs, ctx }: { refs: Ref[]; ctx: Ctx }) {
         return <RefChip key={`${r.manual_id}-${r.pdf_page}-${i}`} target={t} label={r.short} active={sameTarget(ctx.activeManual, t)} onOpen={ctx.onOpenManual} />;
       })}
     </div>
+  );
+}
+
+/* ---------- Расхождение в руководствах ---------- */
+
+const LETTERS = 'АБВГДЕЖЗ';
+
+function DisputedMark() {
+  return (
+    <div className="dsp">
+      <Icon name="alert-triangle" size="s" />
+      По этому условию документы расходятся
+    </div>
+  );
+}
+
+function ConflictBlocks({ conflicts, ctx }: { conflicts: Conflict[]; ctx: Ctx }) {
+  return (
+    <>
+      {conflicts.map((c, n) => (
+        <div className="cdiv" key={n}>
+          <section className="cfl">
+            <div className="sec">
+              <b>
+                <Icon name="alert-triangle" size="s" />
+                Расхождение в руководствах
+              </b>
+              <span className="cfl-tag">формулировок: {c.statements.length}</span>
+            </div>
+            <div className="cfl-topic">{c.topic}</div>
+            <div className="items">
+              {c.statements.map((s, i) => (
+                <div className="item" key={i}>
+                  <span className="ltr">{LETTERS[i] ?? i + 1}</span>
+                  <div>
+                    {s.text ? <div className="cfl-say">{s.text}</div> : null}
+                    <div className="tx">«{s.ref.quote}»</div>
+                    <Chips refs={[s.ref]} ctx={ctx} />
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="cfl-rec">
+              <Icon name="user-question" />
+              <span>{c.recommendation}</span>
+            </div>
+            {c.resolution ? (
+              <div className="cfl-res">
+                <b>Что решено.</b> {c.resolution}
+                {c.resolution_source ? <span className="cfl-src">Источник: {c.resolution_source}</span> : null}
+              </div>
+            ) : null}
+          </section>
+        </div>
+      ))}
+    </>
   );
 }
 
@@ -173,6 +216,7 @@ function StepItems({
               </button>
               <div>
                 <div className="tx">{it.text}</div>
+                {it.disputed ? <DisputedMark /> : null}
                 <Chips refs={it.refs} ctx={ctx} />
               </div>
             </div>
@@ -215,6 +259,7 @@ function AnswerBlocks({
           </div>
         </div>
       ) : null}
+      {answer.conflicts?.length ? <ConflictBlocks conflicts={answer.conflicts} ctx={ctx} /> : null}
       {answer.observations.length ? (
         <section className="ab cdiv">
           <div className="sec">
@@ -478,6 +523,7 @@ function WorkList({ items, ctx, empty }: { items: AnswerItem[]; ctx: Ctx; empty:
           <span className="n">{i + 1}</span>
           <div>
             <div className="tx">{it.text}</div>
+            {it.disputed ? <DisputedMark /> : null}
             <Chips refs={it.refs} ctx={ctx} />
           </div>
         </div>

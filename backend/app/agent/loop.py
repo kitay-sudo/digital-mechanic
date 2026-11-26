@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 import time
 
-from .. import rules
+from .. import conflicts, rules
 from ..config import Settings
 from ..kb.index import Index
 from ..store import Store
@@ -19,8 +19,9 @@ STEP_LABELS = {
     "retry": "Повтор после проверки ссылок",
 }
 EMPTY_ANSWER = {"summary": "", "observations": [], "hypotheses": [], "checks": [], "repair": [],
-                "limitations": [], "not_found": False}
+                "limitations": [], "conflicts": [], "not_found": False}
 HIDDEN_NOTE = "Часть ответа скрыта: её не удалось подтвердить страницей руководства."
+CONFLICT_LEAD = "В руководствах есть расхождение, формулировки показаны ниже."
 
 
 def _cost(settings: Settings, inp: int, out: int, cache: int) -> tuple[float, float]:
@@ -140,7 +141,9 @@ async def run_turn(
         await emit({"type": "done", "usage": _usage(totals, started, llm)})
         return
 
-    payload = _build_message(ctx, answer or dict(EMPTY_ANSWER), problems, confirmed_draft_id)
+    answer = answer or dict(EMPTY_ANSWER)
+    _apply_conflicts(ctx, answer, text)
+    payload = _build_message(ctx, answer, problems, confirmed_draft_id)
     usage = _usage(totals, started, llm)
     payload["steps"] = ctx.steps
     payload["usage"] = usage
@@ -170,6 +173,24 @@ def _has_instruction(ctx: TurnContext, answer: dict) -> bool:
         rules.page_relevant(code, verifier.page(ref["manual_id"], ref["pdf_page"]) or "")
         for item in answer["checks"] + answer["repair"] for ref in item["refs"]
     )
+
+
+def _apply_conflicts(ctx: TurnContext, answer: dict, question: str) -> None:
+    """П18: к расхождениям, которые нашла модель, код добавляет подтверждённые из реестра и помечает спорные шаги."""
+    if ctx.assessment and ctx.assessment["outcome"] in ("check_failed", "normal"):
+        answer["conflicts"] = []
+        return
+    items = answer["checks"] + answer["repair"]
+    registry = conflicts.from_registry(ctx.index, ctx.allowed_manuals, question, items)
+    answer["conflicts"] = conflicts.merge(answer.get("conflicts") or [], registry)
+    conflicts.mark_disputed(items, answer["conflicts"])
+    if answer["conflicts"]:
+        # Механик должен узнать о расхождении из первой же фразы, а не из блока ниже.
+        if answer["not_found"] or not answer["summary"]:
+            answer["summary"] = CONFLICT_LEAD
+        elif "расхожд" not in answer["summary"].lower() and "противореч" not in answer["summary"].lower():
+            answer["summary"] = f"{answer['summary'].rstrip()} {CONFLICT_LEAD}"
+        answer["not_found"] = False
 
 
 def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirmed_draft_id: str | None) -> dict:
@@ -230,7 +251,9 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
             answer["recommendation_text"] = prompt.recommendation_text(vehicle, ctx.diagnosis, ctx.ticket_block)
         return {"kind": "answer", "text": answer["summary"], "answer": answer}
 
-    has_body = any(answer[k] for k in ("observations", "hypotheses", "checks", "repair", "limitations")) or answer["not_found"]
+    has_body = any(
+        answer[k] for k in ("observations", "hypotheses", "checks", "repair", "limitations", "conflicts")
+    ) or answer["not_found"]
     if not has_body:
         return {"kind": "notice", "text": answer["summary"] or "Не удалось подготовить ответ. Повторите вопрос."}
     if not answer["summary"]:

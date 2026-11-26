@@ -50,8 +50,12 @@ class Index:
         with self._lock:
             return self._db.execute("SELECT COALESCE(MAX(page),0) FROM pages WHERE manual_id=?", (manual_id,)).fetchone()[0]
 
-    def search(self, query: str, manual_ids: list[str], limit: int = 6) -> list[dict]:
-        """Лучшие фрагменты по запросу, только из перечисленных руководств (правило П1)."""
+    def search(self, query: str, manual_ids: list[str], limit: int = 6, every_manual: bool = False) -> list[dict]:
+        """Лучшие фрагменты по запросу, только из перечисленных руководств (правило П1).
+
+        every_manual: к лучшим добавляется по одному фрагменту из каждого документа, который в них не попал
+        и покрывает не меньше половины слов запроса. Так видны расхождения между документами (П18).
+        """
         terms = list(dict.fromkeys(tokens(query)))
         if not terms or not manual_ids:
             return []
@@ -83,6 +87,14 @@ class Index:
                         "score": round(score, 3), "coverage": round(coverage, 2)})
             if len(out) >= limit:
                 break
+        if every_manual:
+            present = {hit["manual_id"] for hit in out}
+            for score, coverage, manual_id, page, text in scored:
+                if manual_id in present or coverage < 0.5:
+                    continue
+                present.add(manual_id)
+                out.append({"manual_id": manual_id, "pdf_page": page, "text": text,
+                            "score": round(score, 3), "coverage": round(coverage, 2)})
         return out
 
     # --- построение ---

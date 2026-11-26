@@ -270,5 +270,6 @@ class MockLLM:
             "checks": checks or [],
             "repair": repair or [],
             "limitations": limitations or [],
+            "conflicts": [],
             "not_found": not_found,
         }

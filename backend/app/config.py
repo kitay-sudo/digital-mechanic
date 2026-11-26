@@ -33,6 +33,7 @@ class Settings:
     fleet_path: Path
     fault_types_path: Path
     manuals_config: Path
+    conflicts_config: Path
     # База знаний вне Git: PDF и индекс
     kb_dir: Path
     # Данные приложения: чат, заявки, журнал
@@ -77,6 +78,7 @@ def get_settings() -> Settings:
         fleet_path=_path("FLEET_DATA_PATH", ROOT / "mocks" / "data" / "vehicles.json"),
         fault_types_path=_path("FAULT_TYPES_PATH", ROOT / "mocks" / "data" / "fault_types.json"),
         manuals_config=_path("MANUALS_CONFIG", ROOT / "config" / "manuals.json"),
+        conflicts_config=_path("CONFLICTS_CONFIG", ROOT / "config" / "conflicts.json"),
         kb_dir=_path("KB_DIR", ROOT / "knowledge"),
         data_dir=_path("DATA_DIR", ROOT / "data"),
         llm_provider=provider,

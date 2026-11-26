@@ -32,7 +32,12 @@ def clean_page_text(text: str) -> str:
 
 @lru_cache(maxsize=50_000)
 def stem(word: str) -> str:
-    return _stemmer.stemWord(word)
+    base = _stemmer.stemWord(word)
+    # Snowball режет «клапан» и «клапана» до «клапа», а «клапанов» оставляет «клапан»:
+    # формы одного слова расходятся и не находят друг друга. Приводим к одной основе.
+    if len(base) >= 4 and base.endswith(("ан", "ян")):
+        base = base[:-1]
+    return base
 
 
 def tokens(text: str) -> list[str]:

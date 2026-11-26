@@ -4,13 +4,14 @@
 П2: цитата дословно стоит на указанной странице PDF.
 П3: число в пункте из руководства есть на процитированной странице; число без источника — ошибка.
 П4: гипотезы идут отдельным списком и нормативов не содержат.
+П18: расхождение между источниками — это не меньше двух разных цитат, каждая сверена со своей страницей.
 """
 from __future__ import annotations
 
 import re
 
 from ..kb.index import Index
-from ..kb.text import clean_page_text, is_toc, quote_on_page, strip_service_numbers
+from ..kb.text import clean_page_text, is_toc, quote_on_page, squash, strip_service_numbers
 from ..manuals import manual_by_id
 
 _NUM = re.compile(r"(?<![0-9a-zа-яё.,])(\d+(?:[.,]\d+)?)(?![0-9a-zа-яё]|[.,]\d)", re.IGNORECASE)
@@ -131,8 +132,35 @@ class Verifier:
             good.append(text)
         return good, problems
 
+    def check_conflicts(self, blocks: list[dict]) -> tuple[list[dict], list[str]]:
+        """П18: в расхождении остаются только формулировки, дословно стоящие на своих страницах."""
+        good, problems = [], []
+        for block in blocks or []:
+            topic = str(block.get("topic", "")).strip()
+            statements, numbers = [], set(self.context_numbers)
+            for statement in block.get("statements") or []:
+                ref, err = self.check_ref(statement.get("ref") or {})
+                if ref is None:
+                    problems.append(f"Расхождение «{topic[:60]}»: формулировка не подтверждена ({err})")
+                    continue
+                on_page = page_numbers(self.page(ref["manual_id"], ref["pdf_page"]) or "")
+                numbers |= on_page
+                text = str(statement.get("text", "")).strip()
+                if stray_numbers(text, self.context_numbers | on_page, strict=True):
+                    text = ""  # пересказ с чужим числом не показываем, остаётся дословная цитата
+                statements.append({"text": text, "ref": ref})
+            if len({squash(s["ref"]["quote"]) for s in statements}) < 2:
+                problems.append(f"Расхождение «{topic[:60]}»: нужны две разные формулировки с цитатами со страниц")
+                continue
+            if not topic or stray_numbers(topic, numbers, strict=False):
+                topic = "Источники расходятся"
+            good.append({"topic": topic, "statements": statements})
+        return good, problems
+
     def verify_answer(self, answer: dict) -> tuple[dict, list[str]]:
         problems: list[str] = []
+        found, p = self.check_conflicts(answer.get("conflicts"))
+        problems += p
         checks, p = self.check_items(answer.get("checks"), "Проверки")
         problems += p
         repair, p = self.check_items(answer.get("repair"), "Ремонт")
@@ -141,6 +169,9 @@ class Verifier:
         for item in checks + repair:
             for ref in item["refs"]:
                 cited |= page_numbers(self.page(ref["manual_id"], ref["pdf_page"]) or "")
+        for block in found:
+            for statement in block["statements"]:
+                cited |= page_numbers(self.page(statement["ref"]["manual_id"], statement["ref"]["pdf_page"]) or "")
         observations, p = self.check_free_text(answer.get("observations"), "Наблюдения", cited)
         problems += p
         hypotheses, p = self.check_free_text(answer.get("hypotheses"), "Гипотезы", cited)
@@ -156,6 +187,7 @@ class Verifier:
             "checks": checks,
             "repair": repair,
             "limitations": limitations,
-            "not_found": bool(answer.get("not_found")) and not (checks or repair),
+            "conflicts": found,
+            "not_found": bool(answer.get("not_found")) and not (checks or repair or found),
         }
         return clean, problems

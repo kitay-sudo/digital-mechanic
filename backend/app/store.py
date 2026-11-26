@@ -115,6 +115,7 @@ class Store:
             draft = payload.get("draft") or {}
             items = [*(answer.get("checks") or []), *(answer.get("repair") or []),
                      *(draft.get("operations") or []), *(draft.get("spare_parts") or [])]
+            items += [{"refs": [s["ref"]]} for block in answer.get("conflicts") or [] for s in block["statements"]]
             sources, seen = [], set()
             for item in items:
                 for ref in item.get("refs", []):

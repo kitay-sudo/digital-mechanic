@@ -9,7 +9,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Awaitable, Callable
 
-from .. import clients, fleet, rules
+from .. import clients, conflicts, fleet, rules
 from ..config import Settings
 from ..kb.index import Index
 from ..kb.text import sanitize_description
@@ -37,6 +37,26 @@ ITEM_SCHEMA = {
     "additionalProperties": False,
 }
 
+STATEMENT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "text": {"type": "string", "description": "Что утверждает этот источник, одной фразой"},
+        "ref": REF_SCHEMA,
+    },
+    "required": ["text", "ref"],
+    "additionalProperties": False,
+}
+CONFLICT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "topic": {"type": "string", "description": "О чём расходятся источники, одной фразой без чисел"},
+        "statements": {"type": "array", "items": STATEMENT_SCHEMA,
+                       "description": "Не меньше двух формулировок, каждая со своей страницей и дословной цитатой"},
+    },
+    "required": ["topic", "statements"],
+    "additionalProperties": False,
+}
+
 # Схема итогового ответа. Порядок полей повторяет порядок ответа из ТЗ (F4).
 ANSWER_SCHEMA = {
     "type": "object",
@@ -52,9 +72,12 @@ ANSWER_SCHEMA = {
                    "description": "Возможный ремонт по руководству. У каждого пункта ссылка с дословной цитатой"},
         "limitations": {"type": "array", "items": {"type": "string"},
                         "description": "Ограничения: чего нет в руководстве, что требует решения механика"},
+        "conflicts": {"type": "array", "items": CONFLICT_SCHEMA,
+                      "description": "Противоречия между страницами или документами по одному вопросу. "
+                                     "Пустой список, если противоречий нет"},
         "not_found": {"type": "boolean", "description": "true, если в руководствах этого двигателя ответа нет"},
     },
-    "required": ["summary", "observations", "hypotheses", "checks", "repair", "limitations", "not_found"],
+    "required": ["summary", "observations", "hypotheses", "checks", "repair", "limitations", "conflicts", "not_found"],
     "additionalProperties": False,
 }
 
@@ -295,7 +318,7 @@ async def search_manuals(ctx: TurnContext, args: dict, step_id: str) -> tuple[st
     query = str(args.get("query", "")).strip()
     title = f"Ищу в руководствах: {query[:70]}"
     await ctx.step(step_id, "search_manuals", title, "running")
-    hits = ctx.index.search(query, ctx.allowed_manuals, limit=6)
+    hits = ctx.index.search(query, ctx.allowed_manuals, limit=6, every_manual=True)
     ctx.searched = True
     results = []
     for hit in hits:
@@ -394,6 +417,10 @@ async def prepare_ticket(ctx: TurnContext, args: dict, step_id: str) -> tuple[st
                                    "short": ref["short"], "pdf_page": ref["pdf_page"]})
 
     warnings = list(assessment["warnings"])
+    # П18: если работа опирается на спорную формулировку, механик видит это до подтверждения заявки.
+    disputes = conflicts.from_registry(ctx.index, ctx.allowed_manuals, "", operations + parts)
+    conflicts.mark_disputed(operations + parts, disputes)
+    warnings += [conflicts.warning_line(block) for block in disputes]
     earlier = [t for t in ctx.store.tickets(ctx.vehicle["vehicle_id"]) if t["session_id"] == ctx.session_id]
     if earlier:
         warnings.append(f"По этой проверке уже создана заявка {earlier[-1]['ticket_id']}.")

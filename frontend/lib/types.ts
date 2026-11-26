@@ -120,6 +120,23 @@ export interface Ref {
 export interface AnswerItem {
   text: string;
   refs: Ref[];
+  /** Шаг повторяет формулировку, по которой документы расходятся */
+  disputed?: boolean;
+}
+export interface ConflictStatement {
+  /** Пересказ одной фразой, может быть пустым: тогда показывается только цитата */
+  text: string;
+  ref: Ref;
+}
+/** Расхождение между страницами или документами по одному вопросу */
+export interface Conflict {
+  topic: string;
+  statements: ConflictStatement[];
+  recommendation: string;
+  /** Расхождение подтверждено заказчиком и взято из реестра, а не найдено моделью */
+  confirmed: boolean;
+  resolution: string;
+  resolution_source: string;
 }
 
 export interface Answer {
@@ -129,6 +146,8 @@ export interface Answer {
   checks: AnswerItem[];
   repair: AnswerItem[];
   limitations: string[];
+  /** В старых сообщениях поля нет */
+  conflicts?: Conflict[];
   not_found: boolean;
   recommendation_text: string | null;
 }

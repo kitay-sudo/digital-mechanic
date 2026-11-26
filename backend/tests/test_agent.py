@@ -182,3 +182,58 @@ async def test_profile_reaches_the_agent_and_audit_log_records_sources(store, in
     log = store.audit(10)
     assert log[0]["question"] == "Получи результат диагностики" and log[0]["kind"] == "verdict"
     assert log[0]["sources"] and "get_diagnosis" in log[0]["tools"]
+
+
+# --- П18: противоречащие друг другу инструкции ---
+HOT = {"manual_id": "yamz236_re", "pdf_page": 7, "quote": "Масло сливать сразу после остановки, пока двигатель горячий."}
+COLD = {"manual_id": "yamz236_rk", "pdf_page": 12, "quote": "Масло сливать только на полностью остывшем двигателе."}
+
+
+def test_conflict_keeps_both_statements_with_pages(index):
+    answer = {"conflicts": [{"topic": "Когда сливать масло", "statements": [
+        {"text": "Сразу после остановки", "ref": HOT}, {"text": "На остывшем двигателе", "ref": COLD}]}]}
+    clean, problems = verifier(index).verify_answer(answer)
+    assert not problems
+    pages = [(s["ref"]["manual_id"], s["ref"]["pdf_page"]) for s in clean["conflicts"][0]["statements"]]
+    assert pages == [("yamz236_re", 7), ("yamz236_rk", 12)]
+
+
+def test_conflict_with_made_up_quote_is_dropped(index):
+    fake = {**COLD, "quote": "Масло сливать через сорок минут после остановки двигателя."}
+    answer = {"conflicts": [{"topic": "Когда сливать масло", "statements": [
+        {"text": "", "ref": HOT}, {"text": "", "ref": fake}]}]}
+    clean, problems = verifier(index).verify_answer(answer)
+    assert clean["conflicts"] == [] and len(problems) == 2
+
+
+def test_conflict_needs_two_different_statements(index):
+    answer = {"conflicts": [{"topic": "Когда сливать масло", "statements": [
+        {"text": "", "ref": HOT}, {"text": "", "ref": HOT}]}]}
+    clean, problems = verifier(index).verify_answer(answer)
+    assert clean["conflicts"] == [] and "две разные формулировки" in problems[0]
+
+
+async def test_confirmed_conflict_is_shown_without_choosing_a_side(store, index, services):
+    message, _ = await turn(store, index, "T792HO98", "S-0043", "Как правильно сливать масло при замене?")
+    assert message["kind"] == "answer"
+    block = message["answer"]["conflicts"][0]
+    assert block["confirmed"] and "специалиста" in block["recommendation"]
+    assert block["resolution"].startswith("Принято")
+    assert {(s["ref"]["manual_id"], s["ref"]["pdf_page"]) for s in block["statements"]} == {
+        ("yamz236_re", 7), ("yamz236_rk", 12)}
+    assert all(s["ref"]["quote"] for s in block["statements"])
+    assert "расхождение" in message["text"].lower() and not message["answer"]["not_found"]
+    # Шаг, который повторяет спорную формулировку, помечен и не выглядит бесспорным.
+    disputed = [i for i in message["answer"]["checks"] if "сливать" in i["text"].lower()]
+    assert all(i.get("disputed") for i in disputed)
+
+
+async def test_conflict_is_not_shown_for_unrelated_question(store, index, services):
+    message, _ = await turn(store, index, "T792HO98", "S-0043", "Какое давление масла должно быть в системе смазки?")
+    assert message["answer"]["conflicts"] == []
+
+
+def test_conflict_of_another_engine_is_not_shown(index):
+    from app import conflicts
+
+    assert conflicts.from_registry(index, ["zmz5234_rk"], "замена масла, как сливать", []) == []

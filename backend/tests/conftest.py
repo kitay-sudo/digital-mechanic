@@ -25,12 +25,33 @@ PAGES = {
     ),
     ("yamz236_rk", 2): "\n".join(f"Раздел {i} . . . . . . . . . . . . {i * 3}" for i in range(1, 12))
     + "\nПроверка давления масла . . . . . . . . . . 10",
+    # Две страницы одного двигателя, которые расходятся (П18)
+    ("yamz236_re", 7): (
+        "Замена масла в двигателе. Масло сливать сразу после остановки, пока двигатель горячий. "
+        "Отвернуть пробку поддона и слить масло в чистую ёмкость."
+    ),
+    ("yamz236_rk", 12): (
+        "Замена масла в двигателе. Масло сливать только на полностью остывшем двигателе. "
+        "Отвернуть пробку поддона и слить масло."
+    ),
     # Руководство другого двигателя
     ("zmz5234_rk", 5): (
         "Проверка давления масла. Давление масла в системе смазки должно быть не менее 250 кПа. "
         "Проверить давление масла манометром."
     ),
 }
+
+
+# Реестр подтверждённых расхождений для тестов: только документ, страница и слова-маркеры.
+KNOWN_CONFLICTS = [{
+    "id": "test-oil-drain", "topic": "На каком двигателе сливать масло",
+    "keywords": [["слив", "масл"], ["замен", "масл"]],
+    "statements": [
+        {"manual_id": "yamz236_re", "pdf_page": 7, "markers": ["сливать", "горячий"]},
+        {"manual_id": "yamz236_rk", "pdf_page": 12, "markers": ["сливать", "остывшем"]},
+    ],
+    "resolution": "Принято: сливать на остывшем двигателе.", "resolution_source": "тест",
+}]
 
 
 @pytest.fixture(autouse=True)
@@ -41,14 +62,19 @@ def environment(tmp_path, monkeypatch):
     monkeypatch.setenv("FLEET_DATA_PATH", str(ROOT / "mocks" / "data" / "vehicles.json"))
     monkeypatch.setenv("FAULT_TYPES_PATH", str(ROOT / "mocks" / "data" / "fault_types.json"))
     monkeypatch.setenv("MANUALS_CONFIG", str(ROOT / "config" / "manuals.json"))
+    registry = tmp_path / "conflicts.json"
+    registry.write_text(json.dumps(KNOWN_CONFLICTS, ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("CONFLICTS_CONFIG", str(registry))
 
-    from app import config, fleet, manuals
+    from app import config, conflicts, fleet, manuals
     from app.kb import index as kb_index
 
-    for cached in (config.get_settings, manuals.all_manuals, kb_index.get_index, fleet._load, fleet.fault_types):
+    caches = (config.get_settings, manuals.all_manuals, kb_index.get_index, fleet._load, fleet.fault_types,
+              conflicts.known_conflicts)
+    for cached in caches:
         cached.cache_clear()
     yield
-    for cached in (config.get_settings, manuals.all_manuals, kb_index.get_index, fleet._load, fleet.fault_types):
+    for cached in caches:
         cached.cache_clear()
 
 

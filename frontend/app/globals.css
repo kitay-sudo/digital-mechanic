@@ -2551,3 +2551,135 @@ details.fold > .fin {
     padding: 12px;
   }
 }
+
+/* ---------- Расхождение в руководствах (П18) ---------- */
+
+.cfl {
+  margin: 12px 20px 16px;
+  padding: 10px 16px 14px 20px;
+  border: 1px solid var(--line2);
+  box-shadow: inset 4px 0 0 var(--warn);
+  background: var(--panel2);
+}
+
+.cfl .sec b {
+  color: var(--warn-tx);
+}
+
+.cfl-tag {
+  font: 500 calc(13px * var(--k)) / calc(18px * var(--k)) var(--mono);
+  color: var(--tx3);
+  white-space: nowrap;
+}
+
+.cfl-topic {
+  margin: 4px 0 10px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+  overflow-wrap: anywhere;
+}
+
+.ltr {
+  width: calc(36px * var(--k));
+  height: calc(36px * var(--k));
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--warn);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--warn-tx);
+  font: 600 calc(15px * var(--k)) / 1 var(--mono);
+}
+
+.cfl-say {
+  padding-top: calc(6px * var(--k));
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx2);
+}
+
+.cfl-say + .tx {
+  padding-top: 2px;
+}
+
+.cfl-rec {
+  display: grid;
+  grid-template-columns: calc(36px * var(--k)) minmax(0, 1fr);
+  column-gap: 14px;
+  align-items: start;
+  margin-top: 12px;
+  padding: 0 14px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+}
+
+.cfl-rec .ti {
+  justify-self: center;
+  margin-top: 2px;
+  color: var(--warn-tx);
+}
+
+.cfl-res {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--tx2);
+  overflow-wrap: anywhere;
+}
+
+.cfl-res b {
+  color: var(--tx);
+  font-weight: 600;
+}
+
+.cfl-src {
+  display: block;
+  margin-top: 4px;
+  font: 500 calc(12px * var(--k)) / calc(18px * var(--k)) var(--mono);
+  color: var(--tx3);
+}
+
+.dsp {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--warn-tx);
+}
+
+/* На телефоне блок не вкладывает отступ в отступ: строки идут на всю ширину, ссылке на страницу хватает места */
+@media (max-width: 900px) {
+  .cfl {
+    margin: 10px 14px 12px;
+    padding: 10px 0 12px 4px;
+  }
+
+  .cfl > .sec,
+  .cfl-topic {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .cfl .items {
+    border-left: none;
+    border-right: none;
+  }
+
+  .cfl-rec {
+    padding: 0 10px;
+    column-gap: 10px;
+  }
+
+  .cfl-res {
+    margin-left: 10px;
+    margin-right: 10px;
+  }
+}
