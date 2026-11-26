@@ -1,0 +1,9 @@
+.git
+materials
+knowledge
+data
+frontend
+docs
+**/.venv
+**/__pycache__
+**/node_modules

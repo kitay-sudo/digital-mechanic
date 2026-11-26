@@ -1,0 +1,40 @@
+# Запуск всего продукта одной командой:  docker compose up --build
+# Перед первым запуском положите PDF руководств в knowledge/pdf и соберите индекс (см. README).
+services:
+  mock-ml:
+    build: ./mocks
+    command: uvicorn mock_ml.app:app --host 0.0.0.0 --port 8001
+    restart: unless-stopped
+
+  mock-toir:
+    build: ./mocks
+    command: uvicorn mock_toir.app:app --host 0.0.0.0 --port 8002
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      # Адреса внешних сервисов (F6 ТЗ). Чтобы подключить рабочие сервисы, задайте их в .env.
+      MOCK_ML_URL: ${MOCK_ML_URL:-http://mock-ml:8001}
+      MOCK_TOIR_URL: ${MOCK_TOIR_URL:-http://mock-toir:8002}
+    volumes:
+      - ./knowledge:/knowledge   # PDF руководств и индекс, в Git не входят
+      - ./data:/data             # чат, заявки, журнал стоимости
+    depends_on: [mock-ml, mock-toir]
+    ports:
+      - "${BACKEND_PORT:-8000}:8000"
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    environment:
+      BACKEND_URL: http://backend:8000
+    depends_on: [backend]
+    ports:
+      - "${FRONTEND_PORT:-3000}:3000"
+    restart: unless-stopped
