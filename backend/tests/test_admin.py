@@ -8,7 +8,7 @@ from datetime import datetime
 import httpx
 import pytest
 
-from app import alerts, digest, fleet, journal
+from app import alerts, digest, fleet, journal, shift
 from app.agent.llm_mock import MockLLM
 from app.agent.loop import run_turn
 from app.config import get_settings
@@ -225,3 +225,82 @@ async def test_report_row_shows_message_author(store):
     # Вопрос задал Иванов, о проблеме сообщил Петров: строка случая показывает Петрова
     assert row["author"] == "Иванов" and row["report"]["author"] == "Петров"
     assert journal.page(store, {"mechanic": "Петров"})["total"] == 1
+
+
+# --- сводка смены и метрики пилота ---
+DAY = "2026-11-27"
+OK = {"kind": "answer", "text": "Давление не менее 400 кПа.", "usage": {"duration_ms": 4000},
+      "answer": {"not_found": False, "checks": [{"text": "Проверить давление манометром"}, {"text": "Снять насос"}]}}
+VERDICT = {"kind": "verdict", "text": "Отклонение: низкое давление масла.", "usage": {"duration_ms": 8000},
+           "diagnosis": {"anomaly_type": "F02"},
+           "assessment": {"flags": {}, "warnings": ["Повтор после ремонта: тот же тип уже ремонтировали по заявке TKT-0007."]},
+           "answer": {"not_found": False, "checks": [{"text": "Проверить давление"}]}}
+
+
+def _shift_day(store):
+    """Смена 27.11: Иванов и Петров спрашивают, Иванов отмечает шаг, Сидоров пишет о проблеме, Козлов — администратору."""
+    at = lambda hm: f"{DAY}T{hm}:00+03:00"  # noqa: E731
+    answer = ask(store, "A101TT77", "Какое давление масла?", OK, "Иванов", at("09:00"))
+    ask(store, "B202TT77", "Расход топлива у самолёта", NONE, "Петров", at("09:30"))
+    ask(store, "A101TT77", "Получи результат диагностики", VERDICT, "Иванов", at("10:00"), session="S-9003")
+    ask(store, "A101TT77", "Вчерашний вопрос", OK, "Иванов", "2026-11-26T20:00:00+03:00")
+    store.set_mark("A101TT77", f"{answer}:checks", 1, True, "Иванов")
+    store._exec("UPDATE step_marks SET created_at=?", (at("09:10"),))
+    store.add_ticket({"ticket_id": "TKT-0101", "vehicle_id": "A101TT77", "session_id": "S-9003", "anomaly_type": "F02",
+                      "conclusion": "Низкое давление масла", "urgency": "high", "operations": [], "spare_parts": [],
+                      "references": []})
+    store._exec("UPDATE tickets SET created_at=?", (at("10:30"),))
+    store.add_report(int(answer[2:]), "A101TT77", "Ответ неверный", "", "Сидоров")
+    store._exec("UPDATE reports SET created_at=?", (at("11:00"),))
+    journal.add_admin_message(store, None, "Планшет не заряжается", "Козлов")
+    store._exec("UPDATE admin_messages SET created_at=?", (at("12:00"),))
+    turn_id = store.start_turn("A101TT77", "S-9003")
+    store.log_llm_call(turn_id, "answer", "m", 100, 10, 0, 1.5, 900)
+    store.log_llm_call(turn_id, "answer", "m", 100, 10, 0, 1.2, 900)
+    store._exec("UPDATE llm_calls SET created_at=?", (at("10:00"),))
+
+
+def test_shift_summary(store):
+    _shift_day(store)
+    lo, hi = journal.period(DAY, DAY)
+    s = shift.summary(store, lo, hi)
+    assert s["totals"]["questions"] == 3 and s["totals"]["answers"] == 3 and s["totals"]["vehicles"] == 2
+    assert s["totals"]["tickets"] == 1 and s["totals"]["marks"] == 1
+    # Ждут разбора: вопрос без ответа, сообщение о проблеме, вопрос администратору
+    assert s["totals"]["open_cases"] == 3 and s["totals"]["open_total"] == 3
+    names = [m["name"] for m in s["mechanics"]]
+    assert names == ["Иванов", "Козлов", "Петров", "Сидоров"]
+    ivanov = s["mechanics"][0]
+    assert ivanov["questions"] == 2 and ivanov["marks"] == 1 and ivanov["first_at"].endswith("09:00:00+03:00")
+    mark = s["marks"][0]
+    assert mark["step"] == "Снять насос" and mark["author"] == "Иванов" and mark["list"] == "checks"
+    assert s["tickets"][0]["ticket_id"] == "TKT-0101" and s["tickets"][0]["vehicle_title"]
+    # Смена по часам: только утро
+    lo, hi = journal.period(f"{DAY}T08:00", f"{DAY}T09:15")
+    morning = shift.summary(store, lo, hi)
+    assert morning["totals"]["questions"] == 1 and [m["name"] for m in morning["mechanics"]] == ["Иванов"]
+
+
+def test_pilot_metrics(store):
+    _shift_day(store)
+    lo, hi = journal.period(DAY, DAY)
+
+    m = shift.metrics(store, lo, hi)
+    assert m["verdict_to_ticket"] == {"count": 1, "avg_min": 30.0, "median_min": 30.0}
+    assert m["refusals"] == {"answers": 2, "not_found": 1, "share": 0.5}
+    assert m["verdicts"] == 1 and m["repeat_after_repair"] == 1
+    assert m["response"] == {"count": 2, "avg_ms": 6000}
+    assert m["cost"]["total_rub"] == 2.7 and m["cost"]["per_answer_rub"] == 0.9
+    empty = shift.metrics(store, *journal.period("2026-01-01", "2026-01-01"))
+    assert empty["refusals"]["share"] is None and empty["verdict_to_ticket"]["avg_min"] is None
+
+
+async def test_shift_and_metrics_endpoints(client, store):
+    _shift_day(store)
+    r = await client.get("/api/shift-summary", params={"from": DAY, "to": DAY})
+    assert r.status_code == 200 and r.json()["totals"]["questions"] == 3
+    r = await client.get("/api/metrics", params={"from": DAY, "to": DAY})
+    assert r.status_code == 200 and r.json()["refusals"]["share"] == 0.5
+    today = (await client.get("/api/shift-summary")).json()  # по умолчанию сегодня
+    assert today["from"] < today["to"]
+    assert (await client.get("/api/metrics", params={"from": "2026-11-28", "to": "2026-11-27"})).status_code == 400

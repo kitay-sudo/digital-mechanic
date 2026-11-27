@@ -5,12 +5,12 @@
 from __future__ import annotations
 
 import re
-from datetime import date
+from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from . import alerts, digest, fleet, journal
+from . import alerts, digest, fleet, journal, shift
 from .config import get_settings
 from .store import Store
 
@@ -157,3 +157,20 @@ async def admin_message(req: AdminMessageRequest):
         alerts.send(url, {"text": f"{head}\nСообщение: {text}", "type": "report", "vehicle_id": vehicle_id,
                           "author": author, "question": text, "created_at": saved["created_at"]})
     return saved
+
+
+# --- сводка смены и метрики пилота: период с/по, по умолчанию сегодня ---
+@router.get("/api/shift-summary")
+async def shift_summary(start: str | None = Query(default=None, alias="from", max_length=40),
+                        end: str | None = Query(default=None, alias="to", max_length=40)):
+    """Кто работал, сколько вопросов, какие шаги отмечены и кем, какие заявки созданы, сколько случаев ждут разбора."""
+    lo, hi = _period(start, end, default_today=True)
+    return shift.summary(store(), lo or datetime.fromtimestamp(0, timezone.utc), hi or datetime.now(timezone.utc))
+
+
+@router.get("/api/metrics")
+async def pilot_metrics(start: str | None = Query(default=None, alias="from", max_length=40),
+                        end: str | None = Query(default=None, alias="to", max_length=40)):
+    """Метрики пилота: от вердикта до заявки, честные отказы, повтор после ремонта, время ответа и стоимость."""
+    lo, hi = _period(start, end, default_today=True)
+    return shift.metrics(store(), lo or datetime.fromtimestamp(0, timezone.utc), hi or datetime.now(timezone.utc))

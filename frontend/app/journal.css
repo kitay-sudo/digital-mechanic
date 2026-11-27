@@ -497,3 +497,259 @@
     padding: 0 10px;
   }
 }
+
+/* ---------- Сводка смены и метрики пилота ---------- */
+
+.stools .ft-t b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sback {
+  margin-left: -16px;
+  margin-right: 8px;
+}
+
+.speriod {
+  height: calc(40px * var(--k));
+}
+
+.speriod button {
+  justify-content: center;
+}
+
+/* Сводка прокручивается целиком: она короткая, длинные списки открываются отдельным экраном */
+.sbody {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Блоки не сжимаются: сводка длиннее экрана телефона и прокручивается */
+.sbody > * {
+  flex: none;
+}
+
+.sbody > .ftools {
+  margin-bottom: -4px;
+}
+
+.ssec-h {
+  margin-bottom: 10px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tx2);
+}
+
+.sstats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Плитка: подпись, число, пояснение. Ссылка на журнал выглядит так же, рамка темнеет при наведении */
+.ss {
+  min-height: calc(112px * var(--k));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line2);
+  min-width: 0;
+}
+
+.ss.link:hover {
+  border-color: var(--tx3);
+  border-left-color: var(--line2);
+}
+
+.ss.warn,
+.ss.warn.link:hover {
+  border-left-color: var(--warn);
+}
+
+.ss-l {
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tx2);
+}
+
+.ss-v {
+  font-size: calc(28px * var(--k));
+  line-height: calc(36px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ss-h {
+  min-height: calc(18px * var(--k));
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+.ss.warn .ss-v {
+  color: var(--warn-tx);
+}
+
+/* Переходы к спискам: строки в одной рамке, у последней своей линии нет */
+.slinks {
+  display: flex;
+  flex-direction: column;
+}
+
+button.navrow {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: calc(15px * var(--k));
+  color: var(--tx);
+}
+
+.slinks > .navrow:last-child {
+  border-bottom: none;
+}
+
+/* Списки смены: колонки задаются в разметке (--cols) */
+.stable .shead,
+.stable .srow {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: 16px;
+  align-items: center;
+  padding: 0 20px 0 24px;
+}
+
+.stable .shead {
+  height: calc(40px * var(--k));
+  font-size: calc(12px * var(--k));
+  font-weight: 500;
+  color: var(--tx3);
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+}
+
+.stable .srow {
+  height: calc(52px * var(--k));
+  font-size: calc(15px * var(--k));
+  border-bottom: 1px solid var(--line);
+}
+
+.stable .srow:last-child {
+  border-bottom: none;
+}
+
+.stable .srow > * {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stable .snum {
+  text-align: right;
+}
+
+@media (max-width: 1279px) {
+  .sstats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  /* Выбор периода на телефоне — на всю ширину над подписью, как поле поиска в журнале */
+  .stools {
+    flex-wrap: wrap;
+  }
+
+  .speriod {
+    order: -1;
+    flex: 1 0 100%;
+    margin-left: -8px;
+    height: calc(48px * var(--k));
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  .sback {
+    margin-left: -8px;
+  }
+
+  .sbody {
+    gap: 16px;
+  }
+
+  /* Плитки на телефоне в один столбец: подпись и пояснение слева, число справа, без переносов и обрезки */
+  .sstats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .ss {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'l v' 'h v';
+    column-gap: 12px;
+    row-gap: 0;
+    align-items: center;
+    padding: 10px 14px;
+  }
+
+  .ss-l {
+    grid-area: l;
+  }
+
+  .ss-h {
+    grid-area: h;
+    min-height: 0;
+  }
+
+  .ss-v {
+    grid-area: v;
+    font-size: calc(22px * var(--k));
+  }
+
+  /* Список смены на телефоне: строка — карточка, значения с подписями колонок */
+  .stable .shead {
+    display: none;
+  }
+
+  .stable .srow {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+    align-items: start;
+    padding: 10px 12px;
+    font-size: calc(14px * var(--k));
+    line-height: calc(20px * var(--k));
+  }
+
+  .stable .srow > :first-child {
+    font-size: calc(15px * var(--k));
+    font-weight: 600;
+  }
+
+  .stable .srow > [data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--tx3);
+  }
+
+  .stable .snum {
+    text-align: left;
+  }
+}

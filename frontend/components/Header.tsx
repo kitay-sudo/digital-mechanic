@@ -63,6 +63,11 @@ export function Header() {
             </b>
           ) : null}
         </Link>
+        {/* Сводка смены для главного механика: кто работал, что сделано, метрики пилота */}
+        <Link href="/shift" className={pathname === '/shift' ? 'on' : ''}>
+          <Icon name="users" size="s" />
+          Смена
+        </Link>
       </nav>
       <div className="r">
         {/* Какая модель отвечает, написано в настройках. Здесь только предупреждение о заглушке */}

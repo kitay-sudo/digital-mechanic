@@ -163,6 +163,11 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
             <span>Журнал обращений</span>
             <Icon name="chevron-right" className="mut" />
           </Link>
+          <Link href="/shift" className="sp-link" onClick={onClose}>
+            <Icon name="users" />
+            <span>Сводка смены</span>
+            <Icon name="chevron-right" className="mut" />
+          </Link>
           {config ? (
             <div className="sp-model" title="Модель, которая отвечает механику">
               <Icon name="cpu" />
