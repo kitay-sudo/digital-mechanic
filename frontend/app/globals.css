@@ -5496,8 +5496,9 @@ input.switch:disabled {
 
 .body.fit.lg > .lg-art {
   position: absolute;
-  right: -2vw;
-  bottom: -3vh;
+  /* Весь лист в кадре, вместе со штампом в правом нижнем углу */
+  right: 1vw;
+  bottom: 1vh;
   width: min(64vw, 1000px);
   max-width: none;
   height: auto;

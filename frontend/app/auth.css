@@ -540,7 +540,8 @@
 /* Строка сохранения внутри блока: прилипает к низу экрана, кнопки одного размера справа */
 .intg-f {
   position: sticky;
-  bottom: 0;
+  /* Прилипает к самому низу: отступ .body снизу (16 px) иначе оставляет щель, в которой виден текст */
+  bottom: -16px;
   display: grid;
   grid-template-columns: minmax(0, 1fr) calc(160px * var(--k)) calc(160px * var(--k));
   align-items: center;
@@ -564,6 +565,7 @@
 
 @media (max-width: 900px) {
   .intg-f {
+    bottom: -12px;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     padding: 12px;
   }
