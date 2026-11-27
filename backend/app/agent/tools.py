@@ -267,6 +267,17 @@ def _outcome_instruction(assessment: dict) -> str:
     return text
 
 
+def _webhook_result(vehicle_id: str, session_id: str, error: clients.ServiceError) -> dict | None:
+    """Результат проверки, который «НейроДВС» передал веб-хуком. Нужен, когда ML-сервис эту проверку
+    не знает (404) или недоступен. Проверки из файла заказчика сюда не попадают: их знает ML-сервис."""
+    if error.status not in (None, 404):
+        return None
+    meta = fleet.repo().check_meta(vehicle_id, session_id)
+    if not meta or meta["source"] != "api" or not meta["has_result"] or not meta["session"].get("status"):
+        return None
+    return {k: v for k, v in meta["session"].items() if k != "checked_at"}
+
+
 async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str, bool]:
     session_id = str(args.get("session_id") or ctx.session_id)
     title = f"Получаю результат проверки {session_id}"
@@ -274,11 +285,19 @@ async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
     if fleet.get_session(ctx.vehicle, session_id) is None:
         await ctx.step(step_id, "get_diagnosis", title, "error", "у машины нет такой проверки")
         return _dump({"error": f"У машины {ctx.vehicle['vehicle_id']} нет проверки {session_id}"}), True
+    via = "POST /diagnose → 200"
     try:
         diagnosis = await clients.diagnose(ctx.vehicle["vehicle_id"], session_id)
     except clients.ServiceError as exc:
-        await ctx.step(step_id, "get_diagnosis", title, "error", str(exc))
-        return _dump({"error": str(exc)}), True
+        # Запасной путь: результат пришёл веб-хуком «НейроДВС» (/api/v1/checks), а ML-сервис эту проверку не знает
+        diagnosis = _webhook_result(ctx.vehicle["vehicle_id"], session_id, exc)
+        if diagnosis is None:
+            await ctx.step(step_id, "get_diagnosis", title, "error", str(exc))
+            return _dump({"error": str(exc)}), True
+        via = "результат из веб-хука НейроДВС"
+    else:
+        # Проверка пришла веб-хуком без результата: теперь он есть и в сводке парка
+        fleet.repo().fill_result(ctx.vehicle["vehicle_id"], session_id, diagnosis)
     session = fleet.get_session(ctx.vehicle, session_id)
     diagnosis["checked_at"] = session.get("checked_at")
     # П17: описание от ML-сервиса — данные. Посторонние указания в нём отбрасываются до модели и до экрана.
@@ -296,7 +315,7 @@ async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
     ctx.session_id = session_id
     ctx.diagnosis, ctx.assessment, ctx.diagnosed_this_turn = diagnosis, assessment, True
     ctx.store.save_analysis(ctx.vehicle["vehicle_id"], session_id, diagnosis, assessment)
-    detail = f"POST /diagnose → 200 · {diagnosis['status']}"
+    detail = f"{via} · {diagnosis['status']}"
     if diagnosis.get("anomaly_type"):
         detail += f" {diagnosis['anomaly_type']}"
     await ctx.step(step_id, "get_diagnosis", title, "done", detail)

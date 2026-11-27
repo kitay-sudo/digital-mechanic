@@ -66,6 +66,8 @@ def environment(tmp_path, monkeypatch):
     monkeypatch.setenv("KB_DIR", str(tmp_path / "kb"))
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("LLM_PROVIDER", "mock")
+    # Вход по PIN и паролю выключен; тесты входа включают его сами (test_integration.py)
+    monkeypatch.setenv("AUTH_REQUIRED", "0")
     monkeypatch.setenv("FLEET_DATA_PATH", str(TEST_DATA / "vehicles.json"))
     monkeypatch.setenv("FAULT_TYPES_PATH", str(TEST_DATA / "fault_types.json"))
     monkeypatch.setenv("MANUALS_CONFIG", str(ROOT / "config" / "manuals.json"))

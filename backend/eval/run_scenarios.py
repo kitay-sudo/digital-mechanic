@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -89,6 +90,12 @@ class Runner:
 
     def note(self, text: str) -> None:
         print(f"   · {text[:260]}", flush=True)
+
+
+def service_headers() -> dict[str, str]:
+    """Сервер с входом по PIN (AUTH_REQUIRED=1) пускает скрипт по ключу внешней системы из INTEGRATION_API_KEYS."""
+    key = os.environ.get("INTEGRATION_API_KEY", "").strip()
+    return {"X-API-Key": key} if key else {}
 
 
 def refs_of(answer: dict) -> list[dict]:
@@ -404,7 +411,7 @@ def main() -> int:
 
     started_at = datetime.now().astimezone().isoformat(timespec="seconds")
     started = time.monotonic()
-    with httpx.Client(base_url=args.api, timeout=900) as http:
+    with httpx.Client(base_url=args.api, headers=service_headers(), timeout=900) as http:
         llm = http.get("/api/config").json().get("llm") or {}
         print(f"Модель: {llm.get('model')} ({llm.get('provider')})")
         runner = Runner(http, args.no_ticket)

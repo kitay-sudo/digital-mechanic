@@ -1,4 +1,8 @@
-"""Парк машин и история проверок из vehicles.json (материалы заказчика)."""
+"""Парк машин и история проверок.
+
+Хранятся в базе приложения (fleet_db.py): при первом запуске база наполняется из vehicles.json
+(материалы заказчика), дальше машины приходят из учётной системы парка, проверки — от «НейроДВС» (/api/v1).
+"""
 from __future__ import annotations
 
 import json
@@ -6,6 +10,8 @@ from functools import lru_cache
 
 from . import rules
 from .config import get_settings
+from .db import get_db
+from .fleet_db import FleetDB
 from .kb.text import sanitize_description
 from .manuals import manuals_for_engine
 
@@ -18,9 +24,14 @@ PRIORITY_ORDER = {"high": 0, "medium": 1, "low": 2, None: 3}
 
 
 @lru_cache
-def _load() -> dict[str, dict]:
-    data = json.loads(get_settings().fleet_path.read_text(encoding="utf-8"))
-    return {v["vehicle_id"]: v for v in data["vehicles"]}
+def _load() -> FleetDB:
+    repo = FleetDB(get_db())
+    repo.seed_from_file(get_settings().fleet_path)
+    return repo
+
+
+def repo() -> FleetDB:
+    return _load()
 
 
 @lru_cache
@@ -30,7 +41,7 @@ def fault_types() -> dict[str, str]:
 
 
 def get_vehicle(vehicle_id: str) -> dict | None:
-    return _load().get(vehicle_id)
+    return _load().vehicle(vehicle_id)
 
 
 def get_session(vehicle: dict, session_id: str) -> dict | None:
@@ -69,12 +80,14 @@ def brief(vehicle: dict, tickets: list[dict]) -> dict:
             for t in tickets
         ],
     }
-    out.update(rules.fleet_status(vehicle, conf_min))
+    # Проверка без результата (веб-хук пришёл раньше результата) на статус машины не влияет
+    rated = [s for s in vehicle["sessions"] if s.get("status")]
+    out.update(rules.fleet_status({**vehicle, "sessions": rated}, conf_min))
     return out
 
 
 def fleet(tickets_by_vehicle: dict[str, list[dict]]) -> dict:
-    vehicles = [brief(v, tickets_by_vehicle.get(v["vehicle_id"], [])) for v in _load().values()]
+    vehicles = [brief(v, tickets_by_vehicle.get(v["vehicle_id"], [])) for v in _load().vehicles()]
     vehicles.sort(key=lambda b: (
         STATUS_ORDER[b["fleet_status"]],
         PRIORITY_ORDER[b["priority"]],
