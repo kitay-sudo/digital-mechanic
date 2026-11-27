@@ -9,7 +9,9 @@
 /* Узкая колонка по центру: список фамилий, внизу подсказка и вход администратора */
 .body.fit.lg {
   align-items: center;
-  overflow: auto;
+  /* Вниз прокручивается, если не помещается (PIN на низком экране); вбок — никогда */
+  overflow-x: hidden;
+  overflow-y: auto;
 }
 
 .body.fit.lg > * {

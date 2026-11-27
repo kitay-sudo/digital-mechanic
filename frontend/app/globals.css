@@ -5494,9 +5494,21 @@ input.switch:disabled {
   overflow-x: hidden;
 }
 
-.body.fit.lg > .lg-art {
+/* Слой чертежа ровно по видимой области экрана входа и обрезает его края:
+   выход чертежа за экран не даёт прокрутки ни вбок, ни вниз */
+.body.fit.lg > .lg-bg {
   position: absolute;
-  /* Весь лист в кадре, вместе со штампом в правом нижнем углу */
+  inset: 0;
+  width: auto;
+  max-width: none;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.lg-bg > .lg-art {
+  position: absolute;
+  /* Весь лист в кадре */
   right: 1vw;
   bottom: 1vh;
   width: min(64vw, 1000px);
@@ -5508,11 +5520,11 @@ input.switch:disabled {
   z-index: 0;
 }
 
-[data-theme='light'] .body.fit.lg > .lg-art {
+[data-theme='light'] .lg-bg > .lg-art {
   opacity: 0.1;
 }
 
-.body.fit.lg > :not(.lg-art) {
+.body.fit.lg > :not(.lg-bg) {
   position: relative;
   z-index: 1;
 }
@@ -5527,7 +5539,7 @@ input.switch:disabled {
 }
 
 @media (max-width: 900px) {
-  .body.fit.lg > .lg-art {
+  .lg-bg > .lg-art {
     width: 150vw;
     right: -40vw;
     bottom: -6vh;

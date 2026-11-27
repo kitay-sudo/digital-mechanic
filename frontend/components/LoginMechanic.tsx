@@ -45,8 +45,11 @@ export function LoginMechanic({ hint, canClose = false }: { hint: string | null;
 
   return (
     <div className="body fit lg">
-      {/* Чертёж двигателя тонкими линиями — фоном, под списком и PIN */}
-      <Blueprint className="lg-art" grid />
+      {/* Чертёж двигателя тонкими линиями — фоном, под списком и PIN.
+          Слой-обёртка обрезает всё, что выходит за экран: из-за чертежа не бывает прокрутки */}
+      <div className="lg-bg">
+        <Blueprint className="lg-art" grid />
+      </div>
       {picked ? (
         <PinPad who={picked} onBack={back} />
       ) : error ? (
