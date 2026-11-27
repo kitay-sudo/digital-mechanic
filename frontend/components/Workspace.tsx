@@ -5,7 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { StreamLostError, api, chatStream, confirmDraftStream, turnStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
 import { usePresence } from '@/lib/presence';
-import { profileOf, setSettings, useSettings } from '@/lib/settings';
+import { logout } from '@/lib/auth';
+import { profileOf, useSettings } from '@/lib/settings';
 import type { ManualTarget, Marks, Message, Report, Step, StreamEvent, VehicleDetail } from '@/lib/types';
 import { Composer } from './Composer';
 import { Icon } from './Icon';
@@ -356,14 +357,14 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
             </div>
           </div>
           <div className="rt">
-            {/* Кто сейчас работает с машиной: при смене сменщик вписывает себя, вопросы и отметки подписываются */}
+            {/* Кто сейчас работает: вошедший механик. При смене — «Сменить механика», вход следующего по PIN */}
             <button
               type="button"
               className={`who-btn${me ? '' : ' empty'}${whoOpen ? ' on' : ''}`}
               onClick={() => setWhoOpen((v) => !v)}
-              aria-label={me ? `Механик ${me}. Сменить` : 'Указать, кто работает'}
+              aria-label={me ? `Механик ${me}. Сменить механика` : 'Войти: кто работает'}
               aria-expanded={whoOpen}
-              title={me ? 'Кто работает с машиной. Нажмите при смене механика' : 'Укажите фамилию: она будет видна в чате, журнале и сменщику'}
+              title={me ? 'Кто работает с машиной. Нажмите при смене механика' : 'Войдите: ваша фамилия будет видна в чате, журнале и сменщику'}
             >
               <Icon name={me ? 'user-check' : 'user-question'} />
               <span className="only-d">{me || 'Кто работает?'}</span>
@@ -458,12 +459,12 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
 
       {whoView.shown ? (
         <WhoPanel
-          initial={me}
+          name={me}
           leaving={whoView.leaving}
           onClose={() => setWhoOpen(false)}
-          onSave={(name) => {
-            setSettings({ mechanic: name });
+          onSwitch={() => {
             setWhoOpen(false);
+            void logout();
           }}
         />
       ) : null}
@@ -479,53 +480,45 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   );
 }
 
-/** Смена механика: фамилия видна в чате, журнале и у отметок шагов */
+/** Смена механика: выход к списку «Кто работает», следующий входит своим PIN. ФИО подписывает вопросы и отметки */
 function WhoPanel({
-  initial,
+  name,
   leaving,
   onClose,
-  onSave,
+  onSwitch,
 }: {
-  initial: string;
+  name: string;
   leaving: boolean;
   onClose: () => void;
-  onSave: (name: string) => void;
+  onSwitch: () => void;
 }) {
-  const [name, setName] = useState(initial);
   return (
     <>
       <button type="button" className={`veil${leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={onClose} />
-      <form
-        className={`pop${leaving ? ' leaving' : ''}`}
-        role="dialog"
-        aria-label="Кто работает с машиной"
-        onSubmit={(e) => {
-          e.preventDefault();
-          onSave(name.trim());
-        }}
-      >
-        <div className="pop-t">Кто работает с машиной</div>
-        <div className="pop-s">Фамилия подписывает вопросы и отметки шагов. При смене впишите свою: сменщик увидит, кто и что уже сделал.</div>
-        <input
-          className="inp pop-in"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Фамилия механика"
-          aria-label="Фамилия механика"
-          maxLength={60}
-          autoFocus
-          enterKeyHint="done"
-        />
+      <div className={`pop${leaving ? ' leaving' : ''}`} role="dialog" aria-label="Кто работает с машиной">
+        <div className="pop-t">{name ? `Работает ${name}` : 'Кто работает с машиной?'}</div>
+        <div className="pop-s">
+          {name
+            ? 'При смене нажмите «Сменить механика»: следующий выберет себя в списке и наберёт PIN. Сменщик увидит, кто и что уже сделал.'
+            : 'Войдите: выберите себя в списке и наберите PIN. Ваша фамилия подпишет вопросы и отметки шагов.'}
+        </div>
         <div className="pop-f">
           <button type="button" className="btn" onClick={onClose}>
             Отмена
           </button>
-          <button type="submit" className="btn pri">
-            <Icon name="user-check" />
-            Сохранить
+          <button type="button" className="btn pri" onClick={onSwitch} autoFocus>
+            <Icon name={name ? 'switch-horizontal' : 'login-2'} />
+            {/* На телефоне кнопка в половину ширины: второе слово туда не помещается */}
+            {name ? (
+              <span>
+                Сменить<span className="only-d">&nbsp;механика</span>
+              </span>
+            ) : (
+              'Войти'
+            )}
           </button>
         </div>
-      </form>
+      </div>
     </>
   );
 }
