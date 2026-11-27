@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { api, chatStream, confirmDraftStream } from '@/lib/api';
+import { StreamLostError, api, chatStream, confirmDraftStream, turnStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
 import { usePresence } from '@/lib/presence';
 import { profileOf, useSettings } from '@/lib/settings';
@@ -17,6 +17,11 @@ import { VehiclePanel } from './VehiclePanel';
 
 export const DIAGNOSE_TEXT = 'Получи результат диагностики';
 export const TICKET_TEXT = 'Создай заявку на дефектовку';
+
+/** Начало хода: новый запрос или подключение к ходу, который уже идёт на сервере. */
+type TurnStart = (onEvent: (e: StreamEvent) => void, signal: AbortSignal) => Promise<void>;
+
+const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 let localId = 0;
 const localNotice = (text: string): Message => ({
@@ -49,6 +54,9 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const profile = profileOf(settings);
   const profileRef = useRef(profile);
   profileRef.current = profile;
+  /** Соединение идущего хода. Занято — второй ход с этой страницы не начинается */
+  const turnRef = useRef<AbortController | null>(null);
+  const aliveRef = useRef(true);
 
   const loadVehicle = useCallback(
     () =>
@@ -62,11 +70,102 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     [vehicleId, initialSession],
   );
 
+  const onEvent = useCallback((e: StreamEvent) => {
+    if (e.type === 'user' || e.type === 'message') {
+      setMessages((list) => (list.some((m) => m.id === e.message.id) ? list : [...list, e.message]));
+      if (e.type === 'message') setSteps([]);
+    } else if (e.type === 'step') {
+      const step: Step = { id: e.id, tool: e.tool, title: e.title, status: e.status, detail: e.detail };
+      setSteps((list) => (list.some((s) => s.id === step.id) ? list.map((s) => (s.id === step.id ? step : s)) : [...list, step]));
+    } else if (e.type === 'error') {
+      // При повторном подключении события приходят с начала хода: ту же ошибку дважды не показываем
+      setMessages((list) => (list.some((m) => m.localError && m.text === e.text) ? list : [...list, localNotice(e.text)]));
+    }
+  }, []);
+
+  /**
+   * Общая обёртка хода: поток событий, затем сверка с сервером.
+   * Ход идёт на сервере сам по себе. Если связь оборвалась или запрос ушёл с другого устройства,
+   * страница подключается к нему заново и досматривает до конца.
+   */
+  const runTurn = useCallback(
+    (first: TurnStart) => {
+      const attach: TurnStart = (cb, signal) => turnStream(vehicleId, cb, signal);
+      const go = async (start: TurnStart): Promise<void> => {
+        if (turnRef.current || !aliveRef.current) return;
+        const ctl = new AbortController();
+        turnRef.current = ctl;
+        const release = () => {
+          if (turnRef.current === ctl) turnRef.current = null;
+          setBusy(false);
+          setSteps([]);
+        };
+        setBusy(true);
+        setSteps([]);
+        let finished = false;
+        let failed = false;
+        let lost = false;
+        try {
+          await start((e) => {
+            if (e.type === 'done') finished = true;
+            if (e.type === 'error') failed = true;
+            onEvent(e);
+          }, ctl.signal);
+        } catch (err) {
+          if (ctl.signal.aborted) return;
+          if (err instanceof StreamLostError) lost = true;
+          else {
+            finished = true;
+            setMessages((list) => [...list, localNotice((err as Error).message)]);
+          }
+        }
+        if (ctl.signal.aborted) return;
+        // Ход закончен: кнопки свободны сразу, сверка идёт следом
+        if (finished) release();
+        // Заявки, статусы черновиков и история могли измениться
+        loadVehicle().catch(() => undefined);
+        try {
+          if (lost) await pause(1000);
+          // Ошибка хода показана механику: сервер больше не напомнит о ней при возврате на страницу
+          if (failed) await api.seenTurn(vehicleId).catch(() => undefined);
+          const conv = await api.conversation(vehicleId);
+          if (ctl.signal.aborted) return;
+          setMessages((list) => [...conv.messages, ...list.filter((m) => m.localError)]);
+          if (conv.turn) {
+            // Агент ещё работает: поток оборвался раньше хода или ход начат с другого устройства
+            if (turnRef.current === ctl) turnRef.current = null;
+            return go(attach);
+          }
+        } catch (err) {
+          if (ctl.signal.aborted) return;
+          if (!finished) setMessages((list) => [...list, localNotice((err as Error).message)]);
+        }
+        if (!finished) release();
+      };
+      return go(first);
+    },
+    [loadVehicle, onEvent, vehicleId],
+  );
+
+  // Уход со страницы закрывает только соединение: агент на сервере дорабатывает ход
+  useEffect(() => {
+    aliveRef.current = true;
+    return () => {
+      aliveRef.current = false;
+      turnRef.current?.abort();
+      turnRef.current = null;
+      setBusy(false);
+      setSteps([]);
+    };
+  }, [vehicleId]);
+
   const loadAll = useCallback(() => {
     setLoadError(null);
     Promise.all([loadVehicle(), api.conversation(vehicleId)])
       .then(([v, conv]) => {
         setMessages(conv.messages);
+        // Запрос отправлен до ухода со страницы и ещё выполняется (или оборвался): показываем его ход
+        if (conv.turn) void runTurn((cb, signal) => turnStream(vehicleId, cb, signal));
         // Чат продолжается по той проверке, о которой шёл разговор: иначе кнопка «Создать заявку»
         // из старого вердикта ушла бы с другой, последней проверкой.
         // Явный выбор механика из истории машины важнее.
@@ -77,7 +176,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         }
       })
       .catch((e: Error) => setLoadError(e.message));
-  }, [loadVehicle, vehicleId, initialSession]);
+  }, [loadVehicle, runTurn, vehicleId, initialSession]);
 
   useEffect(loadAll, [loadAll]);
 
@@ -87,55 +186,21 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     if (el) el.scrollTop = el.scrollHeight;
   }, [messages, steps, busy]);
 
-  const onEvent = useCallback((e: StreamEvent) => {
-    if (e.type === 'user' || e.type === 'message') {
-      setMessages((list) => (list.some((m) => m.id === e.message.id) ? list : [...list, e.message]));
-      if (e.type === 'message') setSteps([]);
-    } else if (e.type === 'step') {
-      const step: Step = { id: e.id, tool: e.tool, title: e.title, status: e.status, detail: e.detail };
-      setSteps((list) => (list.some((s) => s.id === step.id) ? list.map((s) => (s.id === step.id ? step : s)) : [...list, step]));
-    } else if (e.type === 'error') {
-      setMessages((list) => [...list, localNotice(e.text)]);
-    }
-  }, []);
-
-  /** Общая обёртка хода: поток событий, затем сверка с сервером. */
-  const runTurn = useCallback(
-    async (start: (cb: (e: StreamEvent) => void) => Promise<void>) => {
-      if (busy) return;
-      setBusy(true);
-      setSteps([]);
-      try {
-        await start(onEvent);
-      } catch (err) {
-        setMessages((list) => [...list, localNotice((err as Error).message)]);
-      } finally {
-        setBusy(false);
-        setSteps([]);
-        // Заявки, статусы черновиков и история могли измениться
-        loadVehicle().catch(() => undefined);
-        api
-          .conversation(vehicleId)
-          .then((conv) => setMessages((list) => [...conv.messages, ...list.filter((m) => m.localError)]))
-          .catch(() => undefined);
-      }
-    },
-    [busy, loadVehicle, onEvent, vehicleId],
-  );
-
   const send = useCallback(
     (text: string) => {
       const clean = text.trim();
       if (!clean) return;
       setMessages((list) => list.filter((m) => !m.localError));
-      void runTurn((cb) => chatStream({ vehicle_id: vehicleId, session_id: sessionId, text: clean, profile: profileRef.current }, cb));
+      void runTurn((cb, signal) =>
+        chatStream({ vehicle_id: vehicleId, session_id: sessionId, text: clean, profile: profileRef.current }, cb, signal),
+      );
     },
     [runTurn, sessionId, vehicleId],
   );
 
   const confirmDraft = useCallback(
     (draftId: string, warningAck: boolean) => {
-      void runTurn((cb) => confirmDraftStream(draftId, { warning_ack: warningAck, profile: profileRef.current }, cb));
+      void runTurn((cb, signal) => confirmDraftStream(draftId, { warning_ack: warningAck, profile: profileRef.current }, cb, signal));
     },
     [runTurn],
   );

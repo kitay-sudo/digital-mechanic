@@ -1,10 +1,17 @@
-import type { AuditItem, Config, Draft, Fleet, ManualPage, Message, Profile, StreamEvent, VehicleDetail } from './types';
+import type { AuditItem, Config, Draft, Fleet, ManualPage, Message, Profile, StreamEvent, TurnState, VehicleDetail } from './types';
 
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
     super(message);
     this.status = status;
+  }
+}
+
+/** Поток оборвался на середине. Ход на сервере продолжается, к нему можно подключиться заново. */
+export class StreamLostError extends ApiError {
+  constructor() {
+    super('Связь с сервером прервалась', 0);
   }
 }
 
@@ -39,7 +46,10 @@ export const api = {
   fleet: () => request<Fleet>('/api/fleet'),
   vehicle: (id: string) => request<VehicleDetail>(`/api/vehicles/${encodeURIComponent(id)}`),
   conversation: (id: string) =>
-    request<{ messages: Message[] }>(`/api/conversations/${encodeURIComponent(id)}`),
+    request<{ messages: Message[]; turn?: TurnState | null }>(`/api/conversations/${encodeURIComponent(id)}`),
+  /** Ошибка хода показана механику: сервер перестаёт о ней напоминать */
+  seenTurn: (id: string) =>
+    request<unknown>(`/api/conversations/${encodeURIComponent(id)}/turn`, { method: 'DELETE' }),
   clearConversation: (id: string) =>
     request<unknown>(`/api/conversations/${encodeURIComponent(id)}`, { method: 'DELETE' }),
   patchDraft: (id: string, patch: Partial<Pick<Draft, 'conclusion' | 'urgency'>>) =>
@@ -50,10 +60,10 @@ export const api = {
 };
 
 /** Читает поток application/x-ndjson и отдаёт события по одному. */
-async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => void): Promise<void> {
+async function stream(path: string, init: RequestInit, onEvent: (e: StreamEvent) => void, signal?: AbortSignal): Promise<void> {
   let res: Response;
   try {
-    res = await fetch(path, { method: 'POST', cache: 'no-store', ...json(body) });
+    res = await fetch(path, { cache: 'no-store', signal, ...init });
   } catch {
     throw new ApiError('Нет связи с сервером', 0);
   }
@@ -72,7 +82,13 @@ async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => 
     }
   };
   for (;;) {
-    const { done, value } = await reader.read();
+    let chunk: ReadableStreamReadResult<Uint8Array>;
+    try {
+      chunk = await reader.read();
+    } catch {
+      throw new StreamLostError();
+    }
+    const { done, value } = chunk;
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     let nl = buffer.indexOf('\n');
@@ -88,10 +104,16 @@ async function stream(path: string, body: unknown, onEvent: (e: StreamEvent) => 
 export const chatStream = (
   body: { vehicle_id: string; session_id: string | null; text: string; profile: Profile },
   onEvent: (e: StreamEvent) => void,
-) => stream('/api/chat', body, onEvent);
+  signal?: AbortSignal,
+) => stream('/api/chat', { method: 'POST', ...json(body) }, onEvent, signal);
 
 export const confirmDraftStream = (
   draftId: string,
   body: { warning_ack: boolean; profile: Profile },
   onEvent: (e: StreamEvent) => void,
-) => stream(`/api/drafts/${encodeURIComponent(draftId)}/confirm`, body, onEvent);
+  signal?: AbortSignal,
+) => stream(`/api/drafts/${encodeURIComponent(draftId)}/confirm`, { method: 'POST', ...json(body) }, onEvent, signal);
+
+/** Подключение к ходу, который уже идёт на сервере: события приходят с начала хода. */
+export const turnStream = (vehicleId: string, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) =>
+  stream(`/api/conversations/${encodeURIComponent(vehicleId)}/turn`, {}, onEvent, signal);

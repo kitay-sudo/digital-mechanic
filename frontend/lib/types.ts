@@ -227,6 +227,9 @@ export interface Message {
   localError?: boolean;
 }
 
+/** Ход агента на сервере: ещё идёт или оборвался, а ошибку механик не видел */
+export type TurnState = 'running' | 'failed';
+
 export type StreamEvent =
   | { type: 'user'; message: Message }
   | ({ type: 'step' } & Step)

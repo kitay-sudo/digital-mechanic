@@ -11,7 +11,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel, Field
 
-from . import clients, fleet, rules
+from . import clients, fleet, rules, turns
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -23,7 +23,6 @@ from .store import Store
 
 log = logging.getLogger("mechanic")
 state: dict = {}
-locks: dict[str, asyncio.Lock] = {}
 
 
 @asynccontextmanager
@@ -36,6 +35,7 @@ async def lifespan(app: FastAPI):
     if not stats["chunks"]:
         log.warning("База знаний пуста. Положите PDF в %s и выполните: python -m app.kb.ingest", settings.pdf_dir)
     yield
+    await turns.shutdown()
 
 
 app = FastAPI(title="Цифровой механик", version="0.1.0", lifespan=lifespan)
@@ -115,40 +115,28 @@ class DraftPatch(BaseModel):
     urgency: str | None = Field(default=None, pattern="^(low|medium|high)$")
 
 
-def stream_turn(vehicle: dict, **kwargs) -> StreamingResponse:
-    """Запускает ход агента и отдаёт события построчно (NDJSON)."""
-    queue: asyncio.Queue = asyncio.Queue()
-    lock = locks.setdefault(vehicle["vehicle_id"], asyncio.Lock())
+def ndjson(turn: turns.Turn) -> StreamingResponse:
+    """События хода построчно (NDJSON), с начала хода и до конца. Обрыв соединения ход не останавливает."""
+    async def lines():
+        async for event in turn.follow():
+            yield json.dumps(event, ensure_ascii=False) + "\n"
 
-    async def emit(event: dict) -> None:
-        await queue.put(event)
-
-    async def runner() -> None:
-        try:
-            async with lock:  # по одной машине ходы идут по очереди
-                settings = get_settings()
-                await run_turn(vehicle=vehicle, store=store(), index=state["index"], settings=settings,
-                               llm=state["llm"], emit=emit, **kwargs)
-        except Exception:
-            log.exception("Сбой хода агента")
-            await queue.put({"type": "error", "text": "Внутренняя ошибка сервера. Повторите запрос."})
-            await queue.put({"type": "done", "usage": {}})
-        finally:
-            await queue.put(None)
-
-    async def events():
-        task = asyncio.create_task(runner())
-        try:
-            while True:
-                event = await queue.get()
-                if event is None:
-                    break
-                yield json.dumps(event, ensure_ascii=False) + "\n"
-        finally:
-            await task
-
-    return StreamingResponse(events(), media_type="application/x-ndjson",
+    return StreamingResponse(lines(), media_type="application/x-ndjson",
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+
+def stream_turn(vehicle: dict, **kwargs) -> StreamingResponse:
+    """Запускает ход агента в фоне и отдаёт его события. По одной машине идёт один ход."""
+    vehicle_id = vehicle["vehicle_id"]
+
+    async def work(emit: turns.Emit) -> None:
+        await run_turn(vehicle=vehicle, store=store(), index=state["index"], settings=get_settings(),
+                       llm=state["llm"], emit=emit, **kwargs)
+
+    turn = turns.start(vehicle_id, work)
+    if turn is None:
+        raise HTTPException(409, "Агент ещё отвечает на предыдущий запрос по этой машине. Дождитесь ответа.")
+    return ndjson(turn)
 
 
 @app.post("/api/chat")
@@ -164,13 +152,29 @@ async def chat(req: ChatRequest):
 @app.get("/api/conversations/{vehicle_id}")
 async def conversation(vehicle_id: str):
     vehicle_or_404(vehicle_id)
-    return {"messages": store().messages(vehicle_id)}
+    return {"messages": store().messages(vehicle_id), "turn": turns.status(vehicle_id)}
+
+
+@app.get("/api/conversations/{vehicle_id}/turn")
+async def follow_turn(vehicle_id: str):
+    """События хода, начатого раньше: с начала и до конца. Пустой ответ, если хода нет."""
+    vehicle_or_404(vehicle_id)
+    return ndjson(turns.get(vehicle_id) or turns.Turn.empty())
+
+
+@app.delete("/api/conversations/{vehicle_id}/turn")
+async def seen_turn(vehicle_id: str):
+    """Страница показала механику ошибку хода: больше о ней не напоминаем."""
+    vehicle_or_404(vehicle_id)
+    turns.seen(vehicle_id)
+    return {"ok": True}
 
 
 @app.delete("/api/conversations/{vehicle_id}")
 async def clear_conversation(vehicle_id: str):
     vehicle_or_404(vehicle_id)
     store().clear_messages(vehicle_id)
+    turns.seen(vehicle_id)
     return {"ok": True}
 
 
