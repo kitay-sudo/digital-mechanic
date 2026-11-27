@@ -318,3 +318,20 @@ PNG страницы. С параметром `q` цитата подсвече�
 ```
 
 `sources` без повторов. `ticket_id` заполнен у сообщения о созданной заявке.
+
+## Вход и роли
+
+Без входа открыты только `GET /api/health`, `GET /api/config`, маршруты `/api/auth/*` и документация `/api/docs`. Остальные `/api/*` отвечают `401`, если нет сессии. Сессия — подписанная кука `dm_session` (httpOnly, SameSite=Lax), прокси интерфейса передаёт её на сервер. Разделы администратора (`/api/audit*`, `/api/usage*`, `/api/admin/*`) механику отвечают `403`. `AUTH_REQUIRED=0` выключает проверку. Действующий ключ `X-API-Key` из `INTEGRATION_API_KEYS` открывает все маршруты (служебный доступ).
+
+- `GET /api/auth/me` → `{"required": true, "role": "mechanic", "mechanic": {"id": 1, "full_name": "Иванов Иван", "level": "expert", "font_size": "normal"}, "hint": "Демо: Иванов, PIN 1111"}`. `role` — `mechanic`, `admin` или `null`.
+- `GET /api/auth/mechanics` → `{"items": [{"id": 1, "full_name": "Иванов Иван"}], "hint": …}`: список экрана «Кто работает», только работающие.
+- `POST /api/auth/mechanic` `{"mechanic_id": 1, "pin": "1111"}` → `200` и кука. Неверный PIN: `401 {"detail", "attempts_left"}`; пятая ошибка подряд и минута после неё: `429 {"detail", "retry_after"}`.
+- `POST /api/auth/admin` `{"login", "password"}` → `200` и кука; `401` — неверно, `429` — пять ошибок подряд, вход закрыт на минуту.
+- `POST /api/auth/logout` → кука удаляется.
+
+Экраны администратора:
+
+- `GET /api/admin/mechanics`, `POST /api/admin/mechanics`, `PUT /api/admin/mechanics/{id}` — те же поля и ответы, что у `/api/v1/mechanics` ([docs/integration.md](integration.md)).
+- `GET /api/admin/integrations`, `PUT /api/admin/integrations` — как `/api/v1/settings/integrations`, плюс `health`: есть ли связь с ML-сервисом и ТОиР.
+
+API для внешних систем (`/api/v1`, ключ `X-API-Key`): [docs/integration.md](integration.md), документация с проверкой запросов — `/api/docs`.
