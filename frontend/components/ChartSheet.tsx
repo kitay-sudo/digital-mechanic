@@ -117,7 +117,7 @@ export function ChartDrop({ sessions, selected, trendIcon, trendText, chatHref, 
           <Chart sessions={sessions} selected={selected} active max={760} />
           {/* Справа от графика: вывод по тенденции, что значат знаки на графике, переход в чат */}
           <div className="cd-side">
-            <div className="cd-blk">
+            <div className="cd-blk box">
               <div className="cd-l">Тенденция</div>
               <Trend icon={trendIcon} text={trendText} />
             </div>
