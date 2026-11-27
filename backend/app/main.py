@@ -4,14 +4,16 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import re
+import time
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response, StreamingResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import FileResponse, Response, StreamingResponse
+from pydantic import BaseModel, Field, model_validator
 
-from . import clients, fleet, rules, turns
+from . import alerts, clients, fleet, rules, stt, turns, uploads
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -79,6 +81,8 @@ async def config():
         "thresholds": {"confidence_min": settings.confidence_min},
         "priority_actions": rules.ACTIONS,
         "levels": prompt.LEVEL_LABELS,
+        # Где распознаётся голос: на сервере (запись с индикацией, любой браузер) или в браузере
+        "stt": {"server": bool(settings.stt_base_url), "model": settings.stt_model if settings.stt_base_url else None},
     }
 
 
@@ -94,15 +98,24 @@ async def get_vehicle(vehicle_id: str):
 
 # --- чат ---
 class Profile(BaseModel):
-    """Настройки механика: язык ответов и уровень подачи."""
+    """Механик: уровень подачи и кто сейчас работает (смены: в журнале видно, кто спрашивал)."""
     level: str = Field(default="expert", pattern="^(expert|novice)$")
+    name: str | None = Field(default=None, max_length=60)
 
 
 class ChatRequest(BaseModel):
     vehicle_id: str = Field(min_length=1)
     session_id: str | None = None
-    text: str = Field(min_length=1, max_length=2000)
+    text: str = Field(default="", max_length=2000)
+    # Фото узла: data URL снимков, уменьшенных в браузере
+    images: list[str] = Field(default_factory=list, max_length=uploads.MAX_PHOTOS)
     profile: Profile | None = None
+
+    @model_validator(mode="after")
+    def has_content(self):
+        if not self.text.strip() and not self.images:
+            raise ValueError("Пустое сообщение: нужен текст или фото")
+        return self
 
 
 class ConfirmRequest(BaseModel):
@@ -145,14 +158,64 @@ async def chat(req: ChatRequest):
     session_id = req.session_id or (vehicle["sessions"][-1]["session_id"] if vehicle["sessions"] else "")
     if fleet.get_session(vehicle, session_id) is None:
         raise HTTPException(404, f"У машины {req.vehicle_id} нет проверки {session_id}")
-    return stream_turn(vehicle, session_id=session_id, text=req.text.strip(),
+    try:
+        photos = uploads.save(req.images, get_settings().data_dir) if req.images else []
+    except uploads.PhotoError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    return stream_turn(vehicle, session_id=session_id, text=req.text.strip(), photos=photos,
                        profile=req.profile.model_dump() if req.profile else None)
+
+
+@app.get("/api/uploads/{name}")
+async def uploaded_photo(name: str):
+    path = uploads.path_of(name, get_settings().data_dir)
+    if path is None:
+        raise HTTPException(404, "Фото не найдено")
+    return FileResponse(path, media_type=uploads.media_type(name), headers={"Cache-Control": "private, max-age=86400"})
 
 
 @app.get("/api/conversations/{vehicle_id}")
 async def conversation(vehicle_id: str):
     vehicle_or_404(vehicle_id)
-    return {"messages": store().messages(vehicle_id), "turn": turns.status(vehicle_id)}
+    return {"messages": store().messages(vehicle_id), "turn": turns.status(vehicle_id),
+            "marks": store().marks(vehicle_id), "reports": store().reports_by_message(vehicle_id)}
+
+
+class MarkRequest(BaseModel):
+    key: str = Field(pattern=r"^m_[0-9]+:(checks|repair)$")
+    index: int = Field(ge=0, le=50)
+    done: bool
+    author: str | None = Field(default=None, max_length=60)
+
+
+@app.put("/api/conversations/{vehicle_id}/marks")
+async def mark_step(vehicle_id: str, req: MarkRequest):
+    """Механик отметил шаг сделанным (или снял отметку). Отметки видны сменщику и агенту."""
+    vehicle_or_404(vehicle_id)
+    store().set_mark(vehicle_id, req.key, req.index, req.done, (req.author or "").strip() or None)
+    return {"marks": store().marks(vehicle_id)}
+
+
+class ReportRequest(BaseModel):
+    message_id: str = Field(pattern=r"^m_[0-9]+$")
+    reason: str = Field(min_length=1, max_length=80)
+    text: str = Field(default="", max_length=1000)
+    author: str | None = Field(default=None, max_length=60)
+
+
+@app.post("/api/reports")
+async def report_problem(req: ReportRequest):
+    """Механик сообщает в поддержку о проблеме с ответом: случай появляется в журнале у администратора."""
+    message = store().message(int(req.message_id[2:]))
+    if message is None or message["role"] != "assistant":
+        raise HTTPException(404, "Ответ агента не найден")
+    author = (req.author or "").strip() or None
+    report = store().add_report(int(req.message_id[2:]), message["vehicle_id"], req.reason.strip(), req.text.strip(), author)
+    vehicle = fleet.get_vehicle(message["vehicle_id"]) or {"vehicle_id": message["vehicle_id"]}
+    gap = alerts.gap_of(message, report)
+    details = req.reason + (f": {req.text.strip()}" if req.text.strip() else "") + (f" (механик {author})" if author else "")
+    alerts.notify(get_settings().alert_webhook_url, gap, vehicle, details, message.get("text", ""), report["created_at"])
+    return {"report": report}
 
 
 @app.get("/api/conversations/{vehicle_id}/turn")
@@ -176,6 +239,31 @@ async def clear_conversation(vehicle_id: str):
     store().clear_messages(vehicle_id)
     turns.seen(vehicle_id)
     return {"ok": True}
+
+
+# --- голос ---
+MAX_AUDIO = 10 * 1024 * 1024
+
+
+@app.post("/api/stt")
+async def speech_to_text(request: Request, seconds: float = Query(default=0, ge=0, le=600)):
+    """Распознаёт фразу механика. Тело запроса — запись из браузера (audio/webm, audio/mp4 и др.)."""
+    settings = get_settings()
+    if not settings.stt_base_url:
+        raise HTTPException(409, "Распознавание речи на сервере не настроено: голос распознаёт браузер.")
+    audio = await request.body()
+    if not audio:
+        raise HTTPException(400, "Запись пустая. Нажмите микрофон и повторите.")
+    if len(audio) > MAX_AUDIO:
+        raise HTTPException(413, "Запись слишком длинная. Скажите короче или разбейте на две фразы.")
+    started = time.monotonic()
+    try:
+        text = await stt.transcribe(audio, request.headers.get("content-type", "audio/webm"), settings)
+    except stt.STTError as exc:
+        raise HTTPException(502, str(exc)) from exc
+    store().log_stt(settings.stt_model, seconds, round(seconds / 60 * settings.stt_price_per_min, 4),
+                    int((time.monotonic() - started) * 1000))
+    return {"text": text}
 
 
 # --- черновики заявок ---
@@ -247,14 +335,33 @@ async def manual_page_image(manual_id: str, page: int, q: str = Query(default=""
 
 
 # --- журнал обращений ---
+class ReviewRequest(BaseModel):
+    reviewed: bool = True
+
+
 @app.get("/api/audit")
 async def audit(limit: int = Query(default=100, ge=1, le=500)):
-    """Кто что спросил, что ответил агент, на какие источники сослался."""
+    """Кто что спросил, что ответил агент, на какие источники сослался. Случаи без ответа помечены (gap)."""
     items = store().audit(limit)
     for item in items:
         vehicle = fleet.get_vehicle(item["vehicle_id"])
         item["vehicle_title"] = fleet.title_of(vehicle) if vehicle else item["vehicle_id"]
-    return {"items": items}
+    return {"items": items, "gaps_open": store().open_gaps()}
+
+
+@app.get("/api/audit/gaps")
+async def audit_gaps():
+    """Сколько случаев без ответа в руководстве администратор ещё не разобрал: число у пункта «Журнал»."""
+    return {"open": store().open_gaps()}
+
+
+@app.post("/api/audit/{item_id}/review")
+async def review_gap(item_id: str, req: ReviewRequest):
+    """Администратор отметил случай разобранным или вернул его в работу."""
+    match = re.fullmatch(r"m_(\d+)", item_id)
+    if not match or not store().is_assistant_message(int(match.group(1))):
+        raise HTTPException(404, "Обращение не найдено")
+    return {"id": item_id, "reviewed_at": store().set_reviewed(int(match.group(1)), req.reviewed)}
 
 
 # --- расчёт стоимости ---

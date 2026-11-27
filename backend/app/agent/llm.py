@@ -44,6 +44,13 @@ class LLM(Protocol):
     async def complete(self, system: str, messages: list[dict], tools: list[dict], schema: dict) -> LLMResponse: ...
 
 
+def text_of(content) -> str:
+    """Текст сообщения: строка как есть или текстовые блоки (у сообщения с фото содержимое — список блоков)."""
+    if isinstance(content, str):
+        return content
+    return "\n".join(b.get("text", "") for b in content if b.get("type") == "text")
+
+
 def build_llm() -> LLM:
     from ..config import get_settings
 

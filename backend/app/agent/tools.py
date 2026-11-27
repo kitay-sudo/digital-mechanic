@@ -192,6 +192,7 @@ class TurnContext:
     steps: list[dict] = field(default_factory=list)
     searched: bool = False
     seen_calls: set[str] = field(default_factory=set)   # вызовы инструментов этого хода: защита от зацикливания
+    photos: int = 0                          # сколько фото механика видит модель в этом ходе
 
     @property
     def allowed_manuals(self) -> list[str]:
@@ -289,6 +290,9 @@ async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
         assessment["warnings"].append(
             "В описании от ML-сервиса был посторонний текст с указаниями для агента. Он отброшен и на вывод не влияет."
         )
+    repeat = rules.repeat_after_repair(diagnosis, ctx.store.tickets(ctx.vehicle["vehicle_id"]), session_id)
+    if repeat:
+        assessment["warnings"].append(repeat)
     ctx.session_id = session_id
     ctx.diagnosis, ctx.assessment, ctx.diagnosed_this_turn = diagnosis, assessment, True
     ctx.store.save_analysis(ctx.vehicle["vehicle_id"], session_id, diagnosis, assessment)
@@ -324,7 +328,8 @@ async def get_vehicle_history(ctx: TurnContext, args: dict, step_id: str) -> tup
         "trend": trend["text"],
         "tickets": [
             {"ticket_id": t["ticket_id"], "session_id": t["session_id"], "created_at": t["created_at"],
-             "conclusion": t["conclusion"], "urgency": t["urgency"]}
+             "anomaly_type": t.get("anomaly_type"), "conclusion": t["conclusion"], "urgency": t["urgency"],
+             "operations": t.get("operations", []), "spare_parts": t.get("spare_parts", [])}
             for t in tickets
         ],
     }), False

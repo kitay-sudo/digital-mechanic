@@ -13,11 +13,47 @@ export interface Config {
   priority_actions: Record<Priority, string>;
   /** Уровни подачи: могут отсутствовать у старого сервера */
   levels?: { code: string; label: string; hint: string }[];
+  /** Где распознаётся голос: server — запись уходит на сервер, иначе распознаёт браузер */
+  stt?: { server: boolean; model: string | null };
 }
 
-/** Профиль механика, уходит с каждым сообщением в чат */
+/** Фото узла, приложенное механиком */
+export interface Photo {
+  id: string;
+  url: string;
+}
+
+/** Случай для администратора: в руководстве нет ответа, не загружены руководства, ошибка модели диагностики */
+export interface Gap {
+  type: 'report' | 'no_answer' | 'kb_missing' | 'ml_mismatch';
+  /** Короткая подпись для строки журнала */
+  label: string;
+  /** Полная формулировка: подсказка при наведении и текст уведомления */
+  title?: string;
+  reviewed_at: string | null;
+}
+
+/** Профиль механика, уходит с каждым сообщением в чат: уровень подачи и кто работает (смены) */
 export interface Profile {
   level: string;
+  name?: string;
+}
+
+/** Отметка «сделано» у шага: кто отметил и когда. Видна всем механикам, сменщик видит, на чём остановились */
+export interface Mark {
+  author: string | null;
+  at: string;
+}
+
+/** Отметки по спискам шагов: ключ «id сообщения:checks» или «:repair», внутри номер шага */
+export type Marks = Record<string, Record<string, Mark>>;
+
+/** Сообщение механика в поддержку об ответе агента */
+export interface Report {
+  reason: string;
+  text: string;
+  author: string | null;
+  created_at: string;
 }
 
 export interface AuditItem {
@@ -33,6 +69,12 @@ export interface AuditItem {
   tools: string[];
   ticket_id: string | null;
   usage: Partial<Usage> | null;
+  gap?: Gap | null;
+  /** Кто из механиков задал вопрос */
+  author?: string | null;
+  /** Сколько фото было в вопросе */
+  photos?: number;
+  report?: Report | null;
 }
 
 export interface SessionBrief {
@@ -215,6 +257,10 @@ export interface Message {
   created_at: string;
   session_id: string | null;
   text: string;
+  /** Фото в сообщении механика */
+  images?: Photo[];
+  /** Кто из механиков написал сообщение */
+  author?: string;
   kind?: MessageKind;
   diagnosis?: Diagnosis | null;
   assessment?: Assessment | null;

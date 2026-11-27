@@ -91,6 +91,19 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
         </div>
         <div className="sp-b">
           <div className="sp-g">
+            <div className="sp-l">Механик</div>
+            {/* Фамилия подписывает вопросы и отметки шагов: при смене сменщик видит, кто что сделал */}
+            <input
+              className="inp sp-in"
+              value={settings.mechanic}
+              onChange={(e) => setSettings({ mechanic: e.target.value })}
+              placeholder="Фамилия"
+              aria-label="Фамилия механика"
+              maxLength={60}
+            />
+            <div className="sp-s">Видна в чате и журнале. При смене впишите свою.</div>
+          </div>
+          <div className="sp-g">
             <div className="sp-l">Размер текста</div>
             <Choice
               label="Размер текста"

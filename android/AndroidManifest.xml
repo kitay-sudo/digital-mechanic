@@ -4,6 +4,22 @@
     package="app.digitalmechanic.shell">
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Голосовой ввод: сайт пишет фразу с микрофона -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
+    <!-- Снимок узла камерой для прикрепления к сообщению -->
+    <uses-permission android:name="android.permission.CAMERA" />
+
+    <!-- Без камеры и микрофона приложение тоже ставится: остаются текст и фото из галереи -->
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.microphone" android:required="false" />
+
+    <!-- С Android 11 программу камеры видно только так -->
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
 
     <!-- usesCleartextTraffic: стенд в сети гаража может работать по http, без сертификата -->
     <application
@@ -23,5 +39,12 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- Куда программа камеры кладёт снимок. Свой провайдер вместо FileProvider: сборка без androidx -->
+        <provider
+            android:name=".PhotoProvider"
+            android:authorities="app.digitalmechanic.shell.photos"
+            android:exported="false"
+            android:grantUriPermissions="true" />
     </application>
 </manifest>

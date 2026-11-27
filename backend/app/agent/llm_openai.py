@@ -61,6 +61,18 @@ class OpenAICompatLLM:
             if isinstance(content, str):
                 out.append({"role": message["role"], "content": content})
                 continue
+            if message["role"] == "user" and any(b.get("type") == "image" for b in content):
+                # Сообщение механика с фото: текст и снимки одним сообщением в формате OpenAI
+                parts = []
+                for b in content:
+                    if b.get("type") == "text":
+                        parts.append({"type": "text", "text": b["text"]})
+                    elif b.get("type") == "image":
+                        src = b["source"]
+                        parts.append({"type": "image_url",
+                                      "image_url": {"url": f"data:{src['media_type']};base64,{src['data']}"}})
+                out.append({"role": "user", "content": parts})
+                continue
             text = "".join(b.get("text", "") for b in content if b.get("type") == "text")
             calls = [
                 {"id": b["id"], "type": "function",

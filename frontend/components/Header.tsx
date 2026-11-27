@@ -3,11 +3,14 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
-import { api } from '@/lib/api';
+import { GAPS_EVENT, api } from '@/lib/api';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 import { usePresence } from '@/lib/presence';
 import { SettingsPanel } from './SettingsPanel';
+
+/** Как часто шапка спрашивает число неразобранных случаев, мс */
+const GAPS_MS = 30_000;
 
 export function Header() {
   const pathname = usePathname();
@@ -17,6 +20,23 @@ export function Header() {
   useEffect(() => {
     api.config().then(setConfig).catch(() => setConfig(null));
   }, []);
+
+  // Число у пункта «Журнал»: сколько вопросов без ответа в руководстве администратор ещё не разобрал
+  const [gaps, setGaps] = useState(0);
+  useEffect(() => {
+    const load = () => {
+      if (document.visibilityState === 'visible') api.auditGaps().then((d) => setGaps(d.open)).catch(() => undefined);
+    };
+    load();
+    const timer = window.setInterval(load, GAPS_MS);
+    document.addEventListener('visibilitychange', load);
+    window.addEventListener(GAPS_EVENT, load);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', load);
+      window.removeEventListener(GAPS_EVENT, load);
+    };
+  }, [pathname]);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
@@ -37,6 +57,11 @@ export function Header() {
         <Link href="/log" className={pathname === '/log' ? 'on' : ''}>
           <Icon name="history" size="s" />
           Журнал
+          {gaps ? (
+            <b className="nbadge m" title={`Вопросов без ответа в руководстве, ещё не разобранных: ${gaps}`}>
+              {gaps}
+            </b>
+          ) : null}
         </Link>
       </nav>
       <div className="r">

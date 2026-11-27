@@ -5,8 +5,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { StreamLostError, api, chatStream, confirmDraftStream, turnStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
 import { usePresence } from '@/lib/presence';
-import { profileOf, useSettings } from '@/lib/settings';
-import type { ManualTarget, Message, Step, StreamEvent, VehicleDetail } from '@/lib/types';
+import { profileOf, setSettings, useSettings } from '@/lib/settings';
+import type { ManualTarget, Marks, Message, Report, Step, StreamEvent, VehicleDetail } from '@/lib/types';
 import { Composer } from './Composer';
 import { Icon } from './Icon';
 import { ManualPanel } from './ManualPanel';
@@ -22,6 +22,30 @@ export const TICKET_TEXT = 'Создай заявку на дефектовку'
 type TurnStart = (onEvent: (e: StreamEvent) => void, signal: AbortSignal) => Promise<void>;
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/** Через сколько часов после последнего сообщения чат напоминает, на чём остановились */
+const RESUME_HOURS = 6;
+
+/** Причины сообщения в поддержку: механик выбирает одну, комментарий по желанию */
+const REPORT_REASONS = ['Ответ неверный', 'Нужного нет в руководстве', 'Ошибка в руководстве', 'Система работает не так', 'Другое'];
+
+/**
+ * На чём остановились: механик вернулся к машине через несколько часов или пришла другая смена.
+ * Считается по чату без модели: кто и когда писал последним, сколько шагов отмечено, какие заявки.
+ */
+function resumeLine(messages: Message[], marks: Marks, vehicle: VehicleDetail, me: string): string | null {
+  const last = [...messages].reverse().find((m) => m.role === 'user' && !m.localError);
+  if (!last) return null;
+  const hours = (Date.now() - new Date(last.created_at).getTime()) / 3_600_000;
+  const otherShift = Boolean(me && last.author && last.author !== me);
+  if (hours < RESUME_HOURS && !otherShift) return null;
+  const done = Object.values(marks).reduce((n, list) => n + Object.keys(list).length, 0);
+  const parts = [`Последнее сообщение ${dateTime(last.created_at)}${last.author ? `, механик ${last.author}` : ''}.`];
+  parts.push(done ? `Отмечено сделанным шагов: ${done}.` : 'Сделанных шагов не отмечено.');
+  const ticket = vehicle.tickets?.[vehicle.tickets.length - 1];
+  if (ticket) parts.push(`Последняя заявка ${ticket.ticket_id}.`);
+  return parts.join(' ');
+}
 
 let localId = 0;
 const localNotice = (text: string): Message => ({
@@ -45,12 +69,22 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const [sideOpen, setSideOpen] = useState(false);
   /** Открыто ли подтверждение очистки чата: панель выезжает снизу по центру */
   const [clearOpen, setClearOpen] = useState(false);
+  /** Отметки «сделано» по шагам: хранятся на сервере, видны сменщику */
+  const [marks, setMarks] = useState<Marks>({});
+  /** Сообщения механиков в поддержку по ответам агента */
+  const [reports, setReports] = useState<Record<string, Report>>({});
+  /** Панель «Кто работает» (смена механика) и панель сообщения в поддержку */
+  const [whoOpen, setWhoOpen] = useState(false);
+  const [reportFor, setReportFor] = useState<string | null>(null);
   const chatRef = useRef<HTMLDivElement>(null);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
   const manualView = usePresence(manual);
   const sideView = usePresence(sideOpen ? true : null);
   const clearView = usePresence(clearOpen ? true : null);
+  const whoView = usePresence(whoOpen ? true : null);
+  const reportView = usePresence(reportFor);
   const settings = useSettings();
+  const me = settings.mechanic.trim();
   const profile = profileOf(settings);
   const profileRef = useRef(profile);
   profileRef.current = profile;
@@ -131,6 +165,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           const conv = await api.conversation(vehicleId);
           if (ctl.signal.aborted) return;
           setMessages((list) => [...conv.messages, ...list.filter((m) => m.localError)]);
+          setMarks(conv.marks ?? {});
+          setReports(conv.reports ?? {});
           if (conv.turn) {
             // Агент ещё работает: поток оборвался раньше хода или ход начат с другого устройства
             if (turnRef.current === ctl) turnRef.current = null;
@@ -164,6 +200,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     Promise.all([loadVehicle(), api.conversation(vehicleId)])
       .then(([v, conv]) => {
         setMessages(conv.messages);
+        setMarks(conv.marks ?? {});
+        setReports(conv.reports ?? {});
         // Запрос отправлен до ухода со страницы и ещё выполняется (или оборвался): показываем его ход
         if (conv.turn) void runTurn((cb, signal) => turnStream(vehicleId, cb, signal));
         // Чат продолжается по той проверке, о которой шёл разговор: иначе кнопка «Создать заявку»
@@ -187,12 +225,16 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   }, [messages, steps, busy]);
 
   const send = useCallback(
-    (text: string) => {
+    (text: string, images: string[] = []) => {
       const clean = text.trim();
-      if (!clean) return;
+      if (!clean && !images.length) return;
       setMessages((list) => list.filter((m) => !m.localError));
       void runTurn((cb, signal) =>
-        chatStream({ vehicle_id: vehicleId, session_id: sessionId, text: clean, profile: profileRef.current }, cb, signal),
+        chatStream(
+          { vehicle_id: vehicleId, session_id: sessionId, text: clean, images, profile: profileRef.current },
+          cb,
+          signal,
+        ),
       );
     },
     [runTurn, sessionId, vehicleId],
@@ -210,21 +252,59 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     if (busy) return;
     api
       .clearConversation(vehicleId)
-      .then(() => setMessages([]))
+      .then(() => {
+        setMessages([]);
+        setMarks({});
+      })
       .catch((e: Error) => setMessages((list) => [...list, localNotice(e.message)]));
   }, [busy, vehicleId]);
+
+  /** Отметка шага сразу видна на экране, сервер её сохраняет с фамилией механика */
+  const toggleStep = useCallback(
+    (key: string, index: number) => {
+      const done = !marks[key]?.[String(index)];
+      setMarks((cur) => {
+        const list = { ...(cur[key] ?? {}) };
+        if (done) list[String(index)] = { author: me || null, at: new Date().toISOString() };
+        else delete list[String(index)];
+        return { ...cur, [key]: list };
+      });
+      api
+        .mark(vehicleId, { key, index, done, author: me || null })
+        .then((r) => setMarks(r.marks))
+        .catch((e: Error) => {
+          setMessages((list) => [...list, localNotice(`Отметка не сохранилась: ${e.message}`)]);
+          api.conversation(vehicleId).then((c) => setMarks(c.marks ?? {})).catch(() => undefined);
+        });
+    },
+    [marks, me, vehicleId],
+  );
+
+  const sendReport = useCallback(
+    (messageId: string, reason: string, text: string) => {
+      setReportFor(null);
+      api
+        .report({ message_id: messageId, reason, text, author: me || null })
+        .then((r) => setReports((cur) => ({ ...cur, [messageId]: r.report })))
+        .catch((e: Error) => setMessages((list) => [...list, localNotice(`Сообщение не отправлено: ${e.message}`)]));
+    },
+    [me],
+  );
 
   // Подтверждение очистки выезжает снизу, отдельного окна браузера нет
   const askClear = useCallback(() => setClearOpen((cur) => !cur), []);
 
   useEffect(() => {
-    if (!clearOpen) return;
+    if (!clearOpen && !whoOpen && !reportFor) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setClearOpen(false);
+      if (e.key !== 'Escape') return;
+      setClearOpen(false);
+      setWhoOpen(false);
+      setReportFor(null);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [clearOpen]);
+  }, [clearOpen, whoOpen, reportFor]);
 
   // Повторное нажатие на ту же ссылку закрывает страницу руководства
   const openManual = useCallback((target: ManualTarget) => {
@@ -236,6 +316,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   if (!vehicle) return <Loading text="Загружаю машину…" />;
 
   const session = vehicle.sessions.find((s) => s.session_id === sessionId) ?? null;
+  const resume = resumeLine(messages, marks, vehicle, me);
   const sessionLine = session ? `Проверка ${session.session_id} · ${dateTime(session.checked_at)}` : 'Проверок нет';
 
   return (
@@ -275,6 +356,18 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
             </div>
           </div>
           <div className="rt">
+            {/* Кто сейчас работает с машиной: при смене сменщик вписывает себя, вопросы и отметки подписываются */}
+            <button
+              type="button"
+              className={`who-btn${me ? '' : ' empty'}${whoOpen ? ' on' : ''}`}
+              onClick={() => setWhoOpen((v) => !v)}
+              aria-label={me ? `Механик ${me}. Сменить` : 'Указать, кто работает'}
+              aria-expanded={whoOpen}
+              title={me ? 'Кто работает с машиной. Нажмите при смене механика' : 'Укажите фамилию: она будет видна в чате, журнале и сменщику'}
+            >
+              <Icon name={me ? 'user-check' : 'user-question'} />
+              <span className="only-d">{me || 'Кто работает?'}</span>
+            </button>
             <button
               type="button"
               className={`hb${clearOpen ? ' on' : ''}`}
@@ -313,8 +406,22 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
               onOpenManual={openManual}
               onCreateTicket={() => send(TICKET_TEXT)}
               onConfirmDraft={confirmDraft}
+              marks={marks}
+              onToggleStep={toggleStep}
+              report={reports[m.id]}
+              onReport={setReportFor}
             />
           ))}
+          {/* Механик вернулся к машине через несколько часов или пришла другая смена: на чём остановились */}
+          {!busy && resume ? (
+            <div className="resume">
+              <Icon name="history" />
+              <div>
+                <b>Продолжение работы по машине</b>
+                <span>{resume}</span>
+              </div>
+            </div>
+          ) : null}
           {busy ? <PendingSteps steps={steps} /> : null}
         </div>
 
@@ -348,6 +455,133 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           </div>
         </>
       ) : null}
+
+      {whoView.shown ? (
+        <WhoPanel
+          initial={me}
+          leaving={whoView.leaving}
+          onClose={() => setWhoOpen(false)}
+          onSave={(name) => {
+            setSettings({ mechanic: name });
+            setWhoOpen(false);
+          }}
+        />
+      ) : null}
+
+      {reportView.shown ? (
+        <ReportPanel
+          leaving={reportView.leaving}
+          onClose={() => setReportFor(null)}
+          onSend={(reason, text) => sendReport(reportView.shown as string, reason, text)}
+        />
+      ) : null}
     </div>
+  );
+}
+
+/** Смена механика: фамилия видна в чате, журнале и у отметок шагов */
+function WhoPanel({
+  initial,
+  leaving,
+  onClose,
+  onSave,
+}: {
+  initial: string;
+  leaving: boolean;
+  onClose: () => void;
+  onSave: (name: string) => void;
+}) {
+  const [name, setName] = useState(initial);
+  return (
+    <>
+      <button type="button" className={`veil${leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={onClose} />
+      <form
+        className={`pop${leaving ? ' leaving' : ''}`}
+        role="dialog"
+        aria-label="Кто работает с машиной"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSave(name.trim());
+        }}
+      >
+        <div className="pop-t">Кто работает с машиной</div>
+        <div className="pop-s">Фамилия подписывает вопросы и отметки шагов. При смене впишите свою: сменщик увидит, кто и что уже сделал.</div>
+        <input
+          className="inp pop-in"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Фамилия механика"
+          aria-label="Фамилия механика"
+          maxLength={60}
+          autoFocus
+          enterKeyHint="done"
+        />
+        <div className="pop-f">
+          <button type="button" className="btn" onClick={onClose}>
+            Отмена
+          </button>
+          <button type="submit" className="btn pri">
+            <Icon name="user-check" />
+            Сохранить
+          </button>
+        </div>
+      </form>
+    </>
+  );
+}
+
+/** Сообщение в поддержку: администратор увидит его в журнале и поправит базу знаний или настройку */
+function ReportPanel({
+  leaving,
+  onClose,
+  onSend,
+}: {
+  leaving: boolean;
+  onClose: () => void;
+  onSend: (reason: string, text: string) => void;
+}) {
+  const [reason, setReason] = useState(REPORT_REASONS[0]);
+  const [text, setText] = useState('');
+  return (
+    <>
+      <button type="button" className={`veil${leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={onClose} />
+      <form
+        className={`pop${leaving ? ' leaving' : ''}`}
+        role="dialog"
+        aria-label="Сообщить о проблеме"
+        onSubmit={(e) => {
+          e.preventDefault();
+          onSend(reason, text.trim());
+        }}
+      >
+        <div className="pop-t">Сообщить о проблеме</div>
+        <div className="pop-s">Сообщение получит администратор системы. Ответ и ваш вопрос он увидит в журнале.</div>
+        <div className="rsn" role="radiogroup" aria-label="Что не так">
+          {REPORT_REASONS.map((r) => (
+            <button key={r} type="button" role="radio" aria-checked={reason === r} className={reason === r ? 'on' : ''} onClick={() => setReason(r)}>
+              {r}
+            </button>
+          ))}
+        </div>
+        <textarea
+          className="inp pop-ta"
+          value={text}
+          onChange={(e) => setText(e.target.value)}
+          placeholder="Что именно не так (по желанию)"
+          aria-label="Комментарий"
+          maxLength={1000}
+          rows={3}
+        />
+        <div className="pop-f">
+          <button type="button" className="btn" onClick={onClose}>
+            Отмена
+          </button>
+          <button type="submit" className="btn pri">
+            <Icon name="send" />
+            Отправить
+          </button>
+        </div>
+      </form>
+    </>
   );
 }

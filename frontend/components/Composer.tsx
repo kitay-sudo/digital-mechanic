@@ -1,9 +1,13 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { api } from '@/lib/api';
+import { MAX_PHOTOS, photoFromFile } from '@/lib/photos';
+import { serverVoiceSupported, useServerVoice } from '@/lib/voice';
 import { Icon } from './Icon';
 
-/* Распознавание речи браузера. Типов в lib.dom нет, описываем нужное сами. */
+/* Распознавание речи браузера — запасной путь, когда на сервере распознавание не настроено.
+   Типов в lib.dom нет, описываем нужное сами. */
 interface SpeechResultEvent {
   results: ArrayLike<ArrayLike<{ transcript: string }>>;
 }
@@ -49,8 +53,17 @@ function voiceErrorText(code: string | undefined): string | null {
 /** Язык распознавания речи: система работает только на русском. */
 const SPEECH_LANG = 'ru-RU';
 
+const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+
+interface Attached {
+  key: number;
+  url: string;
+}
+let photoKey = 0;
+
 /**
  * Панель ввода. Голос — главный способ: механик говорит, фраза сама уходит в чат.
+ * К вопросу можно приложить фото узла: на телефоне кнопка открывает камеру или галерею.
  * Любая фраза идёт агенту как обычное сообщение, инструмент выбирает он.
  */
 export function Composer({
@@ -62,21 +75,47 @@ export function Composer({
   busy: boolean;
   canDiagnose: boolean;
   onDiagnose: () => void;
-  onSend: (text: string) => void;
+  onSend: (text: string, images: string[]) => void;
 }) {
   const [text, setText] = useState('');
-  const [voice, setVoice] = useState(false);
+  const [photos, setPhotos] = useState<Attached[]>([]);
+  const [preparing, setPreparing] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  /** Распознавание на сервере: запись с индикатором уровня, работает в любом браузере с микрофоном */
+  const [serverVoice, setServerVoice] = useState(false);
+  const [browserVoice, setBrowserVoice] = useState(false);
   const [listening, setListening] = useState(false);
-  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const rootRef = useRef<HTMLDivElement>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
   const recRef = useRef<Recognition | null>(null);
   const heardRef = useRef('');
   const busyRef = useRef(busy);
   const sendRef = useRef(onSend);
+  const photosRef = useRef(photos);
   busyRef.current = busy;
   sendRef.current = onSend;
+  photosRef.current = photos;
+
+  /** Фраза распознана: уходит агенту вместе с приложенными фото */
+  const deliver = useCallback((heard: string) => {
+    if (busyRef.current) {
+      setText(heard); // агент ещё отвечает: текст остаётся в поле
+      return;
+    }
+    sendRef.current(heard, photosRef.current.map((p) => p.url));
+    setText('');
+    setPhotos([]);
+  }, []);
+
+  const voice = useServerVoice({ onText: deliver, onError: setNotice, levelRef: rootRef });
+  const recording = voice.state !== 'idle';
 
   useEffect(() => {
-    setVoice(Boolean(getRecognition()));
+    setBrowserVoice(Boolean(getRecognition()));
+    api
+      .config()
+      .then((c) => setServerVoice(Boolean(c.stt?.server) && serverVoiceSupported()))
+      .catch(() => setServerVoice(false));
     return () => {
       const rec = recRef.current;
       if (rec) {
@@ -88,20 +127,47 @@ export function Composer({
     };
   }, []);
 
-  // Сообщение об ошибке голоса само исчезает
+  // Сообщение об ошибке само исчезает
   useEffect(() => {
-    if (!voiceError) return;
-    const timer = setTimeout(() => setVoiceError(null), 6000);
+    if (!notice) return;
+    const timer = setTimeout(() => setNotice(null), 6000);
     return () => clearTimeout(timer);
-  }, [voiceError]);
+  }, [notice]);
 
   const submit = () => {
-    if (busy || !text.trim()) return;
-    onSend(text);
+    if (busy || preparing || (!text.trim() && !photos.length)) return;
+    onSend(text, photos.map((p) => p.url));
     setText('');
+    setPhotos([]);
   };
 
-  const toggleVoice = useCallback(() => {
+  const addFiles = useCallback(async (files: File[]) => {
+    const images = files.filter((f) => f.type.startsWith('image/'));
+    if (!images.length) {
+      if (files.length) setNotice('Приложить можно только фото.');
+      return;
+    }
+    const room = MAX_PHOTOS - photosRef.current.length;
+    if (room <= 0) {
+      setNotice(`К одному вопросу — не больше ${MAX_PHOTOS} фото.`);
+      return;
+    }
+    if (images.length > room) setNotice(`К одному вопросу — не больше ${MAX_PHOTOS} фото, лишние не добавлены.`);
+    setPreparing(true);
+    try {
+      for (const file of images.slice(0, room)) {
+        const url = await photoFromFile(file);
+        setPhotos((list) => [...list, { key: ++photoKey, url }]);
+      }
+    } catch (e) {
+      setNotice((e as Error).message);
+    } finally {
+      setPreparing(false);
+    }
+  }, []);
+
+  /** Голос в браузере: запасной путь без индикатора уровня */
+  const toggleBrowserVoice = useCallback(() => {
     if (recRef.current) {
       recRef.current.stop(); // фраза закончена: сработает onend и отправит распознанное
       return;
@@ -113,7 +179,7 @@ export function Composer({
     rec.interimResults = true;
     rec.continuous = false;
     heardRef.current = '';
-    setVoiceError(null);
+    setNotice(null);
     setText('');
     rec.onresult = (e) => {
       let out = '';
@@ -123,17 +189,14 @@ export function Composer({
     };
     rec.onerror = (e) => {
       const message = voiceErrorText(e?.error);
-      if (message) setVoiceError(message);
+      if (message) setNotice(message);
     };
     rec.onend = () => {
       recRef.current = null;
       setListening(false);
       const heard = heardRef.current.trim();
       heardRef.current = '';
-      if (!heard) return;
-      if (busyRef.current) return; // агент ещё отвечает: текст остаётся в поле
-      sendRef.current(heard);
-      setText('');
+      if (heard) deliver(heard);
     };
     recRef.current = rec;
     setListening(true);
@@ -142,16 +205,96 @@ export function Composer({
     } catch {
       recRef.current = null;
       setListening(false);
-      setVoiceError('Не получилось включить микрофон. Повторите.');
+      setNotice('Не получилось включить микрофон. Повторите.');
     }
-  }, []);
+  }, [deliver]);
+
+  const onMic = () => {
+    if (!serverVoice) {
+      toggleBrowserVoice();
+      return;
+    }
+    if (voice.state === 'idle') {
+      setNotice(null);
+      void voice.start();
+    } else if (voice.state === 'listening') voice.stop();
+  };
+
+  const hasVoice = serverVoice || browserVoice;
+  const live = listening || voice.state === 'listening' || voice.state === 'starting';
+  const micDisabled = serverVoice ? (busy && !recording) || voice.state === 'transcribing' || voice.state === 'starting' : busy && !listening;
+  const status =
+    voice.state === 'transcribing'
+      ? 'Распознаю…'
+      : voice.state === 'starting'
+        ? 'Включаю микрофон…'
+        : voice.hearing
+          ? 'Слышу вас'
+          : voice.heard
+            ? 'Слушаю…'
+            : 'Говорите';
+
+  const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    const files = [...e.clipboardData.files];
+    if (files.some((f) => f.type.startsWith('image/'))) {
+      e.preventDefault();
+      void addFiles(files);
+    }
+  };
+  const onDrop = (e: DragEvent<HTMLDivElement>) => {
+    if (!e.dataTransfer.files.length) return;
+    e.preventDefault();
+    void addFiles([...e.dataTransfer.files]);
+  };
 
   return (
-    <div className={`ftr composer${voice ? ' has-voice' : ''}`}>
-      {voiceError ? (
-        <div className="verr" role="alert">
-          <Icon name="microphone-off" size="s" />
-          {voiceError}
+    <div
+      ref={rootRef}
+      className={`ftr composer${hasVoice ? ' has-voice' : ''}${recording ? ' rec' : ''}`}
+      onDragOver={(e) => {
+        if (e.dataTransfer.types.includes('Files')) e.preventDefault();
+      }}
+      onDrop={onDrop}
+    >
+      {notice || photos.length || preparing ? (
+        <div className="cextra">
+          {notice ? (
+            <div className="verr" role="alert">
+              <Icon name="alert-circle" size="s" />
+              {notice}
+            </div>
+          ) : null}
+          {photos.length || preparing ? (
+            <div className="cphotos">
+              {photos.map((p, i) => (
+                <span className="cph" key={p.key}>
+                  {/* eslint-disable-next-line @next/next/no-img-element -- снимок из памяти браузера, оптимизировать нечего */}
+                  <img src={p.url} alt={`Фото ${i + 1}`} />
+                  <button
+                    type="button"
+                    className="cph-x"
+                    onClick={() => setPhotos((list) => list.filter((x) => x.key !== p.key))}
+                    aria-label={`Убрать фото ${i + 1}`}
+                    title="Убрать фото"
+                  >
+                    <Icon name="x" size="s" />
+                  </button>
+                </span>
+              ))}
+              {preparing ? (
+                <span className="cph wait" aria-label="Готовлю фото">
+                  <Icon name="loader-2" className="spin" />
+                </span>
+              ) : null}
+              <span className="cph-n">
+                Фото уйдут вместе с вопросом
+                <span className="m">
+                  {' '}
+                  {photos.length} из {MAX_PHOTOS}
+                </span>
+              </span>
+            </div>
+          ) : null}
         </div>
       ) : null}
       {/* В узкой колонке (открыто руководство) от кнопки остаётся значок: подпись дублируют title и aria-label */}
@@ -170,32 +313,83 @@ export function Composer({
         className="cgroup"
         onSubmit={(e) => {
           e.preventDefault();
-          submit();
+          if (voice.state === 'listening') voice.stop();
+          else submit();
         }}
       >
-        {voice ? (
+        {hasVoice ? (
           <button
             type="button"
-            className={`btn ic mic${listening ? ' live' : ''}`}
-            onClick={toggleVoice}
-            disabled={busy && !listening}
-            aria-label={listening ? 'Закончить и отправить' : 'Сказать голосом'}
-            aria-pressed={listening}
-            title={listening ? 'Слушаю… нажмите, чтобы закончить и отправить' : 'Сказать голосом: фраза сама уйдёт агенту'}
+            className={`btn ic mic${live ? ' live' : ''}`}
+            onClick={onMic}
+            disabled={micDisabled}
+            aria-label={live ? 'Закончить и отправить' : 'Сказать голосом'}
+            aria-pressed={live}
+            title={live ? 'Слушаю… нажмите, чтобы закончить и отправить' : 'Сказать голосом: фраза сама уйдёт агенту'}
           >
-            <Icon name={listening ? 'player-stop' : 'microphone'} size="l" />
+            <Icon name={live ? 'player-stop' : 'microphone'} size="l" />
           </button>
         ) : null}
+        <button
+          type="button"
+          className="btn ic photo"
+          onClick={() => fileRef.current?.click()}
+          disabled={recording || listening || preparing || photos.length >= MAX_PHOTOS}
+          aria-label="Фото узла: сфотографировать или выбрать"
+          title="Фото узла: сфотографировать или выбрать снимок"
+        >
+          <Icon name="camera" />
+        </button>
         <input
-          className={`inp${listening ? ' live' : ''}`}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder={listening ? 'Слушаю…' : voice ? 'Ваш вопрос' : 'Вопрос по руководству или команда'}
-          aria-label="Вопрос агенту"
-          enterKeyHint="send"
-          readOnly={listening}
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          multiple
+          hidden
+          onChange={(e) => {
+            const files = [...(e.target.files ?? [])];
+            e.target.value = '';
+            void addFiles(files);
+          }}
         />
-        <button type="submit" className="btn ic" disabled={busy || listening || !text.trim()} aria-label="Отправить">
+        {recording ? (
+          <div className={`vbar${voice.hearing ? ' on' : ''}${voice.state === 'transcribing' ? ' busy' : ''}`} role="status" aria-live="polite">
+            <span className="vdot" aria-hidden />
+            <span className="vlv" aria-hidden>
+              <i />
+              <i />
+              <i />
+              <i />
+              <i />
+            </span>
+            <span className="vtx">{status}</span>
+            <span className="vtm m">{clock(voice.elapsed)}</span>
+            {voice.state === 'transcribing' ? (
+              <Icon name="loader-2" className="spin vsp" />
+            ) : (
+              <button type="button" className="vx" onClick={voice.cancel} aria-label="Отменить запись" title="Отменить запись">
+                <Icon name="x" />
+              </button>
+            )}
+          </div>
+        ) : (
+          <input
+            className={`inp${listening ? ' live' : ''}`}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onPaste={onPaste}
+            placeholder={listening ? 'Слушаю…' : photos.length ? 'Вопрос к фото' : hasVoice ? 'Ваш вопрос' : 'Вопрос по руководству или команда'}
+            aria-label="Вопрос агенту"
+            enterKeyHint="send"
+            readOnly={listening}
+          />
+        )}
+        <button
+          type="submit"
+          className="btn ic"
+          disabled={voice.state === 'listening' ? false : busy || listening || recording || preparing || (!text.trim() && !photos.length)}
+          aria-label="Отправить"
+        >
           <Icon name="arrow-up" />
         </button>
       </form>

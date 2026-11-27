@@ -91,6 +91,29 @@ def _sentence(page_text: str, markers: list[str]) -> str | None:
                 break
         if len(sentence) <= MAX_QUOTE:
             return sentence
+    return _table_lines(page_text, markers)
+
+
+_PRIVATE = re.compile(r"[-]")  # значки списков из шрифтов PDF
+
+
+def _table_lines(page_text: str, markers: list[str]) -> str | None:
+    """Строка таблицы, где стоят маркеры, вместе с подписью над ней.
+
+    В таблицах нет точек, и «предложением» оказывается вся таблица. Тогда берём несколько соседних строк:
+    наименьшее окно с маркерами и до трёх строк над ним — там название соединения.
+    """
+    lines = [" ".join(_PRIVATE.sub(" ", line).split()) for line in page_text.splitlines()]
+    lines = [line for line in lines if line]
+    for i in range(len(lines)):
+        for j in range(i, min(i + 6, len(lines))):
+            if len(" ".join(lines[i:j + 1])) > MAX_QUOTE:
+                break
+            if _has_markers(" ".join(lines[i:j + 1]), markers):
+                start = i
+                while start > 0 and i - start < 3 and len(" ".join(lines[start - 1:j + 1])) <= MAX_QUOTE // 2:
+                    start -= 1
+                return " ".join(lines[start:j + 1])
     return None
 
 

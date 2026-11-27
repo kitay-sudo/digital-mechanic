@@ -94,6 +94,25 @@ def valid_sessions(sessions: list[dict]) -> list[dict]:
     return [s for s in sessions if s.get("status") != "check_failed" and s.get("anomaly_score") is not None]
 
 
+def repeat_after_repair(diagnosis: dict, tickets: list[dict], session_id: str) -> str | None:
+    """Отклонение того же типа уже было, и по нему отправляли заявку: неисправность вернулась после ремонта.
+
+    Заказчик на Q&A 27.11: двигатель возвращается через полгода после некачественного ремонта или не той запчасти,
+    поэтому прошлые заявки по машине должны быть видны сразу.
+    """
+    code = diagnosis.get("anomaly_type")
+    if diagnosis.get("status") != "anomaly" or not code:
+        return None
+    past = [t for t in tickets if t.get("anomaly_type") == code and t.get("session_id") != session_id]
+    if not past:
+        return None
+    last = past[-1]
+    created = str(last.get("created_at") or "")[:10]
+    date = ".".join(reversed(created.split("-"))) if created.count("-") == 2 else created
+    return (f"Повтор после ремонта: по типу {code} уже была заявка {last.get('ticket_id')} от {date}. "
+            "Проверьте качество прошлого ремонта и поставленных запчастей.")
+
+
 def trend(sessions: list[dict]) -> dict:
     """Тенденция оценки отклонения по последним проверкам (задача B2)."""
     scores = [s["anomaly_score"] for s in valid_sessions(sessions)][-5:]

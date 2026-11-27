@@ -3,15 +3,17 @@
 import { useSyncExternalStore } from 'react';
 import type { Profile } from './types';
 
-/** Настройки механика. Хранятся в браузере, на сервер уходит только профиль (подача). */
+/** Настройки механика. Хранятся в браузере, на сервер уходит только профиль (подача и фамилия). */
 export interface Settings {
   size: 'normal' | 'large';
   level: string;
   consent: boolean;
+  /** Кто сейчас работает: фамилия механика. Видна в чате и журнале, при смене меняется */
+  mechanic: string;
 }
 
 const KEY = 'dm-settings';
-const DEFAULTS: Settings = { size: 'normal', level: 'expert', consent: false };
+const DEFAULTS: Settings = { size: 'normal', level: 'expert', consent: false, mechanic: '' };
 
 let state: Settings = DEFAULTS;
 let loaded = false;
@@ -54,7 +56,8 @@ export function useSettings(): Settings {
 }
 
 export function profileOf(s: Settings): Profile {
-  return { level: s.level };
+  const name = s.mechanic.trim();
+  return name ? { level: s.level, name } : { level: s.level };
 }
 
 /* Запасной список, если сервер его не прислал */
@@ -62,54 +65,3 @@ export const FALLBACK_LEVELS = [
   { code: 'expert', label: 'Опытный', hint: 'Коротко, только суть' },
   { code: 'novice', label: 'Новичок', hint: 'С пояснениями и простыми словами' },
 ];
-
-/* ---------- Отметки выполненных шагов ---------- */
-
-const STEPS_KEY = 'dm-steps';
-type StepMap = Record<string, number[]>;
-let steps: StepMap = {};
-let stepsLoaded = false;
-const stepListeners = new Set<() => void>();
-const EMPTY: number[] = [];
-
-function loadSteps(): void {
-  if (stepsLoaded || typeof window === 'undefined') return;
-  stepsLoaded = true;
-  try {
-    const raw = localStorage.getItem(STEPS_KEY);
-    if (raw) steps = JSON.parse(raw) as StepMap;
-  } catch {
-    /* отметки действуют до перезагрузки */
-  }
-}
-
-/** Какие шаги списка отмечены выполненными. key: «id сообщения:список». */
-export function useDoneSteps(key: string): number[] {
-  return useSyncExternalStore(
-    (l) => {
-      stepListeners.add(l);
-      return () => stepListeners.delete(l);
-    },
-    () => {
-      loadSteps();
-      return steps[key] ?? EMPTY;
-    },
-    () => EMPTY,
-  );
-}
-
-export function toggleStep(key: string, index: number): void {
-  loadSteps();
-  const cur = steps[key] ?? [];
-  const next = cur.includes(index) ? cur.filter((i) => i !== index) : [...cur, index].sort((a, b) => a - b);
-  steps = { ...steps, [key]: next };
-  try {
-    // Храним отметки только по последним спискам, чтобы хранилище не росло
-    const keys = Object.keys(steps);
-    if (keys.length > 200) for (const k of keys.slice(0, keys.length - 200)) delete steps[k];
-    localStorage.setItem(STEPS_KEY, JSON.stringify(steps));
-  } catch {
-    /* см. выше */
-  }
-  stepListeners.forEach((l) => l());
-}

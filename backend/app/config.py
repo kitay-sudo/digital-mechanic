@@ -73,6 +73,13 @@ class Settings:
     # Правила
     confidence_min: float
     max_agent_steps: int
+    # Куда сообщать администратору о вопросах без ответа в руководстве (пусто — только журнал)
+    alert_webhook_url: str
+    # Распознавание речи на сервере (протокол OpenAI). Пустой адрес — распознаёт браузер
+    stt_base_url: str
+    stt_api_key: str
+    stt_model: str
+    stt_price_per_min: float
 
     @property
     def pdf_dir(self) -> Path:
@@ -128,4 +135,10 @@ def get_settings() -> Settings:
         usd_rate=_float("USD_RATE", 0.0),
         confidence_min=_float("CONFIDENCE_MIN", 0.5),
         max_agent_steps=int(_float("MAX_AGENT_STEPS", 10)),
+        alert_webhook_url=os.environ.get("ALERT_WEBHOOK_URL", "").strip(),
+        stt_base_url=os.environ.get("STT_BASE_URL", "").strip(),
+        # По умолчанию тот же ключ, что у модели: у ProxyAPI один ключ на все модели.
+        stt_api_key=os.environ.get("STT_API_KEY") or os.environ.get("LLM_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", ""),
+        stt_model=os.environ.get("STT_MODEL", "gpt-4o-mini-transcribe").strip(),
+        stt_price_per_min=_float("STT_PRICE_PER_MIN", 0.0),
     )

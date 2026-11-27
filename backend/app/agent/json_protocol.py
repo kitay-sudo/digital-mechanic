@@ -76,7 +76,11 @@ def render(messages: list[dict]) -> str:
                 mark = " (ошибка)" if block.get("is_error") else ""
                 parts.append(f"[Результат инструмента {name}{mark}]\n{block['content']}")
             elif kind == "text" and block.get("text"):
-                parts.append(f"[Твой предыдущий ответ]\n{block['text']}")
+                # Текст в сообщении механика (рядом с фото) — это его сообщение, а не ответ модели.
+                parts.append(block["text"] if message["role"] == "user" else f"[Твой предыдущий ответ]\n{block['text']}")
+            elif kind == "image":
+                parts.append("[Механик приложил фото. В этом режиме подключения снимок модели не передаётся: "
+                             "скажи механику, что фото не видно, и попроси описать словами]")
     return "\n\n".join(parts)
 
 

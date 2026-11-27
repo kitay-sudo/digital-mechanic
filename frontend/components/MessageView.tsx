@@ -3,8 +3,23 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { api } from '@/lib/api';
 import { PRIORITY_LABEL, QUALITY_LABEL, capitalize, dateTime, int, num, plural, timeShort } from '@/lib/format';
-import { toggleStep, useDoneSteps } from '@/lib/settings';
-import type { Answer, AnswerItem, Assessment, Conflict, Draft, ManualTarget, Message, Priority, Ref, Step, Ticket, Usage, VehicleDetail } from '@/lib/types';
+import type {
+  Answer,
+  AnswerItem,
+  Assessment,
+  Conflict,
+  Draft,
+  ManualTarget,
+  Marks,
+  Message,
+  Priority,
+  Ref,
+  Report,
+  Step,
+  Ticket,
+  Usage,
+  VehicleDetail,
+} from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
 import { RefChip, sameTarget } from './RefChip';
@@ -14,6 +29,9 @@ interface Ctx {
   busy: boolean;
   activeManual: ManualTarget | null;
   onOpenManual: (t: ManualTarget) => void;
+  /** Отметки «сделано» по шагам: общие для всех механиков машины */
+  marks: Marks;
+  onToggleStep: (key: string, index: number) => void;
 }
 
 const refTarget = (r: Ref): ManualTarget => ({ manual_id: r.manual_id, page: r.pdf_page, quote: r.quote, short: r.short });
@@ -185,7 +203,8 @@ function StepItems({
   storeKey: string;
   after?: (allDone: boolean) => ReactNode;
 }) {
-  const done = useDoneSteps(storeKey);
+  const marks = ctx.marks[storeKey] ?? {};
+  const done = Object.keys(marks).map(Number);
   const doneCount = done.filter((i) => i < items.length).length;
   const allDone = doneCount === items.length;
   return (
@@ -212,12 +231,19 @@ function StepItems({
                 aria-pressed={isDone}
                 aria-label={isDone ? `Шаг ${i + 1} сделан. Снять отметку` : `Отметить шаг ${i + 1} сделанным`}
                 title={isDone ? 'Сделано. Нажмите, чтобы снять отметку' : 'Отметить, что шаг сделан'}
-                onClick={() => toggleStep(storeKey, i)}
+                onClick={() => ctx.onToggleStep(storeKey, i)}
               >
                 {isDone ? <Icon name="check" /> : i + 1}
               </button>
               <div>
                 <div className="tx">{it.text}</div>
+                {/* Кто отметил и когда: сменщик видит, на чём остановились */}
+                {isDone ? (
+                  <div className="byline">
+                    Сделано: {marks[String(i)]?.author ? `${marks[String(i)].author}, ` : ''}
+                    {dateTime(marks[String(i)].at)}
+                  </div>
+                ) : null}
                 {it.disputed ? <DisputedMark /> : null}
                 <Chips refs={it.refs} ctx={ctx} />
               </div>
@@ -767,6 +793,10 @@ export function MessageView({
   onOpenManual,
   onCreateTicket,
   onConfirmDraft,
+  marks,
+  onToggleStep,
+  report,
+  onReport,
 }: {
   message: Message;
   vehicle: VehicleDetail;
@@ -775,23 +805,38 @@ export function MessageView({
   onOpenManual: (t: ManualTarget) => void;
   onCreateTicket: () => void;
   onConfirmDraft: (draftId: string, ack: boolean) => void;
+  marks: Marks;
+  onToggleStep: (key: string, index: number) => void;
+  /** Сообщение механика в поддержку об этом ответе, если было */
+  report?: Report;
+  onReport: (messageId: string) => void;
 }) {
   if (m.role === 'user') {
     return (
       <div className="q">
-        {/* Подпись отправителя, как у ответов агента: видно, что это запрос механика */}
+        {/* Подпись отправителя: какой механик спрашивал (смены), без фамилии — просто «Механик» */}
         <div className="who">
           <Icon name="user" size="s" />
-          Вы
+          {m.author || 'Механик'}
           <span className="tm">{timeShort(m.created_at)}</span>
           {m.session_id ? <span className="tm">{m.session_id}</span> : null}
         </div>
-        <div>{m.text}</div>
+        {m.images?.length ? (
+          <div className="qph">
+            {m.images.map((p, i) => (
+              <a key={p.id} href={p.url} target="_blank" rel="noreferrer" title="Открыть фото целиком">
+                {/* eslint-disable-next-line @next/next/no-img-element -- снимок отдаёт сервер приложения как есть */}
+                <img src={p.url} alt={`Фото механика ${i + 1}`} loading="lazy" />
+              </a>
+            ))}
+          </div>
+        ) : null}
+        {m.text ? <div>{m.text}</div> : null}
       </div>
     );
   }
 
-  const ctx: Ctx = { vehicle, busy, activeManual, onOpenManual };
+  const ctx: Ctx = { vehicle, busy, activeManual, onOpenManual, marks, onToggleStep };
   let body;
   if (m.localError) {
     body = (
@@ -837,6 +882,18 @@ export function MessageView({
         <Icon name="engine" size="s" />
         Цифровой механик
         <span className="tm">{timeShort(m.created_at)}</span>
+        {/* Механик сообщает администратору: ответ неверный, в руководстве ошибка, система не работает */}
+        {m.localError ? null : report ? (
+          <span className="rep done" title={`${report.reason}${report.text ? `: ${report.text}` : ''}`}>
+            <Icon name="flag" size="s" />
+            <span className="only-d">Сообщено в поддержку</span>
+          </span>
+        ) : (
+          <button type="button" className="rep" onClick={() => onReport(m.id)} title="Сообщить администратору о проблеме с этим ответом">
+            <Icon name="flag" size="s" />
+            <span className="only-d">Сообщить о проблеме</span>
+          </button>
+        )}
       </div>
       {body}
     </div>

@@ -14,7 +14,7 @@ import uuid
 
 from .. import rules
 from ..kb.text import split_sentences, tokens
-from .llm import LLMResponse, ToolCall
+from .llm import LLMResponse, ToolCall, text_of
 
 CHECK_MARK = re.compile(
     r"провер|регулир|измер|замер|зазор|момент|давлен|должн|не более|не менее|снять|снима|затян|затяж|установ|осмотр|контрол|допуск"
@@ -35,9 +35,9 @@ class MockLLM:
     async def complete(self, system: str, messages: list[dict], tools: list[dict], schema: dict) -> LLMResponse:
         start = max(
             i for i, m in enumerate(messages)
-            if m["role"] == "user" and isinstance(m["content"], str) and "[Сообщение механика]" in m["content"]
+            if m["role"] == "user" and "[Сообщение механика]" in text_of(m["content"])
         )
-        context = messages[start]["content"]
+        context = text_of(messages[start]["content"])  # фото заглушка модели не смотрит
         user_text = context.split("[Сообщение механика]")[-1].strip()
 
         calls: dict[str, dict] = {}

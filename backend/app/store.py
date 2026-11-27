@@ -11,6 +11,8 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
+from . import alerts
+
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -38,6 +40,24 @@ CREATE TABLE IF NOT EXISTS turns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     vehicle_id TEXT NOT NULL, session_id TEXT, scenario_id INTEGER,
     kind TEXT, duration_ms INTEGER, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS stt_calls (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    model TEXT NOT NULL, seconds REAL NOT NULL, cost_rub REAL NOT NULL,
+    duration_ms INTEGER NOT NULL, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS step_marks (
+    vehicle_id TEXT NOT NULL, list_key TEXT NOT NULL, idx INTEGER NOT NULL,
+    author TEXT, created_at TEXT NOT NULL,
+    PRIMARY KEY (vehicle_id, list_key, idx)
+);
+CREATE TABLE IF NOT EXISTS reports (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    message_id INTEGER NOT NULL, vehicle_id TEXT NOT NULL,
+    reason TEXT NOT NULL, text TEXT NOT NULL, author TEXT, created_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS reviews (
+    message_id INTEGER PRIMARY KEY, reviewed_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS llm_calls (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,10 +120,56 @@ class Store:
 
     def clear_messages(self, vehicle_id: str) -> None:
         self._exec("DELETE FROM messages WHERE vehicle_id=?", (vehicle_id,))
+        self._exec("DELETE FROM step_marks WHERE vehicle_id=?", (vehicle_id,))
+
+    # --- отметки «сделано» по шагам: видны всем механикам смены ---
+    def set_mark(self, vehicle_id: str, list_key: str, idx: int, done: bool, author: str | None) -> None:
+        if done:
+            self._exec("INSERT OR REPLACE INTO step_marks (vehicle_id, list_key, idx, author, created_at) "
+                       "VALUES (?,?,?,?,?)", (vehicle_id, list_key, idx, author, now()))
+        else:
+            self._exec("DELETE FROM step_marks WHERE vehicle_id=? AND list_key=? AND idx=?", (vehicle_id, list_key, idx))
+
+    def marks(self, vehicle_id: str) -> dict[str, dict[str, dict]]:
+        """Отметки по спискам шагов: {«m_12:checks»: {«0»: {author, at}}}."""
+        out: dict[str, dict[str, dict]] = {}
+        for r in self._all("SELECT * FROM step_marks WHERE vehicle_id=? ORDER BY created_at", (vehicle_id,)):
+            out.setdefault(r["list_key"], {})[str(r["idx"])] = {"author": r["author"], "at": r["created_at"]}
+        return out
+
+    # --- сообщения механика в поддержку ---
+    def add_report(self, message_id: int, vehicle_id: str, reason: str, text: str, author: str | None) -> dict:
+        created = now()
+        self._exec("INSERT INTO reports (message_id, vehicle_id, reason, text, author, created_at) VALUES (?,?,?,?,?,?)",
+                   (message_id, vehicle_id, reason, text, author, created))
+        # Новое сообщение возвращает случай в работу, даже если его уже разбирали
+        self._exec("DELETE FROM reviews WHERE message_id=?", (message_id,))
+        return {"reason": reason, "text": text, "author": author, "created_at": created}
+
+    def _reports(self, vehicle_id: str | None = None) -> dict[int, dict]:
+        """Последнее сообщение механика по каждому ответу агента."""
+        sql, args = "SELECT * FROM reports ORDER BY id", ()
+        if vehicle_id:
+            sql, args = "SELECT * FROM reports WHERE vehicle_id=? ORDER BY id", (vehicle_id,)
+        return {r["message_id"]: {"reason": r["reason"], "text": r["text"], "author": r["author"],
+                                  "created_at": r["created_at"]} for r in self._all(sql, args)}
+
+    def reports_by_message(self, vehicle_id: str) -> dict[str, dict]:
+        return {f"m_{k}": v for k, v in self._reports(vehicle_id).items()}
+
+    def message(self, message_id: int) -> dict | None:
+        rows = self._all("SELECT * FROM messages WHERE id=?", (message_id,))
+        if not rows:
+            return None
+        r = rows[0]
+        return {"id": f"m_{r['id']}", "role": r["role"], "vehicle_id": r["vehicle_id"], "created_at": r["created_at"],
+                **json.loads(r["payload"])}
 
     def audit(self, limit: int = 100) -> list[dict]:
         """Журнал обращений: ответ агента вместе с вопросом, источниками и инструментами."""
         rows = self._all("SELECT * FROM messages WHERE role='assistant' ORDER BY id DESC LIMIT ?", (limit,))
+        reviewed = self._reviewed()
+        reports = self._reports()
         out = []
         for r in rows:
             payload = json.loads(r["payload"])
@@ -123,17 +189,49 @@ class Store:
                     if key not in seen:
                         seen.add(key)
                         sources.append({"manual_id": ref["manual_id"], "short": ref["short"], "pdf_page": ref["pdf_page"]})
+            report = reports.get(r["id"])
+            gap = alerts.gap_of(payload, report)
+            if gap:
+                gap["reviewed_at"] = reviewed.get(r["id"])
+            asked = json.loads(question[0]["payload"]) if question else {}
             out.append({
                 "id": f"m_{r['id']}", "created_at": r["created_at"], "vehicle_id": r["vehicle_id"],
                 "session_id": r["session_id"],
-                "question": json.loads(question[0]["payload"]).get("text", "") if question else "",
+                "question": asked.get("text", ""),
+                "author": asked.get("author"),
+                "photos": len(asked.get("images") or []),
+                "report": report,
                 "kind": payload.get("kind"), "answer": payload.get("text", ""),
                 "sources": sources,
                 "tools": [step["tool"] for step in payload.get("steps", [])],
                 "ticket_id": (payload.get("ticket") or {}).get("ticket_id"),
                 "usage": payload.get("usage", {}),
+                "gap": gap,
             })
         return out
+
+    def _reviewed(self) -> dict[int, str]:
+        return {r["message_id"]: r["reviewed_at"] for r in self._all("SELECT * FROM reviews")}
+
+    def set_reviewed(self, message_id: int, reviewed: bool) -> str | None:
+        """Администратор разобрал случай без ответа в руководстве (или вернул его в работу)."""
+        if not reviewed:
+            self._exec("DELETE FROM reviews WHERE message_id=?", (message_id,))
+            return None
+        stamp = now()
+        self._exec("INSERT OR REPLACE INTO reviews (message_id, reviewed_at) VALUES (?,?)", (message_id, stamp))
+        return stamp
+
+    def is_assistant_message(self, message_id: int) -> bool:
+        return bool(self._all("SELECT 1 FROM messages WHERE id=? AND role='assistant'", (message_id,)))
+
+    def open_gaps(self, limit: int = 500) -> int:
+        """Сколько случаев без ответа ещё не разобрано (среди последних ответов агента)."""
+        reviewed = self._reviewed()
+        reports = self._reports()
+        rows = self._all("SELECT id, payload FROM messages WHERE role='assistant' ORDER BY id DESC LIMIT ?", (limit,))
+        return sum(1 for r in rows
+                   if r["id"] not in reviewed and alerts.gap_of(json.loads(r["payload"]), reports.get(r["id"])))
 
     # --- разборы проверок (память по машине, B1) ---
     def save_analysis(self, vehicle_id: str, session_id: str, diagnosis: dict, assessment: dict) -> None:
@@ -226,6 +324,10 @@ class Store:
             (turn_id, step, model, input_tokens, output_tokens, cache_read_tokens, cost_rub, duration_ms, now()),
         )
 
+    def log_stt(self, model: str, seconds: float, cost_rub: float, duration_ms: int) -> None:
+        self._exec("INSERT INTO stt_calls (model, seconds, cost_rub, duration_ms, created_at) VALUES (?,?,?,?,?)",
+                   (model, seconds, cost_rub, duration_ms, now()))
+
     def usage_summary(self, since: str | None = None) -> dict:
         """Сводка расхода модели. since: считать только ходы не раньше этого времени (ISO), чтобы
         в расчёт стоимости не попали отладочные прогоны на других моделях."""
@@ -244,7 +346,16 @@ class Store:
             "WHERE t.scenario_id IS NOT NULL AND t.created_at >= ? GROUP BY t.scenario_id", (since,)
         )
         n = len(scenarios) or 1
+        speech = self._all(
+            "SELECT model, COUNT(*) AS calls, SUM(seconds) AS sec, SUM(cost_rub) AS cost, SUM(duration_ms) AS ms "
+            "FROM stt_calls WHERE created_at >= ? GROUP BY model", (since,)
+        )
         return {
+            "speech": [
+                {"model": r["model"], "calls": r["calls"], "seconds_per_call": round(r["sec"] / r["calls"], 1),
+                 "cost_rub_per_call": round(r["cost"] / r["calls"], 4), "duration_ms_per_call": round(r["ms"] / r["calls"])}
+                for r in speech
+            ],
             "scenarios": len(scenarios),
             "per_scenario_avg": {
                 "turns": round(sum(s["turns"] for s in scenarios) / n, 2),

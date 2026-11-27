@@ -2442,19 +2442,6 @@ button.sp-link {
   background: var(--crit);
   border-color: var(--crit);
   color: #ffffff;
-  animation: micpulse 1.4s ease-out infinite;
-}
-
-@keyframes micpulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(198, 40, 40, 0.5);
-  }
-  70% {
-    box-shadow: 0 0 0 12px rgba(198, 40, 40, 0);
-  }
-  100% {
-    box-shadow: 0 0 0 0 rgba(198, 40, 40, 0);
-  }
 }
 
 .inp.live {
@@ -2559,7 +2546,7 @@ button.sp-link {
 .lrow {
   display: grid;
   grid-template-columns:
-    calc(100px * var(--k)) calc(150px * var(--k)) minmax(120px, 1fr) minmax(160px, 1.5fr)
+    calc(118px * var(--k)) calc(150px * var(--k)) minmax(120px, 1fr) minmax(160px, 1.5fr)
     calc(210px * var(--k)) calc(176px * var(--k)) calc(92px * var(--k)) calc(72px * var(--k));
   column-gap: 16px;
   padding: 0 20px;
@@ -4493,4 +4480,493 @@ button.sp-link {
   .lrow[data-row] .ln {
     display: none;
   }
+}
+
+/* ---------- Голос через сервер: запись с индикатором уровня ----------
+   --lv (0…1) пишет запись голоса: сколько звука слышит микрофон прямо сейчас */
+
+.composer {
+  --lv: 0;
+}
+
+/* Кольцо вокруг кнопки микрофона растёт вместе с голосом: видно, что система слышит. Теней нет — это обводка */
+.btn.mic.live {
+  animation: none;
+  outline: calc(2px + var(--lv) * 10px) solid rgba(198, 40, 40, 0.28);
+  outline-offset: 0;
+  transition: outline-width 80ms linear;
+}
+
+/* Распознавание в браузере уровень не даёт: обводка ровно пульсирует */
+.composer:not(.rec) .btn.mic.live {
+  animation: micring 1.4s ease-out infinite;
+}
+
+@keyframes micring {
+  0% {
+    outline-width: 2px;
+    outline-color: rgba(198, 40, 40, 0.45);
+  }
+  70% {
+    outline-width: 12px;
+    outline-color: rgba(198, 40, 40, 0);
+  }
+  100% {
+    outline-width: 2px;
+    outline-color: rgba(198, 40, 40, 0);
+  }
+}
+
+.vbar {
+  flex: 1;
+  min-width: 0;
+  height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 4px 0 16px;
+  border: 1px solid var(--crit);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: calc(16px * var(--k));
+  color: var(--tx2);
+}
+
+.vbar.on {
+  color: var(--tx);
+}
+
+.vbar.busy {
+  border-color: var(--line2);
+}
+
+.vdot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--crit);
+}
+
+.vbar.busy .vdot {
+  background: var(--tx3);
+}
+
+/* Столбики уровня: высота каждого следует за голосом, средний выше */
+.vlv {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  height: calc(28px * var(--k));
+}
+
+.vlv i {
+  width: 4px;
+  height: calc(4px + var(--lv) * var(--h) * var(--k));
+  border-radius: 2px;
+  background: var(--crit);
+  transition: height 80ms linear;
+}
+
+.vlv i:nth-child(1),
+.vlv i:nth-child(5) {
+  --h: 10px;
+}
+
+.vlv i:nth-child(2),
+.vlv i:nth-child(4) {
+  --h: 18px;
+}
+
+.vlv i:nth-child(3) {
+  --h: 24px;
+}
+
+.vbar.busy .vlv i {
+  background: var(--tx3);
+}
+
+.vtx {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  font-weight: 500;
+}
+
+.vtm {
+  flex: none;
+  font-size: calc(14px * var(--k));
+  color: var(--tx3);
+  font-variant-numeric: tabular-nums;
+}
+
+.vx {
+  flex: none;
+  width: calc(40px * var(--k));
+  height: calc(40px * var(--k));
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  color: var(--tx2);
+}
+
+.vx:hover {
+  background: var(--panel2);
+}
+
+.vsp {
+  flex: none;
+  margin-right: 10px;
+  color: var(--tx3);
+}
+
+/* ---------- Над панелью ввода: ошибки и приложенные фото ---------- */
+
+.cextra {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 8px 24px;
+  background: var(--panel);
+  border-top: 1px solid var(--line2);
+}
+
+.cextra .verr {
+  position: static;
+  min-height: 0;
+  padding: 0;
+  border-top: none;
+  background: none;
+}
+
+.cphotos {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cph {
+  position: relative;
+  flex: none;
+  width: calc(56px * var(--k));
+  height: calc(56px * var(--k));
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--panel2);
+}
+
+.cph img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cph.wait {
+  display: grid;
+  place-items: center;
+  color: var(--tx3);
+}
+
+.cph-x {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: rgba(20, 24, 29, 0.72);
+  color: #ffffff;
+}
+
+.cph-n {
+  min-width: 0;
+  margin-left: 4px;
+  font-size: calc(13px * var(--k));
+  color: var(--tx3);
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+/* Фото в сообщении механика */
+.qph {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.qph a {
+  display: block;
+  width: calc(132px * var(--k));
+  height: calc(132px * var(--k));
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  overflow: hidden;
+  background: var(--panel2);
+}
+
+.qph img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .cextra {
+    padding: 8px 12px;
+  }
+
+  .vbar {
+    height: calc(56px * var(--k));
+    gap: 10px;
+    padding-left: 12px;
+  }
+
+  .qph a {
+    width: calc(108px * var(--k));
+    height: calc(108px * var(--k));
+  }
+}
+
+/* ---------- Журнал: случаи для администратора ---------- */
+
+/* Неразобранный случай: полоса слева и подпись цветом предупреждения */
+.lrow.gap {
+  position: relative;
+  background: color-mix(in srgb, var(--warn) 7%, var(--panel));
+}
+
+.lrow.gap::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background: var(--warn);
+}
+
+.lrow .lt {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.lgap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--warn-tx);
+}
+
+.lgap.done {
+  color: var(--tx3);
+}
+
+.lrev {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: calc(28px * var(--k));
+  padding: 0 8px;
+  border: 1px solid var(--warn);
+  border-radius: 4px;
+  font-size: calc(13px * var(--k));
+  color: var(--warn-tx);
+  background: var(--panel);
+  white-space: nowrap;
+}
+
+.lrev.done {
+  border-color: var(--line2);
+  color: var(--tx3);
+}
+
+.gapf b {
+  font-weight: 600;
+}
+
+.gapf.has {
+  border-color: var(--warn);
+  color: var(--warn-tx);
+}
+
+.gapf.on {
+  background: var(--warn);
+  border-color: var(--warn);
+  color: #ffffff;
+}
+
+/* Число неразобранных случаев у пункта «Журнал» */
+.nbadge {
+  min-width: calc(20px * var(--k));
+  height: calc(20px * var(--k));
+  padding: 0 6px;
+  display: inline-grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--warn);
+  color: #ffffff;
+  font-size: calc(12px * var(--k));
+  font-weight: 600;
+}
+
+/* Пока идёт запись, кнопка фото не нужна: её место отдаём подписи «Слышу вас» (на телефоне иначе не помещается) */
+.composer.rec .btn.photo {
+  display: none;
+}
+
+/* На телефоне в полосе записи важнее подпись «Слышу вас», чем таймер */
+@media (max-width: 900px) {
+  .vtm {
+    display: none;
+  }
+}
+
+/* ---------- Смены: кто работает с машиной ---------- */
+
+/* Кнопка в шапке чата: фамилия механика. Пока не указана — подпись цветом предупреждения */
+.who-btn {
+  height: 40px;
+  min-width: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--tx2);
+  font-size: calc(14px * var(--k));
+  white-space: nowrap;
+}
+
+.who-btn.empty {
+  border-color: var(--warn);
+  color: var(--warn-tx);
+}
+
+.who-btn.on {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+/* Поле в панели «Кто работает» и в настройках */
+.pop-in,
+.sp-in {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.sp-in {
+  margin-top: 0;
+}
+
+.pop-ta {
+  width: 100%;
+  height: auto;
+  min-height: calc(88px * var(--k));
+  margin-top: 12px;
+  padding: 12px 16px;
+  line-height: calc(22px * var(--k));
+  resize: vertical;
+  font: inherit;
+  font-size: calc(16px * var(--k));
+}
+
+/* Причина сообщения в поддержку: выбор одной из нескольких, кнопками в несколько строк */
+.rsn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.rsn button {
+  height: calc(40px * var(--k));
+  padding: 0 14px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: var(--panel);
+  font-size: calc(15px * var(--k));
+  white-space: nowrap;
+}
+
+.rsn button.on {
+  background: var(--tx);
+  border-color: var(--tx);
+  color: var(--panel);
+}
+
+/* «Сообщить о проблеме» в подписи ответа агента: справа, неприметно, пока не нужно */
+.who .rep {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  color: var(--tx3);
+  font-size: calc(12px * var(--k));
+}
+
+button.rep:hover {
+  color: var(--warn-tx);
+  background: var(--panel2);
+}
+
+.who .rep.done {
+  color: var(--warn-tx);
+}
+
+/* Кто и когда отметил шаг сделанным */
+.byline {
+  margin-top: 2px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+/* На чём остановились: механик вернулся к машине или пришла другая смена */
+.resume {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: var(--by) var(--bx);
+  border: 1px solid var(--line2);
+  border-left: 4px solid var(--acc);
+  background: var(--panel);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--tx2);
+}
+
+.resume b {
+  display: block;
+  color: var(--tx);
+  font-weight: 600;
+}
+
+.resume > .ti {
+  margin-top: 2px;
+  color: var(--acc);
+}
+
+/* Журнал: фамилия механика под временем */
+.lrow .lwho {
+  color: var(--tx2);
 }

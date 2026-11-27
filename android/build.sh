@@ -13,8 +13,8 @@
 # в frontend/public/app/digital-mechanic.apk.
 set -euo pipefail
 
-VERSION_NAME="0.1"
-VERSION_CODE="1"
+VERSION_NAME="0.2"
+VERSION_CODE="2"
 MIN_SDK=24
 # 34, а не 35: с 35 Android рисует окно под системными панелями, сайту это мешало бы
 TARGET_SDK=34

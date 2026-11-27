@@ -5,7 +5,7 @@ import json
 import re
 import time
 
-from .. import conflicts, rules
+from .. import alerts, conflicts, rules, uploads
 from ..config import Settings
 from ..kb.index import Index
 from ..store import Store
@@ -25,7 +25,7 @@ HIDDEN_NOTE = "Часть ответа скрыта: её не удалось п
 MISMATCH_TEXT = ("Это ошибка модели диагностики, а не диагноз: по этому типу выводов о двигателе нет. "
                  "Повторите проверку или проведите дефектовку.")
 KB_EMPTY_TEXT = ("Руководства на двигатель {engine} не загружены в базу знаний, поэтому ответить по ним сейчас нельзя. "
-                 "Это настройка стенда, а не отсутствие инструкции: обратитесь к администратору.")
+                 "Это настройка стенда, а не отсутствие инструкции: администратор видит этот случай в журнале.")
 UNSOURCED_TEXT = ("Подтвердить ответ страницей руководства на этот двигатель не удалось. "
                   "Без страницы и цитаты агент фактов и нормативов не называет.")
 CONFLICT_LEAD = "В руководствах есть расхождение, формулировки показаны ниже."
@@ -39,11 +39,16 @@ def _cost(settings: Settings, inp: int, out: int, cache: int, write: int = 0) ->
     return cost, rub
 
 
+PHOTO_WINDOW = 4   # фото из недавних сообщений механика видны модели и в следующих вопросах
+
+
 def _history_block(messages: list[dict]) -> str:
     lines = []
     for m in messages[-8:]:
         if m["role"] == "user":
-            lines.append(f"Механик: {m.get('text', '')}")
+            photos = f" [приложил фото: {len(m['images'])}]" if m.get("images") else ""
+            who = f"Механик {m['author']}" if m.get("author") else "Механик"
+            lines.append(f"{who} ({prompt.when(m.get('created_at'))}): {m.get('text', '')}{photos}")
         else:
             lines.append(f"Агент: {prompt.render_for_history(m)}")
     return "\n".join(lines)
@@ -66,7 +71,7 @@ def _parse(text: str) -> dict:
 async def run_turn(
     *, vehicle: dict, session_id: str, text: str, store: Store, index: Index, settings: Settings,
     llm: LLM, emit: Emit, confirmed_draft_id: str | None = None, warning_ack: bool = False,
-    profile: dict | None = None,
+    profile: dict | None = None, photos: list[dict] | None = None,
 ) -> None:
     started = time.monotonic()
     vehicle_id = vehicle["vehicle_id"]
@@ -76,15 +81,25 @@ async def run_turn(
     await ensure_diagnosis(ctx)
     saved = store.analysis(vehicle_id, session_id)
 
-    history = _history_block(store.messages(vehicle_id))
-    user_message = store.add_message(vehicle_id, session_id, "user", {"text": text})
+    earlier = store.messages(vehicle_id)
+    history = _history_block(earlier)
+    photos = photos or []
+    author = ((profile or {}).get("name") or "").strip() or None
+    user_message = store.add_message(vehicle_id, session_id, "user", {
+        "text": text, **({"images": photos} if photos else {}), **({"author": author} if author else {}),
+    })
     await emit({"type": "user", "message": user_message})
 
     content = prompt.turn_context(vehicle, session_id, saved, profile)
+    # Память по машине между сменами и через месяцы: кто и когда работал, что отмечено сделанным, какие были ремонты
+    content += "\n\n" + prompt.work_block(earlier, store.marks(vehicle_id), store.tickets(vehicle_id))
     if history:
         content += "\n\n[Предыдущий диалог]\n" + history
-    content += "\n\n[Сообщение механика]\n" + text
-    messages: list[dict] = [{"role": "user", "content": content}]
+    content += "\n\n[Сообщение механика]\n" + (text or "(без текста, приложено фото)")
+    blocks = _photo_blocks(photos, earlier, settings)
+    ctx.photos = sum(1 for b in blocks if b["type"] == "image")
+    first = [*blocks, {"type": "text", "text": content}] if blocks else content
+    messages: list[dict] = [{"role": "user", "content": first}]
 
     totals = {"input_tokens": 0, "output_tokens": 0, "cache_read_tokens": 0, "cost": 0.0, "cost_rub": 0.0, "llm_calls": 0}
     answer, problems, retried, counter = None, [], False, 0
@@ -172,8 +187,26 @@ async def run_turn(
     payload["usage"] = usage
     message = store.add_message(vehicle_id, ctx.session_id, "assistant", payload)
     store.finish_turn(turn_id, payload["kind"], usage["duration_ms"], ctx.diagnosed_this_turn)
+    gap = alerts.gap_of(payload)
+    if gap:
+        # Вопрос без ответа в руководстве: администратор узнаёт сразу, не дожидаясь, пока откроет журнал.
+        alerts.notify(settings.alert_webhook_url, gap, vehicle, text, payload.get("text", ""), message["created_at"])
     await emit({"type": "message", "message": message})
     await emit({"type": "done", "usage": usage})
+
+
+def _photo_blocks(photos: list[dict], earlier: list[dict], settings: Settings) -> list[dict]:
+    """Фото для модели: из этого сообщения, а если в нём фото нет — из недавнего сообщения механика.
+
+    Так на вопрос «а что на фото?» после снимка модель видит снимок. Не больше трёх фото за ход.
+    """
+    label, names = "[Фото механика к этому сообщению]", [p["id"] for p in photos]
+    if not names:
+        recent = [m for m in earlier[-PHOTO_WINDOW:] if m["role"] == "user" and m.get("images")]
+        if recent:
+            label, names = "[Фото из недавнего сообщения механика]", [p["id"] for p in recent[-1]["images"]]
+    blocks = [b for b in (uploads.image_block(n, settings.data_dir) for n in names[:uploads.MAX_PHOTOS]) if b]
+    return [{"type": "text", "text": label}, *blocks] if blocks else []
 
 
 def _usage(totals: dict, started: float, llm: LLM) -> dict:
@@ -202,6 +235,8 @@ def _unsourced(ctx: TurnContext, answer: dict) -> bool:
     """
     if not ctx.searched or answer["not_found"]:
         return False
+    if ctx.photos and answer["observations"]:
+        return False  # ответ про снимок: наблюдения по фото не нуждаются в странице руководства
     if ctx.draft or ctx.ticket or ctx.ticket_block or ctx.diagnosed_this_turn:
         return False
     return not (answer["checks"] or answer["repair"] or answer["conflicts"])

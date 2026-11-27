@@ -33,6 +33,11 @@ function bridge(): AppBridge | null {
   return (window as Window & { DigitalMechanicApp?: AppBridge }).DigitalMechanicApp ?? null;
 }
 
+/** Страница открыта внутри приложения для Android: разрешения там выдаются в настройках телефона, а не браузера */
+export function inAppShell(): boolean {
+  return bridge() !== null;
+}
+
 const SERVER: PwaState = { canInstall: false, installed: false, secure: true, ios: false, shell: false };
 
 let state: PwaState = SERVER;

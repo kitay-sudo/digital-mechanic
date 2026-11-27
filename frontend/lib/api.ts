@@ -1,4 +1,7 @@
-import type { AuditItem, Config, Draft, Fleet, ManualPage, Message, Profile, StreamEvent, TurnState, VehicleDetail } from './types';
+import type { AuditItem, Config, Draft, Fleet, ManualPage, Marks, Message, Profile, Report, StreamEvent, TurnState, VehicleDetail } from './types';
+
+/** Событие страницы: число неразобранных случаев без ответа изменилось, шапка перечитывает его */
+export const GAPS_EVENT = 'mechanic:gaps';
 
 export class ApiError extends Error {
   status: number;
@@ -46,7 +49,15 @@ export const api = {
   fleet: () => request<Fleet>('/api/fleet'),
   vehicle: (id: string) => request<VehicleDetail>(`/api/vehicles/${encodeURIComponent(id)}`),
   conversation: (id: string) =>
-    request<{ messages: Message[]; turn?: TurnState | null }>(`/api/conversations/${encodeURIComponent(id)}`),
+    request<{ messages: Message[]; turn?: TurnState | null; marks?: Marks; reports?: Record<string, Report> }>(
+      `/api/conversations/${encodeURIComponent(id)}`,
+    ),
+  /** Отметка шага «сделано» с фамилией механика: видна сменщику */
+  mark: (vehicleId: string, body: { key: string; index: number; done: boolean; author: string | null }) =>
+    request<{ marks: Marks }>(`/api/conversations/${encodeURIComponent(vehicleId)}/marks`, { method: 'PUT', ...json(body) }),
+  /** Сообщение механика в поддержку об ответе агента: попадает в журнал администратору */
+  report: (body: { message_id: string; reason: string; text: string; author: string | null }) =>
+    request<{ report: Report }>('/api/reports', { method: 'POST', ...json(body) }),
   /** Ошибка хода показана механику: сервер перестаёт о ней напоминать */
   seenTurn: (id: string) =>
     request<unknown>(`/api/conversations/${encodeURIComponent(id)}/turn`, { method: 'DELETE' }),
@@ -56,7 +67,21 @@ export const api = {
     request<Draft>(`/api/drafts/${encodeURIComponent(id)}`, { method: 'PATCH', ...json(patch) }),
   manualPage: (manualId: string, page: number) =>
     request<ManualPage>(`/api/manuals/${encodeURIComponent(manualId)}/pages/${page}`),
-  audit: (limit = 100) => request<{ items: AuditItem[] }>(`/api/audit?limit=${limit}`),
+  audit: (limit = 100) => request<{ items: AuditItem[]; gaps_open?: number }>(`/api/audit?limit=${limit}`),
+  /** Сколько случаев без ответа администратор ещё не разобрал */
+  auditGaps: () => request<{ open: number }>('/api/audit/gaps'),
+  reviewGap: (id: string, reviewed: boolean) =>
+    request<{ id: string; reviewed_at: string | null }>(`/api/audit/${encodeURIComponent(id)}/review`, {
+      method: 'POST',
+      ...json({ reviewed }),
+    }),
+  /** Распознавание фразы механика на сервере. seconds — длина записи, для журнала стоимости */
+  stt: (audio: Blob, seconds: number) =>
+    request<{ text: string }>(`/api/stt?seconds=${Math.round(seconds * 10) / 10}`, {
+      method: 'POST',
+      headers: { 'content-type': audio.type || 'audio/webm' },
+      body: audio,
+    }),
 };
 
 /** Читает поток application/x-ndjson и отдаёт события по одному. */
@@ -102,7 +127,7 @@ async function stream(path: string, init: RequestInit, onEvent: (e: StreamEvent)
 }
 
 export const chatStream = (
-  body: { vehicle_id: string; session_id: string | null; text: string; profile: Profile },
+  body: { vehicle_id: string; session_id: string | null; text: string; images?: string[]; profile: Profile },
   onEvent: (e: StreamEvent) => void,
   signal?: AbortSignal,
 ) => stream('/api/chat', { method: 'POST', ...json(body) }, onEvent, signal);
