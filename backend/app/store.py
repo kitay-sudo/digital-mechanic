@@ -72,6 +72,18 @@ def now() -> str:
     return datetime.now(timezone.utc).astimezone().isoformat(timespec="seconds")
 
 
+def _period(column: str, date_from: str | None, date_to: str | None) -> tuple[list[str], list]:
+    """Условие на период по времени ISO. Конец периода включается целиком: дата — весь день, минута — вся минута."""
+    where, args = ["1=1"], []
+    if date_from:
+        where.append(f"{column} >= ?")
+        args.append(date_from)
+    if date_to:
+        where.append(f"substr({column}, 1, {len(date_to)}) <= ?")
+        args.append(date_to)
+    return where, args
+
+
 class Store:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
@@ -80,7 +92,14 @@ class Store:
         self._lock = threading.Lock()
         with self._lock:
             self._db.executescript(SCHEMA)
+            # Кто задал вопрос в этом ходе: фильтр выгрузки стоимости по механику. В старых базах колонки нет.
+            if "author" not in {r["name"] for r in self._db.execute("PRAGMA table_info(turns)")}:
+                self._db.execute("ALTER TABLE turns ADD COLUMN author TEXT")
             self._db.commit()
+
+    def close(self) -> None:
+        with self._lock:
+            self._db.close()
 
     def _exec(self, sql: str, args: tuple = ()) -> sqlite3.Cursor:
         with self._lock:
@@ -297,9 +316,10 @@ class Store:
         return out
 
     # --- журнал модели и стоимость ---
-    def start_turn(self, vehicle_id: str, session_id: str | None) -> int:
+    def start_turn(self, vehicle_id: str, session_id: str | None, author: str | None = None) -> int:
         return self._exec(
-            "INSERT INTO turns (vehicle_id, session_id, created_at) VALUES (?,?,?)", (vehicle_id, session_id, now())
+            "INSERT INTO turns (vehicle_id, session_id, author, created_at) VALUES (?,?,?,?)",
+            (vehicle_id, session_id, author, now()),
         ).lastrowid
 
     def finish_turn(self, turn_id: int, kind: str, duration_ms: int, starts_scenario: bool) -> None:
@@ -327,6 +347,27 @@ class Store:
     def log_stt(self, model: str, seconds: float, cost_rub: float, duration_ms: int) -> None:
         self._exec("INSERT INTO stt_calls (model, seconds, cost_rub, duration_ms, created_at) VALUES (?,?,?,?,?)",
                    (model, seconds, cost_rub, duration_ms, now()))
+
+    def llm_calls(self, date_from: str | None = None, date_to: str | None = None, model: str | None = None,
+                  vehicle_id: str | None = None, mechanic: str | None = None) -> list[dict]:
+        """Вызовы модели вместе с ходом агента, для выгрузки расчёта стоимости. Период считается по времени хода."""
+        where, args = _period("t.created_at", date_from, date_to)
+        for column, value in (("c.model", model), ("t.vehicle_id", vehicle_id), ("t.author", mechanic)):
+            if value:
+                where.append(f"{column} = ?")
+                args.append(value)
+        rows = self._all(
+            "SELECT c.id, c.created_at, c.step, c.model, c.input_tokens, c.output_tokens, c.cache_read_tokens, "
+            "c.cost_rub, c.duration_ms, t.id AS turn_id, t.scenario_id, t.vehicle_id, t.session_id, t.author, t.kind "
+            "FROM llm_calls c JOIN turns t ON t.id = c.turn_id WHERE " + " AND ".join(where) + " ORDER BY c.id",
+            tuple(args),
+        )
+        return [dict(r) for r in rows]
+
+    def stt_calls(self, date_from: str | None = None, date_to: str | None = None) -> list[dict]:
+        where, args = _period("created_at", date_from, date_to)
+        return [dict(r) for r in self._all("SELECT * FROM stt_calls WHERE " + " AND ".join(where) + " ORDER BY id",
+                                           tuple(args))]
 
     def usage_summary(self, since: str | None = None) -> dict:
         """Сводка расхода модели. since: считать только ходы не раньше этого времени (ISO), чтобы

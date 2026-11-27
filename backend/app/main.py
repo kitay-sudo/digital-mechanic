@@ -18,6 +18,7 @@ from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
 from .config import get_settings
+from . import cost_export
 from .kb import render
 from .kb.index import get_index
 from .manuals import manual_by_id
@@ -375,3 +376,19 @@ async def usage_summary(since: str | None = None):
                    "usd_rate": settings.usd_rate},
         "model": state["llm"].model, "mock": state["llm"].is_mock,
     }
+
+
+@app.get("/api/usage/export.xlsx")
+async def usage_export(date_from: str | None = Query(default=None, alias="from"), to: str | None = None,
+                       model: str | None = None, vehicle_id: str | None = None, mechanic: str | None = None,
+                       vat: float | None = Query(default=None, ge=0, le=30)):
+    """Расчёт стоимости по шаблону организаторов: xlsx из журнала вызовов модели за период. vat — НДС в ценах, %."""
+    try:
+        filters = cost_export.Filters(date_from, to, model, vehicle_id, (mechanic or "").strip() or None)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    data = await asyncio.to_thread(cost_export.export, store(), get_settings(), filters, kb=state["index"].stats(),
+                                   vat=None if vat is None else vat / 100)
+    name = f"cost-calculation-{time.strftime('%Y%m%d-%H%M')}.xlsx"
+    return Response(content=data, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    headers={"Content-Disposition": f'attachment; filename="{name}"'})
