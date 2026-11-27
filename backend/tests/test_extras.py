@@ -317,3 +317,12 @@ def test_registry_texts_speak_to_mechanic():  # в реестре нет «за�
     for item in items:
         text = f"{item.get('resolution', '')} {item.get('resolution_source', '')}"
         assert "аказчик" not in text and "Q&A" not in text and "НейроДВС" not in text
+
+
+def test_usage_summary_since_with_other_timezone(store):  # запись в UTC, отбор по московскому времени
+    store._db.execute("INSERT INTO turns (vehicle_id, session_id, scenario_id, kind, duration_ms, created_at) "
+                      "VALUES ('A1', 'S-1', 1, 'chat', 10, '2026-11-27T20:40:00+00:00')")
+    store._db.commit()
+    assert store.usage_summary("2026-11-27T23:37:42+03:00")["scenarios"] == 1
+    assert store.usage_summary("2026-11-27T23:45:00+03:00")["scenarios"] == 0
+    assert store.usage_summary(None)["scenarios"] >= 1

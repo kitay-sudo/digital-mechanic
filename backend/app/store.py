@@ -366,11 +366,13 @@ class Store:
     def usage_summary(self, since: str | None = None) -> dict:
         """Сводка расхода модели. since: считать только ходы не раньше этого времени (ISO), чтобы
         в расчёт стоимости не попали отладочные прогоны на других моделях."""
-        since = since or ""
+        # Время в базе записано в часовом поясе процесса (в контейнере UTC), since может прийти с другим поясом:
+        # сравниваем через datetime() SQLite, она приводит обе стороны к UTC
+        since = since or "0001-01-01T00:00:00+00:00"
         per_step = self._all(
             "SELECT c.step, c.model, COUNT(*) AS calls, SUM(c.input_tokens) AS inp, SUM(c.output_tokens) AS outp, "
             "SUM(c.cache_read_tokens) AS cache, SUM(c.cost_rub) AS cost, COUNT(DISTINCT t.scenario_id) AS scenarios "
-            "FROM llm_calls c JOIN turns t ON t.id=c.turn_id WHERE t.created_at >= ? "
+            "FROM llm_calls c JOIN turns t ON t.id=c.turn_id WHERE datetime(t.created_at) >= datetime(?) "
             "GROUP BY c.step, c.model ORDER BY c.step", (since,)
         )
         scenarios = self._all(
@@ -378,12 +380,12 @@ class Store:
             "COALESCE(SUM(c.input_tokens),0) AS inp, COALESCE(SUM(c.output_tokens),0) AS outp, "
             "COALESCE(SUM(c.cost_rub),0) AS cost, COALESCE(SUM(c.duration_ms),0) AS ms "
             "FROM turns t LEFT JOIN llm_calls c ON c.turn_id=t.id "
-            "WHERE t.scenario_id IS NOT NULL AND t.created_at >= ? GROUP BY t.scenario_id", (since,)
+            "WHERE t.scenario_id IS NOT NULL AND datetime(t.created_at) >= datetime(?) GROUP BY t.scenario_id", (since,)
         )
         n = len(scenarios) or 1
         speech = self._all(
             "SELECT model, COUNT(*) AS calls, SUM(seconds) AS sec, SUM(cost_rub) AS cost, SUM(duration_ms) AS ms "
-            "FROM stt_calls WHERE created_at >= ? GROUP BY model", (since,)
+            "FROM stt_calls WHERE datetime(created_at) >= datetime(?) GROUP BY model", (since,)
         )
         return {
             "speech": [
