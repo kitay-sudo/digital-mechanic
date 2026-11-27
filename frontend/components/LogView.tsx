@@ -121,13 +121,13 @@ function Row({
     <div
       className={`lrow jrow${isOpen(it) ? ' gap' : ''}${selected ? ' sel' : ''}`}
       data-row
-      role="button"
       tabIndex={0}
       onClick={() => onOpen(it)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onOpen(it);
+        // Enter на строке открывает карточку; на чекбоксе и ссылке внутри строки — их собственное действие
+        if (e.key === 'Enter' && e.target === e.currentTarget) onOpen(it);
       }}
-      aria-label={`Открыть случай: ${it.question || it.answer}`}
+      title="Открыть карточку случая"
     >
       <span className="jc-sel" onClick={(e) => e.stopPropagation()}>
         {gap ? (

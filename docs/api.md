@@ -297,24 +297,67 @@ PNG страницы. С параметром `q` цитата подсвече�
 }
 ```
 
-### `GET /api/audit?limit=100`
+### `GET /api/audit`
 
-Журнал обращений: кто что спросил, что ответил агент, на какие источники сослался. Новые сверху.
+Журнал обращений целиком, постранично с сервера: кто что спросил, что ответил агент, на какие источники сослался. Новые сверху.
+
+Параметры: `page` (с 1), `page_size` (до 100; старый `limit` — размер страницы), `from`, `to` (дата `2026-11-27` — сутки по местному времени, конец включительно, или время `2026-11-27T08:00`), `vehicle_id`, `mechanic` (автор вопроса или сообщения о проблеме, без учёта регистра), `type` (`report`, `no_answer`, `kb_missing`, `ml_mismatch`, `injection`), `status` (`all`, `open` — новые и в работе, `new`, `in_work`, `reviewed`), `q` (поиск по тексту вопроса, ответа и сообщения механика).
 
 ```json
 {
   "items": [
     {
-      "id": "m_12", "created_at": "...", "vehicle_id": "T792HO98", "vehicle_title": "Урал-5557-10",
-      "session_id": "S-0043", "question": "Получи результат диагностики",
-      "kind": "verdict", "answer": "Короткий вывод агента",
+      "id": "m_12", "source": "answer", "created_at": "...", "vehicle_id": "T792HO98", "vehicle_title": "Урал-5557-10",
+      "engine_model": "ЯМЗ-236М2", "session_id": "S-0043", "question": "Получи результат диагностики",
+      "author": "Иванов", "photos": 0, "kind": "verdict", "answer": "Короткий вывод агента",
       "sources": [{"manual_id": "yamz236_re", "short": "РЭ ЯМЗ-236М2", "pdf_page": 19}],
       "tools": ["get_diagnosis", "get_vehicle_history", "search_manuals"],
       "ticket_id": null,
-      "usage": {"input_tokens": 0, "output_tokens": 0, "cost_rub": 0, "duration_ms": 0, "llm_calls": 0, "model": "..."}
+      "usage": {"input_tokens": 0, "output_tokens": 0, "cost_rub": 0, "duration_ms": 0, "llm_calls": 0, "model": "..."},
+      "report": {"reason": "Ответ неверный", "text": "...", "author": "Петров", "created_at": "..."}, "reports_count": 1,
+      "gap": {"type": "report", "label": "От механика", "title": "...", "status": "new", "status_label": "Новый", "reviewed_at": null},
+      "status": "new", "repeats": 1, "injection": false
     }
-  ]
+  ],
+  "total": 52, "page": 1, "page_size": 20, "gaps_open": 5,
+  "facets": {"vehicles": [{"vehicle_id": "T792HO98", "title": "Урал-5557-10"}], "mechanics": ["Иванов", "Петров"]}
 }
 ```
 
-`sources` без повторов. `ticket_id` заполнен у сообщения о созданной заявке.
+`sources` без повторов. `ticket_id` заполнен у сообщения о созданной заявке. Строка — группа повторов: одинаковые вопросы без ответа в руководстве по одной модели двигателя (текст сравнивается без регистра, лишних пробелов и знаков) и повторные сообщения механиков на один ответ; `repeats` — сколько раз повторилось, поля — последнего повтора. `gap` и `status` есть только у случаев, которые разбирает администратор. `id` вида `a_3` — вопрос механика администратору (`source: "admin"`, ответа агента нет). `injection` — в описании от ML-сервиса был посторонний текст.
+
+### `GET /api/audit/gaps`
+
+`{"open": 5}` — сколько случаев «новый» и «в работе» (группа повторов — один случай): число у пункта «Журнал».
+
+### `GET /api/audit/{id}`
+
+Карточка случая: поля строки журнала и `details` (`summary`, `checks`, `repair`, `limitations`, `recommendation_text`, `warnings`, `anomaly_title`), `reports` (все сообщения механиков), `occurrences` (повторы: `id`, `created_at`, `vehicle_id`, `author`), `history` (`status`, `status_label`, `comment`, `reviewer`, `at`), `comment`, `reviewer`, `updated_at`.
+
+### `POST /api/audit/status`
+
+```json
+{"ids": ["m_12", "a_3"], "status": "in_work", "comment": "Запросили производителя", "reviewer": "Сидоров"}
+```
+
+Статус `new`, `in_work` или `reviewed` у нескольких строк сразу; отмечается вся группа повторов каждой строки. `comment` не передан — комментарий прежний. `reviewer` пока приходит из интерфейса. Ответ: `{"updated": 3, "at": "...", "gaps_open": 4}`. Новое сообщение механика по разобранному ответу и новый повтор вопроса возвращают случай в «новый». Старый `POST /api/audit/{id}/review {"reviewed": true}` работает поверх статусов.
+
+### `GET /api/audit/digest?day=2026-11-27`
+
+Текст сводки администратору за день (по умолчанию сегодня) и `mode`, `time`, `sent_at`, `cases`, `open_total`. Режим уведомлений `ALERT_MODE`: `digest` (по умолчанию) — сразу на `ALERT_WEBHOOK_URL` уходят только `kb_missing`, `ml_mismatch` и сбои агента, остальное одной сводкой в `DIGEST_TIME` (18:00) по `APP_TZ` (Europe/Moscow); `instant` — всё сразу.
+
+### `POST /api/admin-messages`
+
+```json
+{"vehicle_id": "T792HO98", "text": "Нет щупа нужного размера на посту 2", "author": "Петров"}
+```
+
+Вопрос механика администратору напрямую, не к ответу агента. `vehicle_id` и `author` необязательны, `text` от 1 до 1000 символов. Ответ `{"id": "a_3", "created_at": "..."}`. В журнале — случай «От механика» без ответа агента, уведомление как у сообщения о проблеме.
+
+### `GET /api/shift-summary?from=...&to=...`
+
+Сводка смены (по умолчанию сегодня): `totals` (`questions`, `answers`, `vehicles`, `marks`, `tickets`, `open_cases` за период, `open_total` всего), `mechanics` (`name`, `questions`, `marks`, `messages`, `first_at`, `last_at`), `marks` (`vehicle_id`, `step`, `list`, `index`, `author`, `at`), `tickets` (`ticket_id`, `vehicle_id`, `created_at`, `urgency`, `conclusion`).
+
+### `GET /api/metrics?from=...&to=...`
+
+Метрики пилота за период (по умолчанию сегодня): `verdict_to_ticket` (`count`, `avg_min`, `median_min` — от первого вердикта по проверке до создания заявки), `refusals` (`answers`, `not_found`, `share`), `repeat_after_repair` (вердикты с предупреждением «Повтор после ремонта»), `verdicts`, `response` (`count`, `avg_ms`), `cost` (`total_rub`, `per_answer_rub`, `speech_rub`).
