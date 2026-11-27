@@ -1718,7 +1718,43 @@ details.fold > .fin {
   container-type: inline-size;
 }
 
+/* Подписи главных кнопок: длинные, короткие или только значки — по ширине колонки чата.
+   При крупном шрифте кнопки шире, поэтому короткие подписи и значки включаются раньше */
+.cacts .lbl-s {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .cacts .lbl-l {
+    display: none;
+  }
+
+  .cacts .lbl-s {
+    display: inline;
+  }
+}
+
 @media (min-width: 901px) {
+  @container (max-width: 860px) {
+    .cacts .lbl-l {
+      display: none;
+    }
+
+    .cacts .lbl-s {
+      display: inline;
+    }
+  }
+
+  @container (max-width: 1150px) {
+    [data-size='large'] .cacts .lbl-l {
+      display: none;
+    }
+
+    [data-size='large'] .cacts .lbl-s {
+      display: inline;
+    }
+  }
+
   @container (max-width: 700px) {
     .composer .cacts .btn {
       width: calc(48px * var(--k));
@@ -1726,7 +1762,19 @@ details.fold > .fin {
       flex: none;
     }
 
-    .composer .cacts .lbl {
+    [data-size] .composer .cacts .lbl {
+      display: none;
+    }
+  }
+
+  @container (max-width: 860px) {
+    [data-size='large'] .composer .cacts .btn {
+      width: calc(48px * var(--k));
+      padding: 0;
+      flex: none;
+    }
+
+    [data-size='large'] .composer .cacts .lbl {
       display: none;
     }
   }

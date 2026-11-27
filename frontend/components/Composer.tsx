@@ -322,8 +322,8 @@ export function Composer({
           ) : null}
         </div>
       ) : null}
-      {/* Две главные кнопки механика. В узкой колонке (открыто руководство) от них остаются значки:
-          подпись дублируют title и aria-label. На телефоне — одной строкой, одного размера */}
+      {/* Две главные кнопки механика. Места мало (крупный шрифт, открыто руководство) — подписи короче,
+          ещё меньше — остаются значки: подпись дублируют title и aria-label. На телефоне — одной строкой, одного размера */}
       <div className="cacts">
         <button
           type="button"
@@ -335,8 +335,8 @@ export function Composer({
           title="Получить результат диагностики"
         >
           <Icon name="wave-sine" />
-          <span className="lbl only-d">Получить результат диагностики</span>
-          <span className="lbl only-m">Диагностика</span>
+          <span className="lbl lbl-l">Получить результат диагностики</span>
+          <span className="lbl lbl-s">Диагностика</span>
         </button>
         <button
           type="button"
@@ -349,13 +349,13 @@ export function Composer({
           <Icon name={ticket.state === 'done' ? 'clipboard-check' : 'clipboard-list'} />
           {ticket.state === 'done' ? (
             <>
-              <span className="lbl only-d">Заявка {ticket.ticketId}</span>
-              <span className="lbl only-m m">{ticket.ticketId}</span>
+              <span className="lbl lbl-l">Заявка {ticket.ticketId}</span>
+              <span className="lbl lbl-s m">{ticket.ticketId}</span>
             </>
           ) : (
             <>
-              <span className="lbl only-d">Создать заявку</span>
-              <span className="lbl only-m">Заявка</span>
+              <span className="lbl lbl-l">Создать заявку</span>
+              <span className="lbl lbl-s">Заявка</span>
             </>
           )}
         </button>
