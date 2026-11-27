@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '@/lib/api';
-import { dateTime, int, num, plural } from '@/lib/format';
+import { dateTime, int, num } from '@/lib/format';
 import { useFitRows, usePaged } from '@/lib/paging';
 import { useSettings } from '@/lib/settings';
 import type { AuditItem, MessageKind } from '@/lib/types';
@@ -21,11 +21,11 @@ const KIND_LABEL: Record<MessageKind, string> = {
 
 const TOOL_LABEL: Record<string, string> = {
   get_diagnosis: 'диагностика',
-  get_vehicle_history: 'история',
-  search_manuals: 'поиск',
-  read_manual_page: 'страница',
-  prepare_ticket: 'черновик',
-  submit_ticket: 'отправка',
+  get_vehicle_history: 'история машины',
+  search_manuals: 'поиск в руководствах',
+  read_manual_page: 'страница руководства',
+  prepare_ticket: 'черновик заявки',
+  submit_ticket: 'отправка заявки',
 };
 
 function Sources({ item }: { item: AuditItem }) {
@@ -52,80 +52,109 @@ function toolGroups(item: AuditItem): { label: string; count: number }[] {
   return [...groups].map(([label, count]) => ({ label, count }));
 }
 
-/** Расход и инструменты: сверху время и токены числами, ниже метки инструментов. */
+/** Три колонки строки: что вызывал агент (по одному инструменту в строке), время ответа и токены числами. */
 function Usage({ item }: { item: AuditItem }) {
   const u = item.usage;
-  const tokens = u ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) : 0;
   const groups = toolGroups(item);
   return (
-    <span className="lu">
-      {u ? (
-        <span className="lu-c">
-          {u.duration_ms !== undefined ? (
-            <span>
-              <b className="m">{num(u.duration_ms / 1000, 1)}</b> с
-            </span>
-          ) : null}
-          <span>
-            <b className="m">{int(tokens)}</b> {plural(tokens, 'токен', 'токена', 'токенов')}
-          </span>
-        </span>
-      ) : null}
-      {groups.length ? (
-        <span className="lu-t">
-          {groups.map((g) => (
+    <>
+      <span className="lu">
+        {groups.length ? (
+          groups.map((g) => (
             <span key={g.label}>
               {g.label}
-              {g.count > 1 ? <b className="m">×{g.count}</b> : null}
+              {g.count > 1 ? <b className="m"> ×{g.count}</b> : null}
             </span>
-          ))}
-        </span>
-      ) : (
-        <span className="mut">без инструментов</span>
-      )}
-    </span>
+          ))
+        ) : (
+          <span className="mut">не вызывал</span>
+        )}
+      </span>
+      <span className="ln m">{u?.duration_ms !== undefined ? `${num(u.duration_ms / 1000, 1)} с` : '—'}</span>
+      <span className="ln m">{u ? int((u.input_tokens ?? 0) + (u.output_tokens ?? 0)) : '—'}</span>
+    </>
   );
 }
+
+/** Как часто журнал перечитывается с сервера, мс */
+const REFRESH_MS = 10_000;
 
 /** Журнал обращений: кто что спросил, что ответил агент и на какие страницы сослался. */
 export function LogView() {
   const [items, setItems] = useState<AuditItem[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
   // Страница не прокручивается: в таблице столько строк, сколько помещается, остальное листается
   const settings = useSettings();
   const { areaRef, pageSize } = useFitRows([settings.size, items]);
   const paged = usePaged(items ?? [], pageSize);
 
-  const load = useCallback(() => {
-    setError(null);
-    setLoading(true);
+  const [loading, setLoading] = useState(false);
+  /** Когда журнал последний раз получен с сервера */
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
+
+  /** quiet — фоновое обновление: список на экране не трогаем, пока не пришёл новый, сбой связи не показываем */
+  const load = useCallback((quiet: boolean) => {
+    if (!quiet) {
+      setError(null);
+      setLoading(true);
+    }
     api
       .audit(100)
-      .then((d) => setItems(d.items))
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+      .then((d) => {
+        setError(null);
+        setUpdatedAt(new Date().toISOString());
+        // Тот же список не перерисовываем: строки и открытая страница остаются на месте
+        setItems((cur) => (cur && cur.length === d.items.length && cur.every((it, i) => it.id === d.items[i].id) ? cur : d.items));
+      })
+      .catch((e: Error) => {
+        if (!quiet) setError(e.message);
+      })
+      .finally(() => {
+        if (!quiet) setLoading(false);
+      });
   }, []);
 
-  useEffect(load, [load]);
+  // Журнал обновляется сам в фоне: раз в REFRESH_MS, пока вкладка на экране, и сразу при возврате на неё.
+  // Кнопка «Обновить» остаётся для обновления вручную
+  useEffect(() => {
+    load(false);
+    const refresh = () => {
+      if (document.visibilityState === 'visible') load(true);
+    };
+    const timer = window.setInterval(refresh, REFRESH_MS);
+    document.addEventListener('visibilitychange', refresh);
+    return () => {
+      window.clearInterval(timer);
+      document.removeEventListener('visibilitychange', refresh);
+    };
+  }, [load]);
 
   return (
     <div className="body fit">
-      {/* Отдельной полосы под шапкой нет: название, число обращений и обновление стоят в панели таблицы */}
+      {/* Отдельной полосы под шапкой нет: название, число обращений, время обновления и кнопка стоят в панели таблицы */}
       <div className="ftools">
         <div className="ft-t">
           <Icon name="history" size="s" />
-          <b>Журнал обращений</b>
+          {/* На телефоне панель в одну строку: длинные подписи туда не помещаются */}
+          <b>
+            Журнал<span className="only-d"> обращений</span>
+          </b>
           {items ? <span className="ft-n">{items.length}</span> : null}
         </div>
-        <button type="button" className="btn sm" onClick={load} disabled={loading}>
+        {updatedAt ? (
+          <span className="ft-hint" title="Журнал обновляется сам каждые 10 секунд">
+            <span className="only-d">обновлено </span>
+            <span className="m">{dateTime(updatedAt)}</span>
+          </span>
+        ) : null}
+        <button type="button" className="btn sm" onClick={() => load(false)} disabled={loading} aria-label="Обновить журнал" title="Обновить">
           <Icon name="refresh" size="s" className={loading ? 'spin' : ''} />
-          Обновить
+          <span className="only-d">Обновить</span>
         </button>
       </div>
       {error ? (
         <div className="box center">
-          <ErrorState text={error} onRetry={load} />
+          <ErrorState text={error} onRetry={() => load(false)} />
         </div>
       ) : !items ? (
         <div className="box center">
@@ -147,7 +176,9 @@ export function LogView() {
               <span>Вопрос</span>
               <span>Ответ</span>
               <span>Источники</span>
-              <span>Расход и инструменты</span>
+              <span>Инструменты агента</span>
+              <span className="ln">Время ответа</span>
+              <span className="ln">Токены</span>
             </div>
               {paged.rows.map((it) => (
                 <div className="lrow" key={it.id} data-row>

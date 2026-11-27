@@ -44,31 +44,31 @@ export function ManualPanel({
   const base = current?.image_url ?? `/api/manuals/${encodeURIComponent(target.manual_id)}/pages/${target.page}/image`;
   const src = target.quote ? `${base}?q=${encodeURIComponent(target.quote)}` : base;
   const go = (n: number) => onNavigate({ manual_id: target.manual_id, page: n, short: target.short });
+  // Сведения о документе не меняются от страницы к странице: пока грузится новая, показываем прежние
+  const doc = page && page.manual_id === target.manual_id ? page : null;
+  const title = doc?.title ?? '';
+  // Обозначение показываем отдельно, только если оно не повторяет название
+  const designation = doc?.designation && doc.designation !== title ? doc.designation : '';
 
   return (
     <aside className={`col manual open${leaving ? ' leaving' : ''}`}>
       <div className="handle">
         <i />
       </div>
-      <div className="hdr">
+      {/* Шапка: короткое имя и обозначение документа, под ними полное название целиком, без обрезки.
+          Номер страницы и их число стоят внизу, между кнопками листания */}
+      <div className="hdr mhdr">
         <Icon name="book-2" size="l" className="only-d" />
         <div className="grow">
-          <div className="h1" style={{ fontSize: 18, lineHeight: '24px' }}>
-            {current?.short ?? page?.short ?? target.short ?? 'Руководство'}
+          <div className="mh-top">
+            <span className="mh-short">{doc?.short ?? target.short ?? 'Руководство'}</span>
+            {designation ? <span className="mh-des m">{designation}</span> : null}
           </div>
-          <div className="sub" title={current?.title ?? page?.title ?? ''}>
-            {current?.designation ?? page?.designation ?? ''}
-          </div>
+          {title ? <div className="mh-title">{title}</div> : null}
         </div>
-        <div className="rt">
-          <span className="st m">
-            стр. PDF {target.page}
-            {pageCount ? ` / ${pageCount}` : ''}
-          </span>
-          <button type="button" className="hb" onClick={onClose} aria-label="Закрыть страницу">
-            <Icon name="x" />
-          </button>
-        </div>
+        <button type="button" className="hb" onClick={onClose} aria-label="Закрыть руководство" title="Закрыть">
+          <Icon name="x" />
+        </button>
       </div>
 
       <div className="viewer">
@@ -122,8 +122,14 @@ export function ManualPanel({
           <Icon name="arrow-left" />
           стр. {Math.max(1, target.page - 1)}
         </button>
-        <span className="st" style={{ flex: 1, textAlign: 'center' }}>
-          <span className="only-d">{target.quote ? 'источник ответа' : 'просмотр'}</span>
+        <span className="mpage">
+          страница <b className="m">{target.page}</b>
+          {pageCount ? (
+            <>
+              {' '}
+              из <b className="m">{pageCount}</b>
+            </>
+          ) : null}
         </span>
         <button type="button" className="btn" onClick={() => go(target.page + 1)} disabled={pageCount !== null && target.page >= pageCount}>
           стр. {target.page + 1}

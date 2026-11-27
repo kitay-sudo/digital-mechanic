@@ -6,6 +6,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState, type RefObje
  * Сколько строк таблицы помещается в отведённую область без прокрутки страницы.
  * Область (areaRef) занимает всё свободное место экрана. Внутри неё ищутся шапка таблицы
  * (data-head) и первая строка (data-row): по их высоте считается число строк на странице.
+ * Высота строки, при которой страница заполняет область целиком, отдаётся стилям в --fit-row-h.
  * Пересчёт идёт при изменении размера окна и при смене deps (например, размера текста).
  */
 export function useFitRows(deps: readonly unknown[] = []): { areaRef: RefObject<HTMLDivElement | null>; pageSize: number } {
@@ -18,11 +19,23 @@ export function useFitRows(deps: readonly unknown[] = []): { areaRef: RefObject<
     const row = area.querySelector<HTMLElement>('[data-row]');
     if (!row) return;
     const head = area.querySelector<HTMLElement>('[data-head]');
+    const table = row.parentElement;
+    // Строки растянуты под высоту области (см. ниже). На время замера растяжение снимается,
+    // иначе вместо собственной высоты строки измерилась бы уже растянутая
+    area.setAttribute('data-measuring', '');
     const rowH = row.getBoundingClientRect().height;
     const headH = head ? head.getBoundingClientRect().height : 0;
+    const frame = table ? table.offsetHeight - table.clientHeight : 0;
+    area.removeAttribute('data-measuring');
     if (rowH < 1) return;
-    // 2 px — рамка таблицы сверху и снизу
-    const fit = Math.max(1, Math.floor((area.clientHeight - headH - 2) / rowH));
+    const room = area.clientHeight - headH - frame;
+    const fit = Math.max(1, Math.floor(room / rowH));
+    // Остаток высоты меньше одной строки делится между строками поровну:
+    // полная страница заполняет таблицу ровно до перелистывания, без пустой полосы и второй линии.
+    // Если строк мало и каждая выросла бы больше чем на четверть, строки остаются своей высоты
+    const stretched = room / fit;
+    area.style.setProperty('--fit-row-h', `${stretched >= rowH && stretched <= rowH * 1.25 ? stretched : rowH}px`);
+    area.setAttribute('data-fit', '');
     setPageSize((cur) => (cur === fit ? cur : fit));
   }, []);
 

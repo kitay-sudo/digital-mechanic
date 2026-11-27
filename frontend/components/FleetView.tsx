@@ -135,7 +135,8 @@ export function FleetView() {
               }}
             >
               <Icon name="x" size="s" />
-              Сбросить
+              {/* На телефоне кнопка стоит в одной строке с подписью: второе слово туда не помещается */}
+              Сбросить<span className="only-d">&nbsp;фильтр</span>
             </button>
           ) : (
             <span className="ft-hint only-d">сначала те, кому нужна дефектовка</span>

@@ -638,6 +638,11 @@ a {
   white-space: nowrap;
 }
 
+/* Кнопки панели той же высоты, что поле поиска */
+.ftools .btn.sm {
+  height: calc(40px * var(--k));
+}
+
 .search {
   flex: none;
   width: calc(400px * var(--k));
@@ -1030,22 +1035,19 @@ a {
   flex: none;
 }
 
-/* Сообщение механика: просто текст справа, без рамки. Рамки остаются у ответов агента */
+/* Сообщение механика: подпись «Вы» и текст справа, без рамки. Рамки остаются у ответов агента.
+   Сверху и снизу воздуха больше, чем между ответами: запрос отделяет один разбор от другого */
 .q {
   align-self: flex-end;
   max-width: min(72%, 640px);
+  margin: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
   font-size: calc(17px * var(--k));
   line-height: calc(24px * var(--k));
   overflow-wrap: anywhere;
-}
-
-.q .mt {
-  margin-top: 4px;
-  font: calc(12px * var(--k))/calc(16px * var(--k)) var(--mono);
-  color: var(--tx3);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
 }
 
 /* Ответ агента занимает всю ширину чата: длинные шаги реже переносятся */
@@ -1064,6 +1066,12 @@ a {
   display: flex;
   align-items: center;
   gap: 6px;
+}
+
+/* Время и номер проверки в подписи отделены отступом, без точки */
+.who .tm {
+  margin-left: 6px;
+  font-family: var(--mono);
 }
 
 .card {
@@ -1402,23 +1410,47 @@ details.fold > .fin {
 
 .steps {
   list-style: none;
+  padding: 8px 0 12px;
 }
 
-/* Значок стоит у заголовка шага, а не по центру всей строки */
+/* Ход разбора как маршрут: шаги идут сверху вниз, значки соединены вертикальной линией.
+   Значок стоит у заголовка шага, а не по центру всей строки */
 .steps li {
-  min-height: calc(40px * var(--k));
+  position: relative;
   display: grid;
   grid-template-columns: calc(20px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--line);
+  justify-items: start;
+  padding-bottom: 20px;
   font-size: calc(15px * var(--k));
   line-height: calc(20px * var(--k));
 }
 
+.steps li > .ti {
+  justify-self: center;
+  line-height: inherit;
+}
+
 .steps li:last-child {
-  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Отрезок от значка шага до значка следующего */
+.steps li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: calc(10px * var(--k) - 1px);
+  top: calc(20px * var(--k) + 4px);
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line2);
+}
+
+/* После выполненного шага отрезок зелёный: видно, докуда дошёл разбор */
+.steps li.ok:not(:last-child)::before {
+  background: color-mix(in srgb, var(--ok) 55%, var(--panel));
 }
 
 .steps .dt {
@@ -1712,12 +1744,41 @@ details.fold > .fin {
 
 /* ---------- Страница руководства ---------- */
 
+/* В панелях полосы прокрутки нет: содержимое у нижнего края плавно уходит в фон,
+   и видно, что его можно пролистать. В конце списка затухание стоит под содержимым и ничего не закрывает */
+.viewer,
+.sp-b,
+.csheet {
+  scrollbar-width: none;
+}
+
+.viewer::-webkit-scrollbar,
+.sp-b::-webkit-scrollbar,
+.csheet::-webkit-scrollbar {
+  display: none;
+}
+
+.viewer::after,
+.sp-b::after {
+  content: '';
+  display: block;
+  position: sticky;
+  bottom: 0;
+  height: 40px;
+  pointer-events: none;
+}
+
 .viewer {
   flex: 1;
   min-height: 0;
   overflow: auto;
-  padding: 16px;
+  padding: 16px 16px 0;
   background: var(--panel2);
+}
+
+.viewer::after {
+  margin: 0 -16px;
+  background: linear-gradient(to bottom, transparent, var(--panel2));
 }
 
 .viewer img {
@@ -1725,14 +1786,73 @@ details.fold > .fin {
   width: 100%;
   height: auto;
   background: #fbfaf5;
-  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.14);
+  outline: 1px solid rgba(0, 0, 0, 0.14);
 }
 
 .viewer img.pending {
   height: 0;
   visibility: hidden;
   background: transparent;
-  box-shadow: none;
+  outline: none;
+}
+
+/* Кнопки листания стоят по краям страницы руководства: отступы строки те же, что у области просмотра */
+.col.manual .ftr {
+  padding: 0 16px;
+}
+
+/* Номер страницы и их число: по центру между кнопками листания */
+.mpage {
+  flex: 1;
+  text-align: center;
+  font-size: calc(14px * var(--k));
+  color: var(--tx2);
+  white-space: nowrap;
+}
+
+.mpage b {
+  font-weight: 600;
+  color: var(--tx);
+}
+
+/* Шапка руководства: высота по содержимому, полное название документа переносится и не обрезается */
+.hdr.mhdr {
+  height: auto;
+  min-height: 72px;
+  align-items: flex-start;
+  padding: 14px 16px;
+}
+
+.mhdr > .ti {
+  margin-top: 2px;
+  color: var(--tx3);
+}
+
+.mh-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 12px;
+}
+
+.mh-short {
+  font-size: calc(18px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+}
+
+.mh-des {
+  font-size: calc(13px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx3);
+}
+
+.mh-title {
+  margin-top: 2px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx2);
+  overflow-wrap: anywhere;
 }
 
 [data-theme='dark'] .viewer img {
@@ -2089,7 +2209,20 @@ details.fold > .fin {
   }
 
   .viewer {
-    padding: 12px;
+    padding: 12px 12px 0;
+  }
+
+  .viewer::after {
+    margin: 0 -12px;
+  }
+
+  .col.manual .ftr {
+    padding: 0 12px;
+  }
+
+  .hdr.mhdr {
+    min-height: 64px;
+    padding: 10px 12px;
   }
 }
 
@@ -2136,7 +2269,6 @@ details.fold > .fin {
   background: var(--panel);
   border: 1px solid var(--line2);
   border-bottom: none;
-  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
   overflow: hidden;
 }
 
@@ -2159,11 +2291,18 @@ details.fold > .fin {
 /* На компьютере и планшете настройки в два столбца, на телефоне в один */
 .sp-b {
   overflow: auto;
-  padding: 16px 20px 20px;
+  padding: 16px 20px 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: start;
   gap: 16px 20px;
+}
+
+/* Затухание у нижнего края: строка сетки на всю ширину, поднята на высоту отступа между строками */
+.sp-b::after {
+  grid-column: 1 / -1;
+  margin: -16px -20px 0;
+  background: linear-gradient(to bottom, transparent, var(--panel));
 }
 
 /* Какая модель отвечает: строка на всю ширину внизу панели */
@@ -2421,10 +2560,21 @@ button.sp-link {
 .lrow {
   display: grid;
   grid-template-columns:
-    calc(112px * var(--k)) calc(180px * var(--k)) minmax(140px, 1fr) minmax(200px, 1.5fr)
-    calc(220px * var(--k)) calc(240px * var(--k));
+    calc(100px * var(--k)) calc(150px * var(--k)) minmax(120px, 1fr) minmax(160px, 1.5fr)
+    calc(210px * var(--k)) calc(176px * var(--k)) calc(92px * var(--k)) calc(72px * var(--k));
   column-gap: 16px;
-  padding: 0 16px 0 20px;
+  padding: 0 20px;
+}
+
+/* Числовые колонки: время ответа и токены выровнены по правому краю, чтобы сравнивать строки */
+.lhead .ln,
+.lrow .ln {
+  text-align: right;
+}
+
+.lrow .ln {
+  font-size: calc(14px * var(--k));
+  white-space: nowrap;
 }
 
 .lhead {
@@ -2511,49 +2661,22 @@ button.sp-link {
   color: var(--tx3);
 }
 
-/* Расход и инструменты: сверху время и токены, числа яркие, единицы приглушены; ниже метки инструментов */
+/* Инструменты агента: по одному в строке, повторные вызовы счётчиком */
 .lu {
   display: flex;
   flex-direction: column;
-  gap: 6px;
   font-size: calc(13px * var(--k));
   line-height: calc(18px * var(--k));
-  color: var(--tx3);
-}
-
-.lu-c {
-  display: flex;
-  gap: 16px;
-  white-space: nowrap;
-}
-
-.lu-c b {
-  font-size: calc(14px * var(--k));
-  font-weight: 600;
-  color: var(--tx);
-}
-
-.lu-t {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-}
-
-.lu-t > span {
-  height: calc(22px * var(--k));
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 7px;
-  border: 1px solid var(--line);
-  border-radius: 4px;
-  background: var(--panel2);
-  font-size: calc(12px * var(--k));
   color: var(--tx2);
-  white-space: nowrap;
 }
 
-.lu-t b {
+.lu > span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lu b {
   font-weight: 600;
   color: var(--tx);
 }
@@ -2579,7 +2702,11 @@ button.sp-link {
 
   .sp-b {
     grid-template-columns: minmax(0, 1fr);
-    padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
+    padding: 16px 16px env(safe-area-inset-bottom);
+  }
+
+  .sp-b::after {
+    margin: -16px -16px 0;
   }
 
   /* Голос на телефоне: крупная залитая кнопка, поле и отправка той же высоты */
@@ -3250,7 +3377,6 @@ button.sp-link {
   border: 1px solid var(--line2);
   border-width: 1px 0 0;
   border-radius: 12px 12px 0 0;
-  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
   touch-action: none;
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
@@ -3588,7 +3714,6 @@ button.sp-link {
   background: var(--panel);
   border: 1px solid var(--line2);
   border-bottom: none;
-  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
 }
 
 .pop-t {
@@ -4214,15 +4339,17 @@ button.sp-link {
   flex-direction: column;
 }
 
-/* Таблица занимает область целиком: остаток высоты меньше строки остаётся внутри её рамки,
-   и перелистывание стоит вплотную под таблицей, без пустой полосы между ними */
+/* Таблица занимает область целиком, перелистывание стоит вплотную под ней.
+   У последней строки своей линии нет: линию над перелистыванием даёт рамка таблицы, поэтому линия одна */
 .body.fit > .fit-area > .ftable {
   flex: 1 0 auto;
 }
 
-.body.fit > .fit-area > .ftable > .frow:last-child,
-.body.fit > .fit-area > .ftable > .lrow:last-child {
-  border-bottom: 1px solid var(--line);
+/* Строки чуть растянуты, чтобы полная страница заполняла таблицу ровно до перелистывания.
+   Высоту считает lib/paging.ts; на время замера растяжение снято */
+.body.fit > .fit-area[data-fit]:not([data-measuring]) > .ftable > [data-row] {
+  height: var(--fit-row-h);
+  min-height: 0;
 }
 
 .body.fit > .center {
@@ -4366,7 +4493,8 @@ button.sp-link {
   }
 
   /* Инструменты и расход на телефоне не показываем: главное — вопрос, ответ и источники */
-  .lrow[data-row] .lu {
+  .lrow[data-row] .lu,
+  .lrow[data-row] .ln {
     display: none;
   }
 }

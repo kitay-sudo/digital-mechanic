@@ -779,11 +779,14 @@ export function MessageView({
   if (m.role === 'user') {
     return (
       <div className="q">
-        {m.text}
-        <div className="mt">
-          {m.session_id ? <span>{m.session_id}</span> : null}
-          <span>{timeShort(m.created_at)}</span>
+        {/* Подпись отправителя, как у ответов агента: видно, что это запрос механика */}
+        <div className="who">
+          <Icon name="user" size="s" />
+          Вы
+          <span className="tm">{timeShort(m.created_at)}</span>
+          {m.session_id ? <span className="tm">{m.session_id}</span> : null}
         </div>
+        <div>{m.text}</div>
       </div>
     );
   }
@@ -832,7 +835,8 @@ export function MessageView({
     <div className="a">
       <div className="who">
         <Icon name="engine" size="s" />
-        Цифровой механик · {timeShort(m.created_at)}
+        Цифровой механик
+        <span className="tm">{timeShort(m.created_at)}</span>
       </div>
       {body}
     </div>
