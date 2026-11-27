@@ -1,8 +1,10 @@
 'use client';
 
-import { type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from 'react';
+import { type CSSProperties, type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { MAX_PHOTOS, photoFromFile } from '@/lib/photos';
+import { usePresence } from '@/lib/presence';
+import { sounds } from '@/lib/sounds';
 import { serverVoiceSupported, useServerVoice } from '@/lib/voice';
 import { Icon } from './Icon';
 
@@ -53,6 +55,16 @@ function voiceErrorText(code: string | undefined): string | null {
 /** Язык распознавания речи: система работает только на русском. */
 const SPEECH_LANG = 'ru-RU';
 
+/** Сколько висит сообщение над панелью ввода; полоса внизу показывает, сколько осталось */
+const NOTE_MS = 6000;
+
+/** Сообщение от экрана чата: успех («отправлено»), подсказка или ошибка. id — чтобы одинаковый текст показался снова */
+export interface Flash {
+  id: number;
+  kind: 'ok' | 'info' | 'err';
+  text: string;
+}
+
 /** Кнопка «Создать заявку» в панели ввода: доступна, недоступна с причиной или заявка уже создана */
 export type TicketButton =
   | { state: 'on' }
@@ -76,6 +88,7 @@ export function Composer({
   onDiagnose,
   ticket,
   onTicket,
+  flash = null,
   onSend,
 }: {
   busy: boolean;
@@ -83,6 +96,8 @@ export function Composer({
   onDiagnose: () => void;
   ticket: TicketButton;
   onTicket: () => void;
+  /** Сообщение экрана чата: показывается здесь же, над панелью ввода */
+  flash?: Flash | null;
   onSend: (text: string, images: string[]) => void;
 }) {
   const [text, setText] = useState('');
@@ -112,6 +127,7 @@ export function Composer({
       setText(heard); // агент ещё отвечает: текст остаётся в поле
       return;
     }
+    sounds.sent();
     sendRef.current(heard, photosRef.current.map((p) => p.url));
     setText('');
     setPhotos([]);
@@ -119,6 +135,18 @@ export function Composer({
 
   const voice = useServerVoice({ onText: deliver, onError: setNotice, levelRef: rootRef });
   const recording = voice.state !== 'idle';
+
+  // Конец записи слышно: запись ушла на распознавание (по паузе в речи или по нажатию)
+  const voiceStateRef = useRef(voice.state);
+  useEffect(() => {
+    if (voiceStateRef.current === 'listening' && voice.state === 'transcribing') sounds.stop();
+    voiceStateRef.current = voice.state;
+  }, [voice.state]);
+
+  const cancelVoice = () => {
+    sounds.cancel();
+    voice.cancel();
+  };
 
   useEffect(() => {
     setBrowserVoice(Boolean(getRecognition()));
@@ -137,18 +165,41 @@ export function Composer({
     };
   }, []);
 
-  // Сообщение об ошибке и подсказка сами исчезают
+  /** Успех: «отправлено администратору» и подобное */
+  const [ok, setOk] = useState<string | null>(null);
+
+  // Сообщения экрана чата встают в тот же ряд над панелью ввода
+  useEffect(() => {
+    if (!flash) return;
+    if (flash.kind === 'err') setNotice(flash.text);
+    else if (flash.kind === 'ok') setOk(flash.text);
+    else setInfo(flash.text);
+  }, [flash]);
+
+  // Сообщения сами исчезают через NOTE_MS; полоса внизу сообщения показывает, сколько осталось
   useEffect(() => {
     if (!notice) return;
-    const timer = setTimeout(() => setNotice(null), 6000);
+    const timer = setTimeout(() => setNotice(null), NOTE_MS);
     return () => clearTimeout(timer);
   }, [notice]);
 
   useEffect(() => {
     if (!info) return;
-    const timer = setTimeout(() => setInfo(null), 6000);
+    const timer = setTimeout(() => setInfo(null), NOTE_MS);
     return () => clearTimeout(timer);
   }, [info]);
+
+  useEffect(() => {
+    if (!ok) return;
+    const timer = setTimeout(() => setOk(null), NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [ok]);
+
+  // Плавное появление и уход: ушедшее сообщение ещё LEAVE_MS остаётся на экране и гаснет
+  const noteText = notice ?? info ?? ok;
+  const noteKind = notice ? 'err' : info ? 'info' : ok ? 'ok' : null;
+  const noteView = usePresence(noteText ? `${noteKind}\u0000${noteText}` : null);
+  const [shownKind, shownText] = noteView.shown ? noteView.shown.split('\u0000') : [null, null];
 
   const submit = () => {
     if (busy || preparing || (!text.trim() && !photos.length)) return;
@@ -210,11 +261,13 @@ export function Composer({
     rec.onend = () => {
       recRef.current = null;
       setListening(false);
+      sounds.stop();
       const heard = heardRef.current.trim();
       heardRef.current = '';
       if (heard) deliver(heard);
     };
     recRef.current = rec;
+    sounds.start();
     setListening(true);
     try {
       rec.start();
@@ -232,6 +285,7 @@ export function Composer({
     }
     if (voice.state === 'idle') {
       setNotice(null);
+      sounds.start();
       void voice.start();
     } else if (voice.state === 'listening') voice.stop();
   };
@@ -275,18 +329,18 @@ export function Composer({
       }}
       onDrop={onDrop}
     >
-      {notice || info || photos.length || preparing ? (
+      {noteView.shown || photos.length || preparing ? (
         <div className="cextra">
-          {info && !notice ? (
-            <div className="vinfo" role="status">
-              <Icon name="info-circle" size="s" />
-              {info}
-            </div>
-          ) : null}
-          {notice ? (
-            <div className="verr" role="alert">
-              <Icon name="alert-circle" size="s" />
-              {notice}
+          {noteView.shown ? (
+            <div
+              key={noteView.shown}
+              className={`cnote ${shownKind === 'err' ? 'verr' : shownKind === 'ok' ? 'vok' : 'vinfo'}${noteView.leaving ? ' leaving' : ''}`}
+              role={shownKind === 'err' ? 'alert' : 'status'}
+              style={{ '--note-ms': `${NOTE_MS}ms` } as CSSProperties}
+            >
+              <Icon name={shownKind === 'err' ? 'alert-circle' : shownKind === 'ok' ? 'circle-check' : 'info-circle'} size="s" />
+              <span>{shownText}</span>
+              <i className="cnote-bar" aria-hidden />
             </div>
           ) : null}
           {photos.length || preparing ? (
@@ -429,7 +483,7 @@ export function Composer({
         />
         {/* Во время записи на месте отправки — отмена: запись выбрасывается, ничего не уходит */}
         {voice.state === 'listening' || voice.state === 'starting' ? (
-          <button type="button" className="btn ic vx" onClick={voice.cancel} aria-label="Отменить запись" title="Отменить запись">
+          <button type="button" className="btn ic vx" onClick={cancelVoice} aria-label="Отменить запись" title="Отменить запись">
             <Icon name="x" />
           </button>
         ) : (

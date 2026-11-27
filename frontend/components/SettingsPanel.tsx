@@ -195,6 +195,13 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
                 <Icon name="chevron-right" className="mut" />
               </Link>
             </>
+          ) : me?.required ? (
+            // Вход в разделы администратора — отсюда же, без поиска ссылки на экране входа
+            <Link href="/admin/login" className="sp-link" onClick={onClose}>
+              <Icon name="shield-lock" />
+              <span>Вход администратора</span>
+              <Icon name="chevron-right" className="mut" />
+            </Link>
           ) : null}
           {config ? (
             <div className="sp-model" title="Модель, которая отвечает механику">

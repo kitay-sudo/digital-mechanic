@@ -5,6 +5,7 @@ import { dateTime, num } from '@/lib/format';
 import type { ManualTarget, Session, VehicleDetail } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
+import { Parts } from './Parts';
 import { historyHref } from './VehicleHistory';
 
 /** Боковая панель чата: двигатель с руководствами, проверка в чате и переходы к истории машины. */
@@ -44,7 +45,7 @@ export function VehiclePanel({
             {vehicle.title} <span className="m">{vehicle.vehicle_id}</span>
           </div>
           <div className="sub">
-            <span className="m">{vehicle.garage_no}</span> · {vehicle.vehicle_type}
+            <Parts items={[<span className="m">{vehicle.garage_no}</span>, vehicle.vehicle_type]} />
           </div>
         </div>
         <div className="rt only-m">

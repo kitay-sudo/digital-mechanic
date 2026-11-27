@@ -1,15 +1,16 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { StreamLostError, api, chatStream, confirmDraftStream, turnStream } from '@/lib/api';
-import { dateTime } from '@/lib/format';
+import { dateTime, num } from '@/lib/format';
 import { usePresence } from '@/lib/presence';
 import { logout } from '@/lib/auth';
 import { profileOf, useSettings } from '@/lib/settings';
 import type { ManualTarget, Marks, Message, Report, Session, Step, StreamEvent, VehicleDetail } from '@/lib/types';
-import { Composer, type TicketButton } from './Composer';
+import { Composer, type Flash, type TicketButton } from './Composer';
 import { Icon } from './Icon';
+import { Parts } from './Parts';
 import { ManualPanel } from './ManualPanel';
 import { MessageView, PendingSteps } from './MessageView';
 import { sameTarget } from './RefChip';
@@ -100,9 +101,14 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   /** Панель «Кто работает» (смена механика) и панель сообщения в поддержку */
   const [whoOpen, setWhoOpen] = useState(false);
   const [reportFor, setReportFor] = useState<string | null>(null);
+  /** Сообщение над панелью ввода: успех или мелкая ошибка, само исчезает */
+  const [flash, setFlash] = useState<Flash | null>(null);
+  const say = useCallback((kind: Flash['kind'], text: string) => setFlash({ id: Date.now(), kind, text }), []);
   /** Вопрос администратору не по конкретному ответу */
   const [adminOpen, setAdminOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
+  /** Колонка чата: высоты стеклянных шапки и панели ввода пишутся в неё (--hdr-h, --cmp-h), переписка уходит под них */
+  const colRef = useRef<HTMLElement>(null);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
   const manualView = usePresence(manual);
   const sideView = usePresence(sideOpen ? true : null);
@@ -267,7 +273,9 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
       el.scrollTop = el.scrollHeight;
       return;
     }
-    el.scrollTop += node.getBoundingClientRect().top - el.getBoundingClientRect().top - CHAT_TOP_GAP;
+    // Шапка стеклянная и лежит поверх переписки: вопрос встаёт сразу под ней
+    const header = colRef.current?.querySelector<HTMLElement>(':scope > .hdr');
+    el.scrollTop += node.getBoundingClientRect().top - el.getBoundingClientRect().top - (header?.offsetHeight ?? 0) - CHAT_TOP_GAP;
   }, [messages, steps, busy]);
 
   const send = useCallback(
@@ -307,7 +315,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         .mark(vehicleId, { key, index, done, author: me || null })
         .then((r) => setMarks(r.marks))
         .catch((e: Error) => {
-          setMessages((list) => [...list, localNotice(`Отметка не сохранилась: ${e.message}`)]);
+          say('err', `Отметка не сохранилась: ${e.message}`);
           api.conversation(vehicleId).then((c) => setMarks(c.marks ?? {})).catch(() => undefined);
         });
     },
@@ -319,10 +327,13 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
       setReportFor(null);
       api
         .report({ message_id: messageId, reason, text, author: me || null })
-        .then((r) => setReports((cur) => ({ ...cur, [messageId]: r.report })))
-        .catch((e: Error) => setMessages((list) => [...list, localNotice(`Сообщение не отправлено: ${e.message}`)]));
+        .then((r) => {
+          setReports((cur) => ({ ...cur, [messageId]: r.report }));
+          say('ok', 'Сообщение о проблеме отправлено администратору.');
+        })
+        .catch((e: Error) => say('err', `Сообщение не отправлено: ${e.message}`));
     },
-    [me],
+    [me, say],
   );
 
   const sendAdmin = useCallback(
@@ -330,10 +341,10 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
       setAdminOpen(false);
       api
         .adminMessage({ vehicle_id: vehicleId, text, author: me || null })
-        .then(() => setMessages((list) => [...list, { ...localNotice('Сообщение отправлено администратору. Он увидит его в журнале.'), localOk: true }]))
-        .catch((e: Error) => setMessages((list) => [...list, localNotice(`Сообщение не отправлено: ${e.message}`)]));
+        .then(() => say('ok', 'Сообщение отправлено администратору. Он увидит его в журнале.'))
+        .catch((e: Error) => say('err', `Сообщение не отправлено: ${e.message}`));
     },
-    [me, vehicleId],
+    [me, say, vehicleId],
   );
 
   useEffect(() => {
@@ -349,17 +360,74 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   }, [whoOpen, reportFor, adminOpen]);
 
   // Повторное нажатие на ту же ссылку закрывает страницу руководства
+  /**
+   * Открытие и закрытие руководства меняет ширину колонки чата: текст переносится иначе и уезжает.
+   * Перед этим запоминаем, где на экране нажатая ссылка (или верхнее сообщение), после — возвращаем её на то же место.
+   */
+  const pressedRef = useRef<Element | null>(null);
+  const anchorRef = useRef<{ el: Element; top: number } | null>(null);
+  const rememberPlace = useCallback(() => {
+    const chat = chatRef.current;
+    if (!chat) return;
+    const box = chat.getBoundingClientRect();
+    const pressed = pressedRef.current;
+    const visible = (el: Element) => {
+      const r = el.getBoundingClientRect();
+      return r.bottom > box.top && r.top < box.bottom;
+    };
+    let el: Element | null = pressed && chat.contains(pressed) && visible(pressed) ? pressed : null;
+    if (!el) el = [...chat.querySelectorAll('[data-mid]')].find(visible) ?? null;
+    anchorRef.current = el ? { el, top: el.getBoundingClientRect().top } : null;
+  }, []);
+
   const openManual = useCallback((target: ManualTarget) => {
+    rememberPlace();
     setManual((cur) => (sameTarget(cur, target) ? null : target));
     setSideOpen(false);
   }, []);
+
+  const withManual = Boolean(manualView.shown);
+
+  // Переписка прокручивается под стеклянными шапкой и панелью ввода: отступы переписки — по их высоте
+  const vehicleLoaded = Boolean(vehicle);
+  useEffect(() => {
+    const col = colRef.current;
+    if (!col || typeof ResizeObserver === 'undefined') return;
+    const header = col.querySelector<HTMLElement>(':scope > .hdr');
+    const composer = col.querySelector<HTMLElement>(':scope > .composer');
+    const measure = () => {
+      if (header) col.style.setProperty('--hdr-h', `${header.offsetHeight}px`);
+      if (composer) col.style.setProperty('--cmp-h', `${composer.offsetHeight}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    if (header) observer.observe(header);
+    if (composer) observer.observe(composer);
+    return () => observer.disconnect();
+  }, [vehicleLoaded]);
+  useLayoutEffect(() => {
+    const chat = chatRef.current;
+    const anchor = anchorRef.current;
+    anchorRef.current = null;
+    if (!chat || !anchor || !anchor.el.isConnected) return;
+    chat.scrollTop += anchor.el.getBoundingClientRect().top - anchor.top;
+  }, [withManual]);
 
   if (loadError) return <ErrorState text={loadError} onRetry={loadAll} />;
   if (!vehicle) return <Loading text="Загружаю машину…" />;
 
   const session = vehicle.sessions.find((s) => s.session_id === sessionId) ?? null;
   const resume = resumeLine(messages, marks, vehicle, me);
-  const sessionLine = session ? `Проверка ${session.session_id} · ${dateTime(session.checked_at)}` : 'Проверок нет';
+  // Расход на весь чат по машине: сумма по всем ответам, в рублях — верна и при смене модели
+  const chatCost = messages.reduce((sum, m) => sum + (m.usage?.cost_rub ?? 0), 0);
+  const costPart = chatCost > 0 ? (
+    <span className="chat-cost" title="Сколько стоили ответы агента в этом чате, по всем моделям">
+      расход чата <b>{num(chatCost)} ₽</b>
+    </span>
+  ) : null;
+  const sessionLine = (
+    <Parts items={[session ? `Проверка ${session.session_id}` : 'Проверок нет', session ? dateTime(session.checked_at) : null, costPart]} />
+  );
 
   return (
     <div className={`ws${manualView.shown ? ' with-manual' : ''}`}>
@@ -368,7 +436,10 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         className={`dimmer${sideView.shown || manualView.shown ? ' open' : ''}${!sideOpen && !manual ? ' leaving' : ''}`}
         aria-label="Закрыть"
         onClick={() => {
-          if (manual) setManual(null);
+          if (manual) {
+            rememberPlace();
+            setManual(null);
+          }
           else setSideOpen(false);
         }}
       />
@@ -386,7 +457,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         }}
       />
 
-      <section className="col chatcol">
+      <section className="col chatcol" ref={colRef}>
         <div className="hdr">
           <Link href="/" className="hb only-m" aria-label="Назад к парку">
             <Icon name="arrow-left" />
@@ -398,7 +469,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
             </div>
             <div className="sub m only-d">{sessionLine}</div>
             <div className="sub m only-m">
-              {vehicle.engine_model} · {session ? `${session.session_id} · ${dateTime(session.checked_at)}` : 'проверок нет'}
+              <Parts nowrap items={[vehicle.engine_model, session ? session.session_id : 'проверок нет', session ? dateTime(session.checked_at) : null]} />
             </div>
           </div>
           <div className="rt">
@@ -420,7 +491,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           </div>
         </div>
 
-        <div className="chat" ref={chatRef}>
+        <div className="chat" ref={chatRef} onPointerDownCapture={(e) => (pressedRef.current = (e.target as Element).closest('button, a'))}>
           {messages.length === 0 && !busy ? (
             <div className="center">
               <Icon name="message-2" size="xl" />
@@ -465,13 +536,22 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           canDiagnose={Boolean(session)}
           onDiagnose={() => send(DIAGNOSE_TEXT)}
           ticket={ticketButton(messages, vehicle, session)}
+          flash={flash}
           onTicket={() => send(TICKET_TEXT)}
           onSend={send}
         />
       </section>
 
       {manualView.shown ? (
-        <ManualPanel target={manualView.shown} leaving={manualView.leaving} onNavigate={setManual} onClose={() => setManual(null)} />
+        <ManualPanel
+          target={manualView.shown}
+          leaving={manualView.leaving}
+          onNavigate={setManual}
+          onClose={() => {
+            rememberPlace();
+            setManual(null);
+          }}
+        />
       ) : null}
 
       {whoView.shown ? (

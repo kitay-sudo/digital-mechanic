@@ -22,7 +22,8 @@ export function RefChip({
       title={active ? 'Закрыть страницу руководства' : target.quote ? `Открыть страницу. Цитата: ${target.quote}` : 'Открыть страницу руководства'}
     >
       <Icon name="file-text" size="s" />
-      {label} · стр. {target.page}
+      {label}
+      <span className="pg">стр. {target.page}</span>
     </button>
   );
 }

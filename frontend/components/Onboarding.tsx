@@ -142,7 +142,8 @@ const SLIDES: Slide[] = [
           <span>Затянуть в два этапа, порядок по рисунку.</span>
           <span className="src">
             <Icon name="file-text" size="s" />
-            РЭ ЗМЗ-409 · стр. 180
+            РЭ ЗМЗ-409
+            <span className="pg">стр. 180</span>
           </span>
         </div>
       </div>

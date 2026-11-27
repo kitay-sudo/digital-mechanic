@@ -3070,22 +3070,7 @@ button.sp-link {
   line-height: calc(22px * var(--k));
 }
 
-.tin dl {
-  display: grid;
-  grid-template-columns: calc(110px * var(--k)) minmax(0, 1fr);
-  gap: 6px 16px;
-  margin-bottom: 12px;
-  max-width: 900px;
-}
 
-.tin dt {
-  color: var(--tx3);
-  font-size: calc(14px * var(--k));
-}
-
-.tin ol {
-  padding-left: 20px;
-}
 
 @media (min-width: 901px) {
   /* Гибкие только номер проверки и результат: остальным колонкам хватает своей ширины */
@@ -3199,14 +3184,6 @@ button.sp-link {
     padding: var(--sy) var(--sx);
   }
 
-  .tin dl {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
-  }
-
-  .tin dd {
-    margin-bottom: 8px;
-  }
 }
 
 /* ---------- Экран проверок: строка тенденции и график в выдвижной панели ---------- */
@@ -5193,30 +5170,288 @@ input.switch:disabled {
   cursor: not-allowed;
 }
 
-/* Шаги по порядку в выводе агента: каждый своей строкой, номер в квадрате, как у шагов проверки */
+/* Шаги по порядку в выводе агента: маршрутом, как работы в заявке */
 .sumsteps {
-  display: grid;
-  gap: 8px;
-  margin: 10px 0 0;
-  padding: 0;
-  list-style: none;
+  margin-top: 12px;
 }
 
-.sumsteps li {
+/* ---------- Маршрут: работы и шаги по порядку, номера на одной линии, как «Ход разбора» ---------- */
+
+.road {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.road > li {
+  position: relative;
   display: grid;
-  grid-template-columns: calc(28px * var(--k)) minmax(0, 1fr);
+  grid-template-columns: calc(26px * var(--k)) minmax(0, 1fr);
   column-gap: 12px;
   align-items: start;
+  padding-bottom: 16px;
 }
 
-.sumsteps .n {
-  width: calc(28px * var(--k));
-  height: calc(28px * var(--k));
+.road > li:last-child {
+  padding-bottom: 0;
+}
+
+/* Отрезок от номера шага до номера следующего */
+.road > li:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: calc(13px * var(--k) - 1px);
+  top: calc(26px * var(--k) + 4px);
+  bottom: 4px;
+  width: 2px;
+  border-radius: 1px;
+  background: var(--line2);
+}
+
+.road .n {
+  width: calc(26px * var(--k));
+  height: calc(26px * var(--k));
   display: grid;
   place-items: center;
-  border: 1px solid var(--line2);
-  border-radius: 4px;
-  font-size: calc(14px * var(--k));
+  border: 2px solid var(--acc);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--acc);
+  font-size: calc(12px * var(--k));
   font-weight: 600;
+  line-height: 1;
+}
+
+.road .tx {
+  min-width: 0;
+  padding-top: calc(1px * var(--k));
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
   color: var(--tx);
+  overflow-wrap: anywhere;
+}
+
+.road .tx .chips {
+  margin-top: 8px;
+}
+
+/* ---------- Состав заявки: таблица полей, как в карточке результата ---------- */
+
+.tdet .kv {
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.tdet .kv > div {
+  align-items: flex-start;
+}
+
+/* Значение со списком или маршрутом — блоком, а не строкой */
+.tdet .kv > div:nth-child(even) {
+  display: block;
+}
+
+.tdet .kv .plain li {
+  padding-top: 0;
+}
+
+.src.static {
+  color: var(--tx2);
+  cursor: default;
+}
+
+.src.static:hover {
+  border-color: var(--line2);
+}
+
+/* Переход в чат — строкой со стрелкой, как «Все проверки и график» */
+.tdet .tgo {
+  margin-top: 12px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.tin .tdet {
+  max-width: 980px;
+}
+
+/* В чате состав заявки внутри складки без лишних полей */
+.fin .tdet .kv {
+  border: none;
+}
+
+@media (max-width: 900px) {
+  .tdet .kv {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tdet .kv > div:nth-child(odd) {
+    min-height: 0;
+    padding-bottom: 4px;
+    border-bottom: none;
+  }
+}
+
+/* ---------- Значения в строку без точек-разделителей: отступ между ними ---------- */
+
+.parts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  column-gap: 14px;
+  row-gap: 2px;
+  min-width: 0;
+}
+
+.parts.nowrap {
+  flex-wrap: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.parts.nowrap > span {
+  white-space: nowrap;
+}
+
+.parts.nowrap > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Номер страницы в ссылке на руководство — за тонкой чертой */
+.src .pg {
+  margin-left: 2px;
+  padding-left: 8px;
+  border-left: 1px solid var(--line2);
+}
+
+/* Общий расход на чат в шапке */
+.chat-cost {
+  color: var(--tx3);
+}
+
+.chat-cost b {
+  font-weight: 600;
+  color: var(--tx2);
+}
+
+/* ---------- Сообщения над панелью ввода: плавно появляются и гаснут, полоса — сколько осталось ---------- */
+
+.cnote {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 6px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  animation: note-in var(--mo) var(--ease);
+}
+
+.cnote > .ti {
+  flex: none;
+}
+
+.cnote.leaving {
+  animation: note-out var(--mo) ease-in forwards;
+}
+
+.vok {
+  color: var(--tx);
+}
+
+.vok > .ti {
+  color: var(--ok);
+}
+
+/* Полоса обратного отсчёта: тонкая, во всю ширину сообщения, тает к правому краю */
+.cnote-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.35;
+  transform-origin: left center;
+  animation: note-timer var(--note-ms, 6s) linear forwards;
+}
+
+.vinfo .cnote-bar {
+  background: var(--acc);
+  opacity: 0.6;
+}
+
+.vok .cnote-bar {
+  background: var(--ok);
+  opacity: 0.6;
+}
+
+@keyframes note-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+@keyframes note-out {
+  to {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@keyframes note-timer {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cnote,
+  .cnote.leaving {
+    animation: none;
+  }
+}
+
+/* ---------- Стекло: шапка и панель ввода чата лежат поверх переписки, она прокручивается под ними ---------- */
+
+.chatcol {
+  position: relative;
+}
+
+.chatcol > .hdr,
+.chatcol > .composer,
+.chatcol > .composer .cextra {
+  background: color-mix(in srgb, var(--panel) 72%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.6);
+  backdrop-filter: blur(16px) saturate(1.6);
+}
+
+.chatcol > .hdr,
+.chatcol > .composer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  z-index: 6;
+}
+
+.chatcol > .hdr {
+  top: 0;
+}
+
+.chatcol > .composer {
+  bottom: 0;
+}
+
+/* Переписка на всю высоту колонки; первое и последнее сообщения не прячутся под стеклом */
+.chatcol > .chat {
+  padding-top: calc(var(--hdr-h, 72px) + 20px);
+  padding-bottom: calc(var(--cmp-h, 80px) + 20px);
+  scroll-padding-top: var(--hdr-h, 72px);
+  scroll-padding-bottom: var(--cmp-h, 80px);
 }

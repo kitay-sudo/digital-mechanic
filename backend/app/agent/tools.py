@@ -314,13 +314,13 @@ async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
     ctx.session_id = session_id
     ctx.diagnosis, ctx.assessment, ctx.diagnosed_this_turn = diagnosis, assessment, True
     ctx.store.save_analysis(ctx.vehicle["vehicle_id"], session_id, diagnosis, assessment)
-    detail = f"{via} · {diagnosis['status']}"
+    detail = f"{via}, {diagnosis['status']}"
     if diagnosis.get("anomaly_type"):
         detail += f" {diagnosis['anomaly_type']}"
     # Механику предупреждение о подложенном тексте не нужно: на вывод оно не влияет. Видно в ходе разбора
     # и в журнале администратора (флаг остаётся в сохранённом результате проверки).
     if flagged:
-        detail += f" · {INJECTION_NOTE}"
+        detail += f"; {INJECTION_NOTE}"
     await ctx.step(step_id, "get_diagnosis", title, "done", detail)
     return _dump({
         "diagnosis": {k: v for k, v in diagnosis.items() if k != "description_flagged"},
@@ -343,7 +343,7 @@ async def get_vehicle_history(ctx: TurnContext, args: dict, step_id: str) -> tup
     current = fleet.get_session(ctx.vehicle, ctx.session_id)
     trend = rules.trend(upto + ([current] if current else []))
     await ctx.step(step_id, "get_vehicle_history", title, "done",
-                   f"проверок: {len(sessions)}, заявок: {len(tickets)} · {trend['text']}")
+                   f"проверок: {len(sessions)}, заявок: {len(tickets)}; {trend['text']}")
     return _dump({
         "selected_session": ctx.session_id,
         "sessions": sessions,
@@ -379,7 +379,7 @@ async def search_manuals(ctx: TurnContext, args: dict, step_id: str) -> tuple[st
     engine = ctx.vehicle["engine_model"]
     if results:
         found = ", ".join(f"{manual_by_id(r['manual_id']).short} стр. {r['pdf_page']}" for r in results[:4])
-        await ctx.step(step_id, "search_manuals", title, "done", f"найдено фрагментов: {len(results)} · {found}")
+        await ctx.step(step_id, "search_manuals", title, "done", f"найдено фрагментов: {len(results)}; {found}")
         note = f"Поиск шёл только по руководствам двигателя {engine}."
     else:
         await ctx.step(step_id, "search_manuals", title, "done", "ничего не найдено")
@@ -563,7 +563,7 @@ async def submit_ticket(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
     draft.update(status="sent", ticket_id=response["ticket_id"])
     ctx.store.save_draft(draft)
     ctx.ticket, ctx.draft = ticket, draft
-    await ctx.step(step_id, "submit_ticket", title, "done", f"POST /tickets → 201 · {response['ticket_id']}")
+    await ctx.step(step_id, "submit_ticket", title, "done", f"POST /tickets → 201, {response['ticket_id']}")
     return _dump({"ok": True, "ticket_id": response["ticket_id"], "status": response.get("status")}), False
 
 

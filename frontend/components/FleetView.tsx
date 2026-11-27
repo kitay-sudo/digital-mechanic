@@ -11,6 +11,7 @@ import type { Fleet, FleetStatus, VehicleBrief } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
 import { Pager } from './Pager';
+import { Parts } from './Parts';
 import { ErrorState, Loading } from './States';
 
 const TILES: { key: FleetStatus; label: string; hint: string; cls: string; icon: string }[] = [
@@ -44,11 +45,16 @@ function Row({ v }: { v: VehicleBrief }) {
       </span>
       <span className="d">{ticket ? <span className="m">{ticket}</span> : <span className="mut">—</span>}</span>
       <span className="m2">
-        {v.title} · {v.engine_model}
+        <Parts nowrap items={[v.title, v.engine_model]} />
       </span>
       <span className="m2 r">
-        {v.priority ? <PriorityBadge priority={v.priority} /> : v.needs_recheck ? 'повторить запись' : s ? dateTime(s.checked_at) : ''}
-        {ticket ? ` · ${ticket}` : ''}
+        <Parts
+          nowrap
+          items={[
+            v.priority ? <PriorityBadge priority={v.priority} /> : v.needs_recheck ? 'повторить запись' : s ? dateTime(s.checked_at) : null,
+            ticket,
+          ]}
+        />
       </span>
     </Link>
   );
@@ -111,7 +117,7 @@ export function FleetView() {
               <span>
                 <span className="lbl">{t.label}</span>
                 <span className="hint">
-                  {t.key === 'attention' && summary.recheck ? `${t.hint} · повторить запись: ${summary.recheck}` : t.hint}
+                  {t.key === 'attention' && summary.recheck ? `${t.hint}, повторить запись: ${summary.recheck}` : t.hint}
                 </span>
               </span>
               <Icon name={t.icon} size="l" />

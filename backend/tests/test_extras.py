@@ -336,18 +336,14 @@ def test_stt_drops_prompt_echo():  # на записи без речи серв�
     assert stt.clean(question) == question
 
 
-def test_follow_up_without_repeated_steps_is_accepted():  # «что в итоге делать» после вердикта со ссылками
+def test_follow_up_answer_rules():  # «что в итоге делать» без поиска принимается, новый вопрос с поиском — только со страницами
     from types import SimpleNamespace
 
     from app.agent.loop import _unsourced
 
-    earlier = [{"role": "assistant", "session_id": "S-1", "answer": {"checks": [{"text": "шаг", "refs": [{}]}]}}]
-    store = SimpleNamespace(messages=lambda vehicle_id: earlier)
-    ctx = SimpleNamespace(searched=True, photos=[], draft=None, ticket=None, ticket_block=None, diagnosed_this_turn=False,
-                          store=store, vehicle={"vehicle_id": "A1"}, session_id="S-1")
+    ctx = SimpleNamespace(searched=False, photos=[], draft=None, ticket=None, ticket_block=None, diagnosed_this_turn=False)
     answer = {"summary": "Сначала шаг 1 из проверок выше, затем шаг 3.", "checks": [], "repair": [],
               "conflicts": [], "not_found": False, "observations": []}
     assert not _unsourced(ctx, answer)
-    # По другой проверке шагов ещё не было — ответ без ссылок по-прежнему не принимается
-    ctx.session_id = "S-2"
+    ctx.searched = True  # искал в руководствах, а страниц в ответе нет — так механику не показываем
     assert _unsourced(ctx, answer)

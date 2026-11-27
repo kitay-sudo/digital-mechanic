@@ -23,6 +23,8 @@ import type {
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
 import { RefChip, sameTarget } from './RefChip';
+import { Parts } from './Parts';
+import { Road, TicketDetails } from './TicketDetails';
 
 interface Ctx {
   vehicle: VehicleDetail;
@@ -150,12 +152,19 @@ export function PendingSteps({ steps }: { steps: Step[] }) {
   );
 }
 
-function usageLine(usage: Usage | null | undefined): string {
-  if (!usage) return '';
-  const parts = [`${int(usage.input_tokens + usage.output_tokens)} ${plural(usage.input_tokens + usage.output_tokens, 'токен', 'токена', 'токенов')}`];
-  parts.push(`${num(usage.cost_rub)} ₽`);
-  parts.push(`${num(usage.duration_ms / 1000, 1)} с`);
-  return parts.join(' · ');
+function usageLine(usage: Usage | null | undefined) {
+  if (!usage) return null;
+  const tokens = usage.input_tokens + usage.output_tokens;
+  return (
+    <Parts
+      items={[
+        `${int(tokens)} ${plural(tokens, 'токен', 'токена', 'токенов')}`,
+        `${num(usage.cost_rub)} ₽`,
+        `${num(usage.duration_ms / 1000, 1)} с`,
+        usage.mock ? 'заглушка' : null,
+      ]}
+    />
+  );
 }
 
 function StepsFold({ steps, usage }: { steps?: Step[]; usage?: Usage | null }) {
@@ -166,19 +175,23 @@ function StepsFold({ steps, usage }: { steps?: Step[]; usage?: Usage | null }) {
       <summary>
         <Icon name="chevron-right" />
         <span>
-          Ход разбора{count ? ` · ${count} ${plural(count, 'шаг', 'шага', 'шагов')}` : ''}
+          <Parts items={['Ход разбора', count ? <span className="mut">{`${count} ${plural(count, 'шаг', 'шага', 'шагов')}`}</span> : null]} />
           <span className="usub only-m">{usageLine(usage)}</span>
         </span>
-        <span className="rt">
-          {usageLine(usage)}
-          {usage?.mock ? ' · заглушка' : ''}
-        </span>
+        <span className="rt">{usageLine(usage)}</span>
       </summary>
       <div className="fin">
         {steps?.length ? <StepList steps={steps} /> : null}
         {usage ? (
           <div className="st m" style={{ marginTop: 8 }}>
-            модель {usage.model} · вызовов {usage.llm_calls} · вход {int(usage.input_tokens)} · выход {int(usage.output_tokens)}
+            <Parts
+              items={[
+                `модель ${usage.model}`,
+                `вызовов ${usage.llm_calls}`,
+                `вход ${int(usage.input_tokens)}`,
+                `выход ${int(usage.output_tokens)}`,
+              ]}
+            />
           </div>
         ) : null}
       </div>
@@ -268,14 +281,9 @@ function SummaryText({ text }: { text: string }) {
   return (
     <>
       {lead.trim() ? <div>{lead.trim()}</div> : null}
-      <ol className="sumsteps">
-        {steps.map((step, i) => (
-          <li key={i}>
-            <span className="n m">{i + 1}</span>
-            <span>{step.replace(/^\d\)\s/, '')}</span>
-          </li>
-        ))}
-      </ol>
+      <div className="sumsteps">
+        <Road items={steps.map((step) => step.replace(/^\d\)\s/, ''))} />
+      </div>
     </>
   );
 }
@@ -526,7 +534,7 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
             <div>{d.description}</div>
             <div>Проверка</div>
             <div className="m">
-              {d.session_id} · {dateTime(d.checked_at)} · {d.model_version}
+              <Parts items={[d.session_id, dateTime(d.checked_at), d.model_version]} />
             </div>
           </div>
         </div>
@@ -566,18 +574,15 @@ const URGENCY: Priority[] = ['low', 'medium', 'high'];
 function WorkList({ items, ctx, empty }: { items: AnswerItem[]; ctx: Ctx; empty: string }) {
   if (!items.length) return <span className="mut">{empty}</span>;
   return (
-    <div className="wks">
-      {items.map((it, i) => (
-        <div className="wk" key={i}>
-          <span className="n">{i + 1}</span>
-          <div>
-            <div className="tx">{it.text}</div>
-            {it.disputed ? <DisputedMark /> : null}
-            <Chips refs={it.refs} ctx={ctx} />
-          </div>
+    <Road
+      items={items.map((it, i) => (
+        <div key={i}>
+          <div>{it.text}</div>
+          {it.disputed ? <DisputedMark /> : null}
+          <Chips refs={it.refs} ctx={ctx} />
         </div>
       ))}
-    </div>
+    />
   );
 }
 
@@ -623,7 +628,13 @@ function DraftCard({ m, ctx, onConfirm }: { m: Message; ctx: Ctx; onConfirm: (dr
         <Icon name={draft.status === 'sent' ? 'clipboard-check' : 'clipboard-list'} />
         Заявка на дефектовку
         <span className="st">
-          {draft.status === 'sent' ? `отправлена${draft.ticket_id ? ' · ' + draft.ticket_id : ''}` : draft.status === 'cancelled' ? 'отменена' : 'черновик'}
+          {draft.status === 'sent' ? (
+            <Parts items={['отправлена', draft.ticket_id ? <span className="m">{draft.ticket_id}</span> : null]} />
+          ) : draft.status === 'cancelled' ? (
+            'отменена'
+          ) : (
+            'черновик'
+          )}
         </span>
         {saving ? (
           <span className="st rt">
@@ -634,16 +645,15 @@ function DraftCard({ m, ctx, onConfirm }: { m: Message; ctx: Ctx; onConfirm: (dr
       <div className="frm">
         <div className="k">Машина</div>
         <div className="v">
-          {ctx.vehicle.title} <span className="m">{draft.vehicle_id}</span> · <span className="m">{ctx.vehicle.engine_model}</span>
+          <Parts items={[ctx.vehicle.title, <span className="m">{draft.vehicle_id}</span>, <span className="m">{ctx.vehicle.engine_model}</span>]} />
         </div>
         <div className="k">Проверка</div>
         <div className="v m">
-          {draft.session_id}
-          {session ? ` · ${dateTime(session.checked_at)}` : ''}
+          <Parts items={[draft.session_id, session ? dateTime(session.checked_at) : null]} />
         </div>
         <div className="k">Тип неисправности</div>
         <div className="v">
-          <span className="m">{draft.anomaly_type}</span> · {draft.anomaly_title}
+          <Parts items={[<span className="m">{draft.anomaly_type}</span>, draft.anomaly_title]} />
         </div>
         <div className="k">Диагноз</div>
         <div className="v">
@@ -691,7 +701,13 @@ function DraftCard({ m, ctx, onConfirm }: { m: Message; ctx: Ctx; onConfirm: (dr
           {draft.status === 'draft' ? (
             <span className="sub2">Приоритет предложил агент. Его можно изменить: окончательный выбор за вами.</span>
           ) : null}
-          {draft.urgency_basis.length ? <span className="sub2">{draft.urgency_basis.join(' · ')}</span> : null}
+          {draft.urgency_basis.length ? (
+            <ul className="plain sub2">
+              {draft.urgency_basis.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
+          ) : null}
         </div>
         <div className="k">Работы</div>
         <div className="v">
@@ -761,7 +777,7 @@ function DraftCard({ m, ctx, onConfirm }: { m: Message; ctx: Ctx; onConfirm: (dr
   );
 }
 
-function TicketCard({ m }: { m: Message }) {
+function TicketCard({ m, ctx }: { m: Message; ctx: Ctx }) {
   const t = m.ticket as Ticket;
   return (
     <div className="card">
@@ -772,7 +788,7 @@ function TicketCard({ m }: { m: Message }) {
             Заявка <span className="m">{t.ticket_id}</span> создана в ТОиР
           </div>
           <div className="st m">
-            {dateTime(t.created_at)} · проверка {t.session_id} · приоритет {PRIORITY_LABEL[t.urgency]}
+            <Parts items={[dateTime(t.created_at), `проверка ${t.session_id}`, `приоритет ${PRIORITY_LABEL[t.urgency]}`]} />
           </div>
         </div>
       </div>
@@ -782,15 +798,7 @@ function TicketCard({ m }: { m: Message }) {
           Состав заявки
         </summary>
         <div className="fin">
-          <ul className="basis">
-            <li>
-              Тип неисправности: <span className="m">{t.anomaly_type}</span>
-            </li>
-            <li>Диагноз: {t.conclusion}</li>
-            <li>Работы: {t.operations.join('; ')}</li>
-            <li>Запчасти: {t.spare_parts.length ? t.spare_parts.join('; ') : 'нет'}</li>
-            <li>Источники: {t.references.map((r) => `${r.manual}, стр. ${r.pdf_page}`).join('; ')}</li>
-          </ul>
+          <TicketDetails t={t} manuals={ctx.vehicle.manuals} activeManual={ctx.activeManual} onOpenManual={ctx.onOpenManual} />
         </div>
       </details>
       <StepsFold steps={m.steps} usage={m.usage} />
@@ -867,7 +875,7 @@ export function MessageView({
   } else if (m.kind === 'ticket_draft' && m.draft) {
     body = <DraftCard m={m} ctx={ctx} onConfirm={onConfirmDraft} />;
   } else if (m.kind === 'ticket_created' && m.ticket) {
-    body = <TicketCard m={m} />;
+    body = <TicketCard m={m} ctx={ctx} />;
   } else if (m.kind === 'answer' && m.answer) {
     body = (
       <div className="card">

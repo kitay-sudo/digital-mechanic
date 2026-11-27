@@ -4,11 +4,13 @@ import Link from 'next/link';
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { PRIORITY_LABEL, QUALITY_LABEL, dateTime, num } from '@/lib/format';
-import type { Session, Ticket, VehicleDetail } from '@/lib/types';
+import type { Manual, Session, Ticket, VehicleDetail } from '@/lib/types';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
 import { ChartDrop, ChartSheet } from './ChartSheet';
 import { Pager } from './Pager';
+import { Parts } from './Parts';
+import { TicketDetails } from './TicketDetails';
 import { ErrorState, Loading } from './States';
 import { useFitRows, usePaged } from '@/lib/paging';
 import { useSettings } from '@/lib/settings';
@@ -137,7 +139,7 @@ function CheckRow({
   );
 }
 
-function TicketRow({ vehicleId, t }: { vehicleId: string; t: Ticket }) {
+function TicketRow({ vehicleId, t, manuals }: { vehicleId: string; t: Ticket; manuals: Manual[] }) {
   return (
     <details className="trec">
       <summary className="frow" data-row>
@@ -163,28 +165,7 @@ function TicketRow({ vehicleId, t }: { vehicleId: string; t: Ticket }) {
         </span>
       </summary>
       <div className="tin">
-        <dl>
-          <dt>Диагноз</dt>
-          <dd>{t.conclusion}</dd>
-          <dt>Приоритет</dt>
-          <dd>{PRIORITY_LABEL[t.urgency]}</dd>
-          <dt>Работы</dt>
-          <dd>
-            <ol>
-              {t.operations.map((o, i) => (
-                <li key={i}>{o}</li>
-              ))}
-            </ol>
-          </dd>
-          <dt>Запчасти</dt>
-          <dd>{t.spare_parts.length ? t.spare_parts.join('; ') : 'нет'}</dd>
-          <dt>Источники</dt>
-          <dd>{t.references.map((r) => `${r.manual}, стр. ${r.pdf_page}`).join('; ')}</dd>
-        </dl>
-        <Link href={chatHref(vehicleId, t.session_id)} className="btn sm">
-          <Icon name="message-2" size="s" />
-          Проверка {t.session_id} в чате
-        </Link>
+        <TicketDetails t={t} manuals={manuals} chatHref={chatHref(vehicleId, t.session_id)} />
       </div>
     </details>
   );
@@ -272,7 +253,7 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
             {vehicle.title} <span className="m">{vehicle.vehicle_id}</span>
           </div>
           <div className="sub m">
-            {vehicle.garage_no} · {vehicle.engine_model}
+            <Parts items={[vehicle.garage_no, vehicle.engine_model]} />
           </div>
         </div>
         {/* Вкладки как разделы в верхнем меню. Они заменяют запись в истории браузера: «Назад» ведёт сразу в чат */}
@@ -369,7 +350,7 @@ export function VehicleHistory({ vehicleId, tab, current }: { vehicleId: string;
                   <span>Диагноз</span>
                 </div>
                   {pagedTickets.rows.map((t) => (
-                    <TicketRow key={t.ticket_id} vehicleId={vehicleId} t={t} />
+                    <TicketRow key={`${t.ticket_id}-${t.created_at}`} vehicleId={vehicleId} t={t} manuals={vehicle.manuals} />
                   ))}
                 </div>
               </div>
