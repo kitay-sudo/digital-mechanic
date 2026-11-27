@@ -95,7 +95,7 @@ COOKIE_SECURE=1
 docker compose -f docker-compose.yml -f deploy/docker-compose.https.yml up -d --build
 ```
 
-Интерфейс и сервер открыты только для самой машины, снаружи — 80 и 443. Проверка стенда после запуска (из папки `backend` на любом компьютере):
+Интерфейс и сервер открыты только для самой машины, снаружи — 80 и 443. Если на сервере уже работает nginx с другими сайтами, Caddy не нужен: запустите `docker compose up -d` с теми же `FRONTEND_PORT` и `BACKEND_PORT`, подключите сайт из [deploy/nginx-site.conf](deploy/nginx-site.conf) и выпустите сертификат `certbot --nginx -d адрес.стенда`. Проверка стенда после запуска (из папки `backend` на любом компьютере):
 
 ```bash
 uv run python -m eval.smoke --web https://адрес.стенда --key ключ_из_INTEGRATION_API_KEYS --mechanic Иванов --pin 1111
