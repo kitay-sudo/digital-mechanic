@@ -294,10 +294,8 @@ export function CaseSheet({
                     <>
                       Изменил {who ?? 'без фамилии'} <span className="m">{dateTime(card.updated_at)}</span>
                     </>
-                  ) : settings.mechanic.trim() ? (
-                    <>Решение подпишется фамилией из настроек: {settings.mechanic.trim()}</>
                   ) : (
-                    <>Фамилию для подписи решения можно указать в настройках</>
+                    <>Решение подпишется: Администратор</>
                   )}
                   {card.repeats > 1 ? <span className="jc-all">отмечается вся группа повторов</span> : null}
                 </div>

@@ -7,10 +7,10 @@ from __future__ import annotations
 import re
 from datetime import date, datetime, timezone
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from . import alerts, digest, fleet, journal, shift
+from . import alerts, auth, digest, fleet, journal, shift
 from .config import get_settings
 from .store import Store
 
@@ -102,15 +102,26 @@ class StatusRequest(BaseModel):
     ids: list[str] = Field(min_length=1, max_length=200)
     status: str = Field(pattern="^(new|in_work|reviewed)$")
     comment: str | None = Field(default=None, max_length=2000)
-    # Кто разобрал. Пока имя приходит из интерфейса, позже его даст вход администратора
+    # Кто разобрал: внешняя система по ключу API передаёт имя сама, при входе администратора подпись ставит сервер
     reviewer: str | None = Field(default=None, max_length=60)
 
 
+ADMIN_SIGNATURE = "Администратор"
+
+
+def reviewer_of(request: Request, given: str | None) -> str | None:
+    """Решение администратора подписывает его вход, а не фамилия, оставшаяся в браузере от механика."""
+    session = auth.session_from_cookie(request.headers.get("cookie"))
+    if session and session.get("role") == "admin":
+        return ADMIN_SIGNATURE
+    return (given or "").strip() or None
+
+
 @router.post("/api/audit/status")
-async def audit_status(req: StatusRequest):
+async def audit_status(req: StatusRequest, request: Request):
     """Статус разбора у нескольких строк сразу. Отмечается вся группа повторов каждой строки."""
     ids = [_item_id(i) for i in req.ids]
-    result = journal.set_status(store(), ids, req.status, req.comment, req.reviewer)
+    result = journal.set_status(store(), ids, req.status, req.comment, reviewer_of(request, req.reviewer))
     if not result["updated"]:
         raise HTTPException(404, "Обращения не найдены")
     return {**result, "gaps_open": journal.open_count(store())}

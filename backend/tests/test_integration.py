@@ -355,3 +355,21 @@ def test_admin_login_locks_after_five_errors(secured):
         assert secured.post("/api/auth/admin", json={"login": "boss", "password": "x"}).status_code == 401
     assert secured.post("/api/auth/admin", json={"login": "boss", "password": "x"}).status_code == 429
     assert secured.post("/api/auth/admin", json={"login": "boss", "password": "s3cret"}).status_code == 429
+
+
+def test_admin_decision_signed_by_login_and_shift_is_admin_only(secured):
+    # Механик пишет администратору; сводка смены и метрики ему закрыты
+    m = mechanics.repo().create({"full_name": "Петров Пётр", "pin": "2222"})
+    assert secured.post("/api/auth/mechanic", json={"mechanic_id": m["id"], "pin": "2222"}).status_code == 200
+    sent = secured.post("/api/admin-messages", json={"text": "Нет щупа на посту 2", "author": "Петров Пётр"})
+    assert sent.status_code == 200
+    assert secured.get("/api/shift-summary").status_code == 403
+    assert secured.get("/api/metrics").status_code == 403
+    secured.post("/api/auth/logout")
+    # Решение администратора подписывает его вход, даже если браузер прислал чужую фамилию
+    assert secured.post("/api/auth/admin", json={"login": "boss", "password": "s3cret"}).status_code == 200
+    r = secured.post("/api/audit/status", json={"ids": [sent.json()["id"]], "status": "reviewed", "reviewer": "Петров Пётр"})
+    assert r.status_code == 200
+    card = secured.get(f"/api/audit/{sent.json()['id']}").json()
+    assert card["reviewer"] == "Администратор"
+    assert secured.get("/api/shift-summary").status_code == 200

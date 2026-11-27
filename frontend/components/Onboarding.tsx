@@ -321,7 +321,7 @@ export function Onboarding() {
                 <Icon name="microphone" size="l" />
                 <div>
                   <b>Голос</b>
-                  <span>Распознаёт служба вашего браузера</span>
+                  <span>Только пока горит микрофон, звук не хранится</span>
                 </div>
               </div>
               <div className="tv-feat">
