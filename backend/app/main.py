@@ -33,7 +33,7 @@ async def lifespan(app: FastAPI):
     state["llm"] = build_llm()
     stats = state["index"].stats()
     if not stats["chunks"]:
-        log.warning("База знаний пуста. Положите PDF в %s и выполните: python -m app.kb.ingest", settings.pdf_dir)
+        log.warning("База знаний пуста (%s). Задайте MATERIALS_URL и выполните: python -m app.materials", settings.pdf_dir)
     yield
     await turns.shutdown()
 

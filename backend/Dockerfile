@@ -19,7 +19,7 @@ COPY backend/app ./app
 # Скрипты проверки качества: предполётная проверка ключа, сценарии, контрольные вопросы
 COPY backend/eval ./eval
 COPY config /srv/config
-COPY mocks/data /srv/mocks/data
+# Данные заглушек (карточки машин) в образ не входят: docker-compose подключает папку mocks/data.
 
 EXPOSE 8000
 CMD ["uv", "run", "--no-dev", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

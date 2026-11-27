@@ -1,3 +1,5 @@
 __pycache__
 .venv
 .pytest_cache
+# Данные подключаются томом из docker-compose.yml, в образ не входят
+data

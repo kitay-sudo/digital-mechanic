@@ -8,6 +8,10 @@ from fastapi.testclient import TestClient
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT)
 
+# Данные заглушек (data/*.json) в Git не входят: их берут из материалов задачи (см. README в корне).
+if not os.path.exists(os.path.join(ROOT, "data", "vehicles.json")):
+    pytest.skip("нет data/vehicles.json: данные заглушек скачиваются из материалов задачи", allow_module_level=True)
+
 from mock_ml.app import app as ml_app  # noqa: E402
 from mock_toir.app import app as toir_app  # noqa: E402
 

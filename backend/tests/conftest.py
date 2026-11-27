@@ -1,6 +1,7 @@
-"""Общая подготовка тестов: своя маленькая база знаний и подмена внешних сервисов.
+"""Общая подготовка тестов: своя маленькая база знаний, свой парк машин и подмена внешних сервисов.
 
-Текст страниц в тестовой базе придуман для тестов и не взят из руководств заказчика.
+Текст страниц в тестовой базе придуман для тестов и не взят из руководств заказчика. Парк машин в
+tests/data тоже свой: данные заглушек заказчика в репозиторий не входят, тесты от них не зависят.
 """
 from __future__ import annotations
 
@@ -11,6 +12,7 @@ from pathlib import Path
 import pytest
 
 ROOT = Path(__file__).resolve().parents[2]
+TEST_DATA = Path(__file__).resolve().parent / "data"
 
 PAGES = {
     # Руководство двигателя ЯМЗ-236М2
@@ -64,8 +66,8 @@ def environment(tmp_path, monkeypatch):
     monkeypatch.setenv("KB_DIR", str(tmp_path / "kb"))
     monkeypatch.setenv("DATA_DIR", str(tmp_path / "data"))
     monkeypatch.setenv("LLM_PROVIDER", "mock")
-    monkeypatch.setenv("FLEET_DATA_PATH", str(ROOT / "mocks" / "data" / "vehicles.json"))
-    monkeypatch.setenv("FAULT_TYPES_PATH", str(ROOT / "mocks" / "data" / "fault_types.json"))
+    monkeypatch.setenv("FLEET_DATA_PATH", str(TEST_DATA / "vehicles.json"))
+    monkeypatch.setenv("FAULT_TYPES_PATH", str(TEST_DATA / "fault_types.json"))
     monkeypatch.setenv("MANUALS_CONFIG", str(ROOT / "config" / "manuals.json"))
     registry = tmp_path / "conflicts.json"
     registry.write_text(json.dumps(KNOWN_CONFLICTS, ensure_ascii=False), encoding="utf-8")
@@ -98,7 +100,7 @@ def index(environment):
 
 @pytest.fixture
 def services(monkeypatch):
-    """Подмена ML и ТОиР: ответы берутся из vehicles.json, как у заглушек заказчика."""
+    """Подмена ML и ТОиР: ответы берутся из тестового парка, как у заглушек заказчика."""
     from app import clients, fleet
 
     sent: list[dict] = []
@@ -125,7 +127,7 @@ def services(monkeypatch):
 
 
 def load_vehicles() -> list[dict]:
-    return json.loads((ROOT / "mocks" / "data" / "vehicles.json").read_text(encoding="utf-8"))["vehicles"]
+    return json.loads((TEST_DATA / "vehicles.json").read_text(encoding="utf-8"))["vehicles"]
 
 
 os.environ.setdefault("LLM_PROVIDER", "mock")

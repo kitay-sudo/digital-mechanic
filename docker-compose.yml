@@ -1,14 +1,21 @@
 # Запуск всего продукта одной командой:  docker compose up --build
-# Перед первым запуском положите PDF руководств в knowledge/pdf и соберите индекс (см. README).
+# Материалы заказчика (PDF руководств, данные заглушек) в Git не входят. Перед первым запуском
+# задайте MATERIALS_URL в .env и скачайте их, индекс соберётся там же (см. README):
+#   docker compose build
+#   docker compose run --rm --no-deps backend uv run --no-dev python -m app.materials
 services:
   mock-ml:
     build: ./mocks
     command: uvicorn mock_ml.app:app --host 0.0.0.0 --port 8001
+    volumes:
+      - ./mocks/data:/srv/data:ro   # данные заглушек, скачиваются по MATERIALS_URL
     restart: unless-stopped
 
   mock-toir:
     build: ./mocks
     command: uvicorn mock_toir.app:app --host 0.0.0.0 --port 8002
+    volumes:
+      - ./mocks/data:/srv/data:ro
     restart: unless-stopped
 
   backend:
@@ -26,8 +33,9 @@ services:
       MOCK_ML_URL: ${MOCK_ML_URL:-http://mock-ml:8001}
       MOCK_TOIR_URL: ${MOCK_TOIR_URL:-http://mock-toir:8002}
     volumes:
-      - ./knowledge:/knowledge   # PDF руководств и индекс, в Git не входят
-      - ./data:/data             # чат, заявки, журнал стоимости
+      - ./knowledge:/knowledge           # PDF руководств и индекс, в Git не входят
+      - ./mocks/data:/srv/mocks/data     # карточки машин из материалов заказчика, в Git не входят
+      - ./data:/data                     # чат, заявки, журнал стоимости
     depends_on: [mock-ml, mock-toir]
     ports:
       - "${BACKEND_PORT:-8000}:8000"

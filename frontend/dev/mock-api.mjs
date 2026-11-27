@@ -9,7 +9,7 @@ const sess = (id, day, status, type, title, score, conf, q, desc) => ({
   session_id: id, checked_at: iso(day, 8 + (day % 9), (day * 7) % 60), status, anomaly_type: type, anomaly_title: title,
   anomaly_score: score, confidence: conf, signal_quality: q, description: desc, ticket_id: null,
 });
-const OK = 'Признаков неисправности в записи не найдено';
+const OK = 'Звук работы двигателя ровный, отклонений нет';
 const MANUALS = {
   'ЯМЗ-236М2': [
     { manual_id: 'yamz236_re', designation: '236-3902150-Б РЭ', title: 'Руководство по эксплуатации двигателей ЯМЗ-236М2', short: 'РЭ ЯМЗ-236', pages: 172 },
@@ -23,14 +23,14 @@ const MANUALS = {
   'ЗМЗ-40905.10': [{ manual_id: 'zmz409_rk', designation: 'Руководство по эксплуатации, техническому обслуживанию и ремонту двигателей ЗМЗ-40904.10 и ЗМЗ-40905.10', title: 'Руководство по эксплуатации, ТО и ремонту', short: 'РК ЗМЗ-409', pages: 238 }],
 };
 const V = [
-  { vehicle_id: 'M333YK47', garage_no: 'Г-105', make: 'МАЗ', model: 'МАЗ-5337', vehicle_type: 'грузовой автомобиль', engine_model: 'ЯМЗ-236М2', fuel: 'дизель', fleet_status: 'quarantine', needs_recheck: false, priority: 'high',
+  { vehicle_id: 'M313TT77', garage_no: 'Г-105', make: 'МАЗ', model: 'МАЗ-5337', vehicle_type: 'грузовой автомобиль', engine_model: 'ЯМЗ-236М2', fuel: 'дизель', fleet_status: 'quarantine', needs_recheck: false, priority: 'high',
     sessions: [sess('S-0011', 2, 'normal', null, null, 0.21, 0.84, 'good', OK), sess('S-0012', 9, 'normal', null, null, 0.38, 0.8, 'good', OK), sess('S-0013', 14, 'anomaly', 'F02', 'Низкое давление масла', 0.64, 0.79, 'good', 'Глухой стук в нижней части блока на холостом ходу'), sess('S-0014', 20, 'anomaly', 'F02', 'Низкое давление масла', 0.81, 0.86, 'good', 'Глухой стук в нижней части блока, усиливается при сбросе оборотов')],
     trend: { direction: 'rising', text: 'Оценка отклонения растёт три проверки подряд' } },
-  { vehicle_id: 'P456AT178', garage_no: 'Г-101', make: 'ПАЗ', model: 'ПАЗ-3205', vehicle_type: 'автобус', engine_model: 'ЗМЗ-5234.10', fuel: 'бензин', fleet_status: 'attention', needs_recheck: true, priority: null,
+  { vehicle_id: 'P414TT77', garage_no: 'Г-101', make: 'ПАЗ', model: 'ПАЗ-3205', vehicle_type: 'автобус', engine_model: 'ЗМЗ-5234.10', fuel: 'бензин', fleet_status: 'attention', needs_recheck: true, priority: null,
     sessions: [sess('S-0001', 3, 'normal', null, null, 0.05, 0.81, 'good', OK), sess('S-0002', 11, 'normal', null, null, 0.13, 0.82, 'good', OK), sess('S-0003', 19, 'check_failed', null, null, null, null, 'bad', 'Запись непригодна: посторонний шум перекрывает двигатель')],
     trend: { direction: 'none', text: 'Последняя запись непригодна, динамику оценить нельзя' } },
-  { vehicle_id: 'Y652CK98', garage_no: 'Г-132', make: 'ПАЗ', model: 'ПАЗ-3206', vehicle_type: 'автобус', engine_model: 'ЗМЗ-5234.10', fuel: 'бензин', fleet_status: 'attention', needs_recheck: false, priority: 'medium',
-    sessions: [sess('S-0130', 4, 'normal', null, null, 0.18, 0.8, 'good', OK), sess('S-0131', 12, 'normal', null, null, 0.22, 0.78, 'good', OK), sess('S-0132', 21, 'anomaly', 'F08', 'Дизельная топливоподача', 0.7, 0.6, 'warning', 'Жёсткая работа с резким стуком в цилиндрах, дымный выхлоп')],
+  { vehicle_id: 'B212TT77', garage_no: 'Г-132', make: 'ПАЗ', model: 'ПАЗ-3206', vehicle_type: 'автобус', engine_model: 'ЗМЗ-5234.10', fuel: 'бензин', fleet_status: 'attention', needs_recheck: false, priority: 'medium',
+    sessions: [sess('S-0130', 4, 'normal', null, null, 0.18, 0.8, 'good', OK), sess('S-0131', 12, 'normal', null, null, 0.22, 0.78, 'good', OK), sess('S-0132', 21, 'anomaly', 'F08', 'Дизельная топливоподача', 0.7, 0.6, 'warning', 'Резкий стук в цилиндрах, дымный выхлоп')],
     trend: { direction: 'rising', text: 'Оценка выросла на последней проверке' } },
   { vehicle_id: 'K208OP54', garage_no: 'Г-118', make: 'МАЗ', model: null, vehicle_type: 'грузовой автомобиль', engine_model: 'ЯМЗ-536', fuel: 'дизель', fleet_status: 'attention', needs_recheck: false, priority: 'low',
     sessions: [sess('S-0071', 5, 'normal', null, null, 0.2, 0.83, 'good', OK), sess('S-0072', 13, 'normal', null, null, 0.25, 0.8, 'good', OK), sess('S-0073', 18, 'normal', null, null, 0.31, 0.81, 'good', OK), sess('S-0074', 22, 'anomaly', 'F04', 'Ремённый привод агрегатов', 0.55, 0.71, 'good', 'Свист в передней части двигателя при пуске')],

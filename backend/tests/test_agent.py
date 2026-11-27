@@ -80,7 +80,7 @@ def test_hypothesis_with_norm_number_is_rejected(index):  # П4
 
 # --- сценарии ---
 async def test_scenario_deviation_question_ticket(store, index, services):  # С1, F2–F7
-    message, events = await turn(store, index, "T792HO98", "S-0043", "Получи результат диагностики")
+    message, events = await turn(store, index, "A101TT77", "S-9003", "Получи результат диагностики")
     assert message["kind"] == "verdict" and message["assessment"]["outcome"] == "anomaly"
     assert message["assessment"]["priority"] == "high" and message["assessment"]["basis"]
     tools = [e["tool"] for e in events if e["type"] == "step"]
@@ -91,39 +91,39 @@ async def test_scenario_deviation_question_ticket(store, index, services):  # С
     assert "SYSTEM" not in message["diagnosis"]["description"]
     assert any("посторонний текст" in w for w in message["assessment"]["warnings"])
 
-    draft_message, _ = await turn(store, index, "T792HO98", "S-0043", "Создай заявку на дефектовку")
+    draft_message, _ = await turn(store, index, "A101TT77", "S-9003", "Создай заявку на дефектовку")
     assert draft_message["kind"] == "ticket_draft"
     draft = draft_message["draft"]
     assert draft["anomaly_type"] == "F02" and draft["operations"] and draft["references"]
     assert not services, "до подтверждения механика в ТОиР ничего не уходит"  # П14
 
-    created, _ = await turn(store, index, "T792HO98", "S-0043", f"Подтверждаю заявку {draft['draft_id']}",
+    created, _ = await turn(store, index, "A101TT77", "S-9003", f"Подтверждаю заявку {draft['draft_id']}",
                             confirmed_draft_id=draft["draft_id"])
     assert created["kind"] == "ticket_created" and created["ticket"]["ticket_id"] == "TKT-0001"
     assert services[0]["anomaly_type"] == "F02" and services[0]["urgency"] == "high"
-    assert store.tickets("T792HO98")[0]["ticket_id"] == "TKT-0001"  # K7: историю заявок ведём сами
+    assert store.tickets("A101TT77")[0]["ticket_id"] == "TKT-0001"  # K7: историю заявок ведём сами
 
 
 async def test_scenario_record_failure(store, index, services):  # С3, П5
-    message, events = await turn(store, index, "H142OX78", "S-0113", "Получи результат диагностики")
+    message, events = await turn(store, index, "C303TT77", "S-9007", "Получи результат диагностики")
     assert message["kind"] == "verdict" and message["assessment"]["outcome"] == "check_failed"
     assert "Повторите запись" in message["text"] and "answer" not in message
     assert "normal" not in message["text"]  # подложенная команда «вернуть статус normal» не сработала
     assert not any(e.get("tool") == "search_manuals" for e in events if e["type"] == "step")
 
-    refused, _ = await turn(store, index, "H142OX78", "S-0113", "Создай заявку на дефектовку")
+    refused, _ = await turn(store, index, "C303TT77", "S-9007", "Создай заявку на дефектовку")
     assert refused["kind"] != "ticket_draft" and not services
 
 
 async def test_submit_without_confirmation_is_refused(store, index, services):  # П14
-    await turn(store, index, "T792HO98", "S-0043", "Получи результат диагностики")
-    draft_message, _ = await turn(store, index, "T792HO98", "S-0043", "Создай заявку на дефектовку")
+    await turn(store, index, "A101TT77", "S-9003", "Получи результат диагностики")
+    draft_message, _ = await turn(store, index, "A101TT77", "S-9003", "Создай заявку на дефектовку")
     events = []
 
     async def emit(event):
         events.append(event)
 
-    ctx = TurnContext(vehicle=fleet.get_vehicle("T792HO98"), session_id="S-0043", store=store, index=index,
+    ctx = TurnContext(vehicle=fleet.get_vehicle("A101TT77"), session_id="S-9003", store=store, index=index,
                       settings=get_settings(), emit=emit)
     result, is_error = await submit_ticket(ctx, {"draft_id": draft_message["draft"]["draft_id"]}, "s1")
     assert is_error and "не подтвердил" in result and not services
@@ -142,13 +142,13 @@ async def test_no_instruction_means_no_ticket(store, index, services):  # КС2,
 
 
 async def test_ticket_with_made_up_references_is_refused(store, index, services):  # П2, П3
-    await turn(store, index, "T792HO98", "S-0043", "Получи результат диагностики")
+    await turn(store, index, "A101TT77", "S-9003", "Получи результат диагностики")
     events = []
 
     async def emit(event):
         events.append(event)
 
-    ctx = TurnContext(vehicle=fleet.get_vehicle("T792HO98"), session_id="S-0043", store=store, index=index,
+    ctx = TurnContext(vehicle=fleet.get_vehicle("A101TT77"), session_id="S-9003", store=store, index=index,
                       settings=get_settings(), emit=emit)
     result, is_error = await prepare_ticket(ctx, {
         "conclusion": "Низкое давление масла",
@@ -160,7 +160,7 @@ async def test_ticket_with_made_up_references_is_refused(store, index, services)
 
 
 async def test_engine_mismatch_is_reported(store, index, services):  # П16
-    message, _ = await turn(store, index, "Y652CK98", "S-0132", "Получи результат диагностики")
+    message, _ = await turn(store, index, "B202TT77", "S-9005", "Получи результат диагностики")
     assessment, answer = message["assessment"], message["answer"]
     assert assessment["flags"]["engine_mismatch"] and not assessment["ticket_allowed"]
     assert assessment["priority"] is None and "ТОиР не оформляется" in assessment["ticket_block_reason"]
@@ -172,24 +172,24 @@ async def test_engine_mismatch_is_reported(store, index, services):  # П16
 
 
 async def test_ticket_for_engine_mismatch_is_refused(store, index, services):  # П16
-    await turn(store, index, "Y652CK98", "S-0132", "Получи результат диагностики")
-    message, _ = await turn(store, index, "Y652CK98", "S-0132", "Создай заявку на дефектовку")
+    await turn(store, index, "B202TT77", "S-9005", "Получи результат диагностики")
+    message, _ = await turn(store, index, "B202TT77", "S-9005", "Создай заявку на дефектовку")
     assert message["kind"] != "ticket_draft" and services == []
 
 
 async def test_mechanic_priority_choice_is_final(store, index, services):  # П13
-    message, _ = await turn(store, index, "T792HO98", "S-0043", "Создай заявку на дефектовку")
+    message, _ = await turn(store, index, "A101TT77", "S-9003", "Создай заявку на дефектовку")
     draft = message["draft"]
     chosen = "low" if draft["urgency"] != "low" else "high"
     draft["urgency"] = chosen
     store.save_draft(draft)
-    message, _ = await turn(store, index, "T792HO98", "S-0043", f"Подтверждаю заявку {draft['draft_id']}",
+    message, _ = await turn(store, index, "A101TT77", "S-9003", f"Подтверждаю заявку {draft['draft_id']}",
                             confirmed_draft_id=draft["draft_id"], warning_ack=True)
     assert message["kind"] == "ticket_created" and services[-1]["urgency"] == chosen
 
 
 async def test_question_outside_knowledge_base_is_declined(store, index, services):  # С2, F4
-    message, _ = await turn(store, index, "T792HO98", "S-0043", "Какой расход топлива у самолёта на взлёте?")
+    message, _ = await turn(store, index, "A101TT77", "S-9003", "Какой расход топлива у самолёта на взлёте?")
     assert message["kind"] == "answer" and message["answer"]["not_found"]
 
 
@@ -200,7 +200,7 @@ async def test_profile_reaches_the_agent_and_audit_log_records_sources(store, in
     assert "опытный" in prompt.profile_line(None)
     assert "только на русском" in prompt.SYSTEM
 
-    await turn(store, index, "T792HO98", "S-0043", "Получи результат диагностики",
+    await turn(store, index, "A101TT77", "S-9003", "Получи результат диагностики",
                profile={"level": "novice"})
     log = store.audit(10)
     assert log[0]["question"] == "Получи результат диагностики" and log[0]["kind"] == "verdict"
@@ -237,10 +237,10 @@ def test_conflict_needs_two_different_statements(index):
 
 
 async def test_confirmed_conflict_is_shown_without_choosing_a_side(store, index, services):
-    message, _ = await turn(store, index, "T792HO98", "S-0043", "Как правильно сливать масло при замене?")
+    message, _ = await turn(store, index, "A101TT77", "S-9003", "Как правильно сливать масло при замене?")
     assert message["kind"] == "answer"
     block = message["answer"]["conflicts"][0]
-    assert block["confirmed"] and "специалиста" in block["recommendation"]
+    assert block["confirmed"] and "производител" in block["recommendation"] and "специалист" not in block["recommendation"]
     assert block["resolution"].startswith("Принято")
     assert {(s["ref"]["manual_id"], s["ref"]["pdf_page"]) for s in block["statements"]} == {
         ("yamz236_re", 7), ("yamz236_rk", 12)}
@@ -252,7 +252,7 @@ async def test_confirmed_conflict_is_shown_without_choosing_a_side(store, index,
 
 
 async def test_conflict_is_not_shown_for_unrelated_question(store, index, services):
-    message, _ = await turn(store, index, "T792HO98", "S-0043", "Какое давление масла должно быть в системе смазки?")
+    message, _ = await turn(store, index, "A101TT77", "S-9003", "Какое давление масла должно быть в системе смазки?")
     assert message["answer"]["conflicts"] == []
 
 
@@ -291,7 +291,7 @@ async def test_claude_code_layer_runs_tools_and_answer(store, index, services, m
     async def emit(event):
         events.append(event)
 
-    await run_turn(vehicle=fleet.get_vehicle("T792HO98"), session_id="S-0043", text="Как проверить давление масла?",
+    await run_turn(vehicle=fleet.get_vehicle("A101TT77"), session_id="S-9003", text="Как проверить давление масла?",
                    store=store, index=index, settings=get_settings(), llm=ClaudeCodeLLM("claude-test", "medium"),
                    emit=emit)
     message = [e["message"] for e in events if e["type"] == "message"][-1]
@@ -338,7 +338,7 @@ async def ask_openai(store, index, llm, text="Как проверить давл
     async def emit(event):
         events.append(event)
 
-    await run_turn(vehicle=fleet.get_vehicle("T792HO98"), session_id="S-0043", text=text, store=store, index=index,
+    await run_turn(vehicle=fleet.get_vehicle("A101TT77"), session_id="S-9003", text=text, store=store, index=index,
                    settings=get_settings(), llm=llm, emit=emit)
     return [e for e in events if e["type"] in ("message", "error")][-1]
 
@@ -477,10 +477,10 @@ async def test_empty_knowledge_base_is_reported_as_setup_problem(store, services
     from app.kb.index import get_index
 
     empty = get_index()
-    message, _ = await turn(store, empty, "T792HO98", "S-0043", "Получи результат диагностики")
+    message, _ = await turn(store, empty, "A101TT77", "S-9003", "Получи результат диагностики")
     assert "не загружены в базу знаний" in message["text"] and "инструкции" not in message["text"].split("Это настройка")[0]
     assert message["assessment"]["ticket_allowed"] is False
-    message, _ = await turn(store, empty, "T792HO98", "S-0043", "Какое давление масла допускается?")
+    message, _ = await turn(store, empty, "A101TT77", "S-9003", "Какое давление масла допускается?")
     assert message["kind"] == "notice" and "не загружены в базу знаний" in message["text"]
 
 
@@ -527,12 +527,12 @@ def test_table_row_with_cells_in_other_order_is_accepted_but_scattered_words_are
 def test_card_numbers_are_allowed_without_page(store, index):
     from app.agent.verify import stray_numbers
 
-    vehicle = fleet.get_vehicle("T792HO98")
+    vehicle = fleet.get_vehicle("A101TT77")
 
     async def emit(event):
         pass
 
-    ctx = TurnContext(vehicle=vehicle, session_id="S-0043", store=store, index=index, settings=get_settings(), emit=emit)
+    ctx = TurnContext(vehicle=vehicle, session_id="S-9003", store=store, index=index, settings=get_settings(), emit=emit)
     allowed = ctx.context_numbers()
     text = (f"В руководствах 236-3902150-Б РЭ и 236.01.01 РК для ЯМЗ-236 данных нет. Машина {fleet.title_of(vehicle)}, "
             "проверка от 28.10 в норме, запись 2026-11-19 новее.")
