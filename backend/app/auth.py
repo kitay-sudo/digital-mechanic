@@ -2,8 +2,8 @@
 
 Механик выбирает себя в списке и набирает PIN, администратор входит по логину и паролю
 (ADMIN_LOGIN, ADMIN_PASSWORD). Сессия — подписанная кука (HMAC-SHA256 на SECRET_KEY), httpOnly,
-SameSite=Lax. Только администратору: журнал (/api/audit*), расход (/api/usage*), механики и настройки
-подключений (/api/admin/*). Механику — парк, чат, руководства.
+SameSite=Lax. Только администратору: журнал (/api/audit*), расход (/api/usage*), сводка смены и метрики,
+механики и настройки подключений (/api/admin/*). Механику — парк, чат, руководства.
 
 AUTH_REQUIRED=0 выключает проверку (тесты, локальная разработка). API для внешних систем (/api/v1)
 закрыт своим ключом X-API-Key независимо от этого переключателя (api_v1.py). Действующий ключ
@@ -40,7 +40,7 @@ ADMIN_LOCK_SECONDS = 60
 # /api/v1 закрыт ключом X-API-Key (api_v1.py).
 PUBLIC = ("/api/health", "/api/config", "/api/docs", "/api/openapi.json")
 PUBLIC_PREFIXES = ("/api/auth/", "/api/v1/", "/api/docs/")
-ADMIN_PREFIXES = ("/api/audit", "/api/usage", "/api/admin/")
+ADMIN_PREFIXES = ("/api/audit", "/api/usage", "/api/admin/", "/api/shift-summary", "/api/metrics")
 
 
 def _flag(name: str, default: bool) -> bool:

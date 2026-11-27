@@ -1,0 +1,781 @@
+/*
+  Журнал обращений, карточка случая, фильтры, сводка смены.
+  Общие элементы (панель таблицы, строки журнала, панели снизу, перелистывание) — в globals.css,
+  здесь только то, что добавлено к ним. Теней и закруглённых панелей нет.
+*/
+
+/* ---------- Панель журнала ---------- */
+
+@media (min-width: 901px) {
+  /* Поиск занимает свободное место панели, но не шире 400 px */
+  .jtools .search {
+    flex: 1 1 calc(200px * var(--k));
+    width: auto;
+    min-width: calc(160px * var(--k));
+    max-width: calc(400px * var(--k));
+  }
+}
+
+.jtools .btn.sm b {
+  font-weight: 600;
+}
+
+/* Время обновления: на широком экране подписью «обновлено», на узком и на телефоне — на кнопке «Обновить» */
+.jtools .jt-time {
+  display: none;
+}
+
+@media (max-width: 1279px) {
+  .jtools .jt-hint,
+  .jtools .jt-l {
+    display: none;
+  }
+
+  .jtools .jt-time {
+    display: inline;
+  }
+}
+
+/* На узком компьютере у кнопок панели остаются значки и числа */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .jtools .jl-wide {
+    display: none;
+  }
+}
+
+.jsel {
+  gap: 10px;
+  margin-left: -16px;
+}
+
+.jsel b {
+  letter-spacing: normal;
+  text-transform: none;
+  font-size: calc(14px * var(--k));
+}
+
+/* ---------- Таблица журнала: колонка выбора слева ---------- */
+
+@media (min-width: 901px) {
+  .jtable .lhead,
+  .jtable .lrow {
+    grid-template-columns:
+      calc(24px * var(--k)) calc(118px * var(--k)) calc(150px * var(--k)) minmax(120px, 1fr) minmax(160px, 1.5fr)
+      calc(210px * var(--k)) calc(176px * var(--k)) calc(92px * var(--k)) calc(72px * var(--k));
+    padding-left: 14px;
+  }
+}
+
+/* На узком компьютере колонка инструментов агента не помещается: она есть в карточке случая */
+@media (min-width: 901px) and (max-width: 1279px) {
+  .jtable .lhead,
+  .jtable .lrow {
+    grid-template-columns:
+      calc(24px * var(--k)) calc(110px * var(--k)) calc(130px * var(--k)) minmax(100px, 1fr) minmax(140px, 1.4fr)
+      calc(160px * var(--k)) calc(84px * var(--k)) calc(64px * var(--k));
+    column-gap: 12px;
+  }
+
+  .jtable .lhead > :nth-child(7),
+  .jtable .lrow .lu {
+    display: none;
+  }
+}
+
+.jc-sel {
+  display: flex;
+  align-items: flex-start;
+  padding-top: 1px;
+}
+
+.jtable .lhead .jc-sel {
+  align-items: center;
+  padding-top: 0;
+}
+
+.jc-sel input {
+  width: calc(18px * var(--k));
+  height: calc(18px * var(--k));
+  margin: 0;
+  accent-color: var(--acc);
+  cursor: pointer;
+}
+
+.jrow {
+  cursor: pointer;
+  position: relative;
+}
+
+.jrow:hover {
+  background: var(--panel2);
+}
+
+.lrow.jrow.gap:hover {
+  background: color-mix(in srgb, var(--warn) 12%, var(--panel));
+}
+
+.lrow.jrow.sel,
+.lrow.jrow.sel:hover {
+  background: var(--acc-bg);
+}
+
+/* Значения в одной строке разделены отступом, без точек */
+.jgap:not(:first-child),
+.lkind > .jgap {
+  margin-left: 10px;
+}
+
+.jtable .lgap {
+  white-space: nowrap;
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* «повторилось N раз» — в начале второй строки ответа */
+.jrep {
+  margin-right: 8px;
+  font-weight: 600;
+  color: var(--tx);
+}
+
+.jinj {
+  margin-right: 8px;
+  color: var(--warn-tx);
+}
+
+/* Статус разбора: новый — цвет предупреждения, в работе — акцент, разобрано — приглушённо */
+.jst {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: calc(22px * var(--k));
+  padding: 0 6px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  font-size: calc(12px * var(--k));
+  line-height: 1;
+  font-weight: 500;
+  white-space: nowrap;
+  color: var(--tx3);
+  background: var(--panel);
+}
+
+.jst .ti {
+  font-size: calc(14px * var(--k));
+}
+
+.jst.st-new {
+  border-color: var(--warn);
+  color: var(--warn-tx);
+}
+
+.jst.st-in_work {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+@media (max-width: 900px) {
+  /* Панель журнала на телефоне: под поиском подпись и кнопки в одну строку, кнопки поуже */
+  .jtools .btn.sm {
+    padding: 0 10px;
+  }
+
+  .jtools .ft-t {
+    flex: 1 1 auto;
+  }
+
+  /* Карточка строки на телефоне: время, механик и статус в одну строку, выбор — в правом верхнем углу */
+  .jtable .lrow {
+    padding: 12px 52px 12px 12px;
+  }
+
+  .jtable .lrow .lt {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+
+  .jtable .lrow .lt .l2 {
+    display: inline;
+  }
+
+  .jtable .lrow .jc-sel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 52px;
+    height: 52px;
+    padding: 0;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .jtable .lrow .jc-sel input {
+    width: 22px;
+    height: 22px;
+  }
+
+  .jtable .lrow .lv .l2 {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+}
+
+/* ---------- Панели снизу: фильтры и карточка случая ---------- */
+
+/* Содержимое в один столбец и прокручивается, кнопки у нижнего края остаются на экране */
+.jsheet .sp-b {
+  flex: 1 1 auto;
+  min-height: 0;
+  grid-template-columns: minmax(0, 1fr);
+  padding-bottom: 16px;
+}
+
+.jsheet .sp-b::after {
+  margin-bottom: -16px;
+}
+
+.jf-two {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px 20px;
+}
+
+.jf-two .inp,
+.jsheet select.inp {
+  width: 100%;
+}
+
+.jdates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.jdates label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: calc(15px * var(--k));
+  color: var(--tx3);
+}
+
+.jchips {
+  margin-top: 0;
+}
+
+.jf-f {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+}
+
+/* Карточка случая шире настроек: в ней текст ответа и таблица повторов. На телефоне — во всю ширину */
+@media (min-width: 901px) {
+  .sp.jcard {
+    width: calc(800px * var(--k));
+  }
+}
+
+.jc-title {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sp-h .jc-warn {
+  color: var(--warn-tx);
+}
+
+.jcard .sp-h .jst {
+  flex: none;
+}
+
+.jc-b {
+  gap: 20px;
+}
+
+.jc-gap {
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  padding-left: 12px;
+  border-left: 4px solid var(--warn);
+  color: var(--tx2);
+}
+
+.jc-s .sp-l {
+  margin-bottom: 6px;
+}
+
+.jc-q,
+.jc-a {
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.jc-q {
+  font-weight: 600;
+}
+
+.jc-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+  margin-top: 8px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx2);
+}
+
+.jc-meta > * {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.jc-meta .ti {
+  color: var(--tx3);
+}
+
+.jc-sub {
+  font-weight: 400;
+  color: var(--tx2);
+}
+
+.jc-list {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+}
+
+.jc-li {
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  overflow-wrap: anywhere;
+}
+
+.jc-li:last-child {
+  border-bottom: none;
+}
+
+.jc-li b {
+  font-weight: 600;
+}
+
+.jc-by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 4px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+.jc-hl {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+}
+
+.jc-ol {
+  margin: 8px 0 0;
+  padding-left: 22px;
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+}
+
+.jc-ol li + li {
+  margin-top: 4px;
+}
+
+/* Ограничения ответа: приглушённо, после шагов */
+.jc-lim {
+  color: var(--tx2);
+}
+
+.jc-rec {
+  margin-top: 10px;
+  padding: 10px 14px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  white-space: pre-wrap;
+}
+
+.jc-w {
+  margin-top: 10px;
+}
+
+/* Повторы случая: таблица с подписями колонок */
+.jc-t {
+  border: 1px solid var(--line);
+}
+
+.jc-tr {
+  display: grid;
+  grid-template-columns: calc(110px * var(--k)) calc(110px * var(--k)) minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  min-height: calc(40px * var(--k));
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+  font-size: calc(14px * var(--k));
+  white-space: nowrap;
+}
+
+.jc-tr:last-child {
+  border-bottom: none;
+}
+
+.jc-tr > * {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.jc-th {
+  min-height: calc(32px * var(--k));
+  background: var(--panel2);
+  font-size: calc(12px * var(--k));
+  color: var(--tx3);
+}
+
+/* Решение по случаю: комментарий, статус и «Сохранить» у нижнего края панели */
+.jc-f {
+  flex: none;
+  padding: 12px 20px calc(12px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.pop-ta.jc-ta {
+  margin-top: 0;
+  min-height: calc(48px * var(--k));
+  padding: 12px 16px;
+}
+
+.jc-act {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.jc-act .seg.full {
+  flex: 1;
+  min-width: 0;
+}
+
+.jc-hint {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin-top: 8px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+.jc-err {
+  color: var(--crit);
+}
+
+.jc-all {
+  color: var(--tx2);
+}
+
+@media (max-width: 900px) {
+  .jf-two {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .jsheet .sp-b {
+    padding-bottom: 16px;
+  }
+
+  .jf-f,
+  .jc-f {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+
+  .jc-act {
+    flex-direction: column;
+  }
+
+  .jc-tr {
+    grid-template-columns: calc(96px * var(--k)) calc(96px * var(--k)) minmax(0, 1fr);
+    padding: 0 10px;
+  }
+}
+
+/* ---------- Сводка смены и метрики пилота ---------- */
+
+.stools .ft-t b {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sback {
+  margin-left: -16px;
+  margin-right: 8px;
+}
+
+.speriod {
+  height: calc(40px * var(--k));
+}
+
+.speriod button {
+  justify-content: center;
+}
+
+/* Сводка прокручивается целиком: она короткая, длинные списки открываются отдельным экраном */
+.sbody {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Блоки не сжимаются: сводка длиннее экрана телефона и прокручивается */
+.sbody > * {
+  flex: none;
+}
+
+.sbody > .ftools {
+  margin-bottom: -4px;
+}
+
+.ssec-h {
+  margin-bottom: 10px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tx2);
+}
+
+.sstats {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 16px;
+}
+
+/* Плитка: подпись, число, пояснение. Ссылка на журнал выглядит так же, рамка темнеет при наведении */
+.ss {
+  min-height: calc(112px * var(--k));
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 14px 18px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--line2);
+  min-width: 0;
+}
+
+.ss.link:hover {
+  border-color: var(--tx3);
+  border-left-color: var(--line2);
+}
+
+.ss.warn,
+.ss.warn.link:hover {
+  border-left-color: var(--warn);
+}
+
+.ss-l {
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--tx2);
+}
+
+.ss-v {
+  font-size: calc(28px * var(--k));
+  line-height: calc(36px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ss-h {
+  min-height: calc(18px * var(--k));
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+.ss.warn .ss-v {
+  color: var(--warn-tx);
+}
+
+/* Переходы к спискам: строки в одной рамке, у последней своей линии нет */
+.slinks {
+  display: flex;
+  flex-direction: column;
+}
+
+button.navrow {
+  width: 100%;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+  font: inherit;
+  font-size: calc(15px * var(--k));
+  color: var(--tx);
+}
+
+.slinks > .navrow:last-child {
+  border-bottom: none;
+}
+
+/* Списки смены: колонки задаются в разметке (--cols) */
+.stable .shead,
+.stable .srow {
+  display: grid;
+  grid-template-columns: var(--cols);
+  column-gap: 16px;
+  align-items: center;
+  padding: 0 20px 0 24px;
+}
+
+.stable .shead {
+  height: calc(40px * var(--k));
+  font-size: calc(12px * var(--k));
+  font-weight: 500;
+  color: var(--tx3);
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+}
+
+.stable .srow {
+  height: calc(52px * var(--k));
+  font-size: calc(15px * var(--k));
+  border-bottom: 1px solid var(--line);
+}
+
+.stable .srow:last-child {
+  border-bottom: none;
+}
+
+.stable .srow > * {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stable .snum {
+  text-align: right;
+}
+
+@media (max-width: 1279px) {
+  .sstats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  /* Выбор периода на телефоне — на всю ширину над подписью, как поле поиска в журнале */
+  .stools {
+    flex-wrap: wrap;
+  }
+
+  .speriod {
+    order: -1;
+    flex: 1 0 100%;
+    margin-left: -8px;
+    height: calc(48px * var(--k));
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
+  }
+
+  .sback {
+    margin-left: -8px;
+  }
+
+  .sbody {
+    gap: 16px;
+  }
+
+  /* Плитки на телефоне в один столбец: подпись и пояснение слева, число справа, без переносов и обрезки */
+  .sstats {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .ss {
+    min-height: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas: 'l v' 'h v';
+    column-gap: 12px;
+    row-gap: 0;
+    align-items: center;
+    padding: 10px 14px;
+  }
+
+  .ss-l {
+    grid-area: l;
+  }
+
+  .ss-h {
+    grid-area: h;
+    min-height: 0;
+  }
+
+  .ss-v {
+    grid-area: v;
+    font-size: calc(22px * var(--k));
+  }
+
+  /* Список смены на телефоне: строка — карточка, значения с подписями колонок */
+  .stable .shead {
+    display: none;
+  }
+
+  .stable .srow {
+    height: auto;
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 2px;
+    align-items: start;
+    padding: 10px 12px;
+    font-size: calc(14px * var(--k));
+    line-height: calc(20px * var(--k));
+  }
+
+  .stable .srow > :first-child {
+    font-size: calc(15px * var(--k));
+    font-weight: 600;
+  }
+
+  .stable .srow > [data-label]::before {
+    content: attr(data-label) ' ';
+    color: var(--tx3);
+  }
+
+  .stable .snum {
+    text-align: left;
+  }
+}

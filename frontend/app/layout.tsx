@@ -15,6 +15,7 @@ import '@fontsource/ibm-plex-mono/latin-600.css';
 import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import './globals.css';
 import './auth.css';
+import './journal.css';
 import { Onboarding } from '@/components/Onboarding';
 import { PwaRegister } from '@/components/PwaRegister';
 import { Header } from '@/components/Header';

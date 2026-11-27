@@ -26,7 +26,7 @@ export function Header() {
     api.config().then(setConfig).catch(() => setConfig(null));
   }, []);
 
-  // Число у пункта «Журнал»: сколько вопросов без ответа в руководстве администратор ещё не разобрал
+  // Число у пункта «Журнал»: сколько случаев «новый» и «в работе» ждут разбора (группа повторов — один случай)
   const [gaps, setGaps] = useState(0);
   useEffect(() => {
     const load = () => {
@@ -67,11 +67,18 @@ export function Header() {
           <Icon name="history" size="s" />
           Журнал
           {gaps ? (
-            <b className="nbadge m" title={`Вопросов без ответа в руководстве, ещё не разобранных: ${gaps}`}>
+            <b className="nbadge m" title={`Случаев ждут разбора (новые и в работе): ${gaps}`}>
               {gaps}
             </b>
           ) : null}
         </Link>
+        ) : null}
+        {admin ? (
+          // Сводка смены для главного механика: кто работал, что сделано, метрики пилота
+          <Link href="/shift" className={pathname === '/shift' ? 'on' : ''}>
+            <Icon name="calendar-stats" size="s" />
+            Смена
+          </Link>
         ) : null}
         {admin ? (
           <Link href="/admin/mechanics" className={pathname === '/admin/mechanics' ? 'on' : ''}>

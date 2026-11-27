@@ -150,3 +150,6 @@ export const confirmDraftStream = (
 /** Подключение к ходу, который уже идёт на сервере: события приходят с начала хода. */
 export const turnStream = (vehicleId: string, onEvent: (e: StreamEvent) => void, signal?: AbortSignal) =>
   stream(`/api/conversations/${encodeURIComponent(vehicleId)}/turn`, {}, onEvent, signal);
+
+/** Общий запрос к серверу для модулей экранов (lib/journal.ts): те же ошибки и заголовки, что у api */
+export { request as apiRequest };
