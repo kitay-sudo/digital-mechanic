@@ -212,13 +212,24 @@ a {
   gap: 8px;
   font-size: calc(15px * var(--k));
   color: var(--tx2);
-  border-bottom: 2px solid transparent;
-  border-top: 2px solid transparent;
+  position: relative;
 }
 
 .nav a.on {
   color: var(--tx);
-  border-bottom-color: var(--acc);
+}
+
+/* Черта активного пункта одной длины у всех пунктов и стоит по центру пункта */
+.nav a.on::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  width: 24px;
+  height: 2px;
+  margin-left: -12px;
+  border-radius: 1px;
+  background: var(--acc);
 }
 
 .top .r {
@@ -584,35 +595,66 @@ a {
 
 /* ---------- Парк ---------- */
 
-.fbar {
-  height: 72px;
-  flex: none;
+/* Панель таблицы: слева что показано и сколько, справа сброс и поиск.
+   Стоит вплотную над таблицей и высоту не меняет, поэтому таблица под ней не сдвигается */
+.ftools {
+  min-height: calc(56px * var(--k));
   display: flex;
   align-items: center;
-  gap: 24px;
-  padding: 0 24px;
+  gap: 16px;
+  padding: 8px 8px 8px 24px;
   background: var(--panel);
-  border-bottom: 1px solid var(--line2);
+  border: 1px solid var(--line);
+  border-bottom: none;
+  font-size: calc(13px * var(--k));
+  color: var(--tx3);
 }
 
-.fbar .h1 {
-  font-size: calc(22px * var(--k));
+.ft-t {
+  margin-right: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  white-space: nowrap;
+  color: var(--tx2);
+}
+
+.ft-t b {
+  font-size: calc(12px * var(--k));
   font-weight: 600;
-  line-height: calc(28px * var(--k));
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.ft-n {
+  margin-left: 4px;
+  font: 600 calc(14px * var(--k))/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--tx);
+}
+
+.ft-hint {
+  white-space: nowrap;
 }
 
 .search {
-  margin-left: auto;
-  width: calc(340px * var(--k));
+  flex: none;
+  width: calc(400px * var(--k));
   height: calc(40px * var(--k));
   border: 1px solid var(--line2);
   border-radius: 4px;
-  background: var(--panel);
+  background: var(--bg);
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 0 12px;
   color: var(--tx3);
+}
+
+.search:focus-within {
+  border-color: var(--acc);
+  color: var(--acc);
 }
 
 .search input {
@@ -988,13 +1030,10 @@ a {
   flex: none;
 }
 
+/* Сообщение механика: просто текст справа, без рамки. Рамки остаются у ответов агента */
 .q {
   align-self: flex-end;
   max-width: min(72%, 640px);
-  background: var(--panel);
-  border: 1px solid var(--line2);
-  border-radius: 4px;
-  padding: var(--by) var(--bx);
   font-size: calc(17px * var(--k));
   line-height: calc(24px * var(--k));
   overflow-wrap: anywhere;
@@ -1004,7 +1043,9 @@ a {
   margin-top: 4px;
   font: calc(12px * var(--k))/calc(16px * var(--k)) var(--mono);
   color: var(--tx3);
-  text-align: right;
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
 }
 
 /* Ответ агента занимает всю ширину чата: длинные шаги реже переносятся */
@@ -1781,18 +1822,24 @@ details.fold > .fin {
     padding: 0 12px;
   }
 
-  .fbar {
-    height: auto;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    padding: 12px;
+  /* На телефоне панель таблицы в две строки: поиск на всю ширину, под ним подпись со счётчиком и сброс */
+  .ftools {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 8px 8px 8px 16px;
   }
 
-  .search {
+  .ftools .search {
+    order: -1;
+    flex: 1 0 100%;
     width: auto;
-    margin: 0;
+    margin-left: -8px;
     height: calc(48px * var(--k));
+  }
+
+  /* Высота строки равна высоте кнопки «Сбросить»: с кнопкой и без неё список стоит на месте */
+  .ft-t {
+    min-height: calc(40px * var(--k));
   }
 
   .tiles {
@@ -2073,11 +2120,14 @@ details.fold > .fin {
   cursor: default;
 }
 
+/* Панель стоит у нижнего края по центру экрана и выезжает снизу */
 .sp {
   position: fixed;
-  top: 64px;
-  right: 16px;
-  width: calc(400px * var(--k));
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-inline: auto;
+  width: calc(680px * var(--k));
   max-width: calc(100vw - 32px);
   max-height: calc(100dvh - 80px);
   z-index: 60;
@@ -2085,6 +2135,8 @@ details.fold > .fin {
   flex-direction: column;
   background: var(--panel);
   border: 1px solid var(--line2);
+  border-bottom: none;
+  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
   overflow: hidden;
 }
 
@@ -2104,12 +2156,40 @@ details.fold > .fin {
   margin-left: auto;
 }
 
+/* На компьютере и планшете настройки в два столбца, на телефоне в один */
 .sp-b {
   overflow: auto;
   padding: 16px 20px 20px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  align-items: start;
+  gap: 16px 20px;
+}
+
+/* Какая модель отвечает: строка на всю ширину внизу панели */
+.sp-model {
+  grid-column: 1 / -1;
   display: flex;
-  flex-direction: column;
-  gap: 16px;
+  align-items: center;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--line);
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx2);
+}
+
+.sp-model .ti {
+  color: var(--tx3);
+}
+
+.sp-model .m {
+  margin-left: auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tx);
 }
 
 .sp-l {
@@ -2337,16 +2417,12 @@ button.sp-link {
 
 /* ---------- Журнал обращений ---------- */
 
-.lbar .lrefresh {
-  margin-left: auto;
-}
-
 .lhead,
 .lrow {
   display: grid;
   grid-template-columns:
     calc(112px * var(--k)) calc(180px * var(--k)) minmax(140px, 1fr) minmax(200px, 1.5fr)
-    calc(220px * var(--k)) calc(230px * var(--k));
+    calc(220px * var(--k)) calc(240px * var(--k));
   column-gap: 16px;
   padding: 0 16px 0 20px;
 }
@@ -2435,13 +2511,51 @@ button.sp-link {
   color: var(--tx3);
 }
 
+/* Расход и инструменты: сверху время и токены, числа яркие, единицы приглушены; ниже метки инструментов */
 .lu {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: 6px;
   font-size: calc(13px * var(--k));
   line-height: calc(18px * var(--k));
+  color: var(--tx3);
+}
+
+.lu-c {
+  display: flex;
+  gap: 16px;
+  white-space: nowrap;
+}
+
+.lu-c b {
+  font-size: calc(14px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+}
+
+.lu-t {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.lu-t > span {
+  height: calc(22px * var(--k));
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 7px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--panel2);
+  font-size: calc(12px * var(--k));
   color: var(--tx2);
+  white-space: nowrap;
+}
+
+.lu-t b {
+  font-weight: 600;
+  color: var(--tx);
 }
 
 /* ---------- Телефон ---------- */
@@ -2452,10 +2566,6 @@ button.sp-link {
   }
 
   .sp {
-    top: auto;
-    left: 0;
-    right: 0;
-    bottom: 0;
     width: auto;
     max-width: none;
     max-height: 88dvh;
@@ -2468,6 +2578,7 @@ button.sp-link {
   }
 
   .sp-b {
+    grid-template-columns: minmax(0, 1fr);
     padding: 16px 16px calc(20px + env(safe-area-inset-bottom));
   }
 
@@ -2532,13 +2643,6 @@ button.sp-link {
   .pact .pa {
     font-size: calc(18px * var(--k));
     line-height: calc(24px * var(--k));
-  }
-
-  .lbar {
-    height: 64px;
-    flex-direction: row;
-    align-items: center;
-    padding: 0 12px;
   }
 
   .lhead {
@@ -3397,9 +3501,10 @@ button.sp-link {
     animation: in-right var(--mo) var(--ease);
   }
 
-  /* Настройки выпадают из-под кнопки */
-  .sp {
-    animation: in-down var(--mo) var(--ease);
+  /* Настройки и подтверждения выезжают снизу */
+  .sp,
+  .pop {
+    animation: sheet-in var(--mo) var(--ease);
   }
 
   /* Новые сообщения в чате и подсказки под шагами */
@@ -3434,8 +3539,7 @@ button.sp-link {
 @media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
   /* На телефоне панели поднимаются снизу */
   .col.side.open,
-  .col.manual.open,
-  .sp {
+  .col.manual.open {
     animation: in-up var(--mo) var(--ease);
   }
 }
@@ -3470,15 +3574,21 @@ button.sp-link {
   animation: fade-in var(--mo) ease-out;
 }
 
-/* Выпадающее подтверждение под кнопкой */
+/* Подтверждение: панель у нижнего края по центру экрана, выезжает снизу, как настройки */
 .pop {
   position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin-inline: auto;
   z-index: 60;
-  width: min(calc(340px * var(--k)), calc(100vw - 24px));
-  padding: var(--sy) var(--sx);
+  width: calc(480px * var(--k));
+  max-width: calc(100vw - 32px);
+  padding: var(--sy) var(--sx) calc(var(--sy) + env(safe-area-inset-bottom));
   background: var(--panel);
   border: 1px solid var(--line2);
-  box-shadow: 0 16px 48px rgb(0 0 0 / 0.28);
+  border-bottom: none;
+  box-shadow: 0 -16px 48px rgb(0 0 0 / 0.28);
 }
 
 .pop-t {
@@ -3494,26 +3604,33 @@ button.sp-link {
   color: var(--tx2);
 }
 
+/* Кнопки подтверждения одного размера */
 .pop-f {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
   margin-top: var(--by);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-
+@media (max-width: 900px) {
+  /* На телефоне подтверждение во всю ширину экрана, как настройки */
   .pop {
-    animation: in-down var(--mo) var(--ease);
+    width: auto;
+    max-width: none;
+    border: none;
+    border-radius: 12px 12px 0 0;
   }
 }
 
-@media (max-width: 900px) {
-  /* На телефоне подтверждение занимает ширину экрана: кнопка не у края, панель вылезла бы влево */
-  .pop {
-    left: 12px;
-    right: 12px !important;
-    width: auto;
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%);
+  }
+}
+
+@keyframes sheet-out {
+  to {
+    transform: translateY(100%);
   }
 }
 
@@ -3541,13 +3658,6 @@ button.sp-link {
   }
 }
 
-@keyframes out-up {
-  to {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-}
-
 .leaving {
   pointer-events: none;
 }
@@ -3569,14 +3679,13 @@ button.sp-link {
 
   .sp.leaving,
   .pop.leaving {
-    animation: out-up var(--mo) var(--ease) forwards;
+    animation: sheet-out var(--mo) var(--ease) forwards;
   }
 }
 
 @media (prefers-reduced-motion: no-preference) and (max-width: 900px) {
   .col.side.open.leaving,
-  .col.manual.open.leaving,
-  .sp.leaving {
+  .col.manual.open.leaving {
     animation: out-down var(--mo) var(--ease) forwards;
   }
 }
@@ -3590,7 +3699,7 @@ button.sp-link {
 }
 
 /* ---------- Обучение при первом открытии ----------
-   Экран на всю величину окна: шапка со счётчиком, индикатор шагов, слайд, кнопки.
+   Экран на всю величину окна: шапка, слайд, внизу индикатор шагов со счётчиком и кнопки.
    На компьютере текст слева и пример справа, на телефоне пример сверху. */
 
 .tour {
@@ -3619,35 +3728,46 @@ button.sp-link {
   border-bottom: 1px solid var(--line2);
 }
 
-.tour-count {
+.tour-top .hb {
   margin-left: auto;
-  font-size: calc(14px * var(--k));
-  color: var(--tx2);
 }
 
-/* Индикатор шагов: пройденные и текущий закрашены */
+/* Индикатор шагов в нижней строке: короткие метки одной длины, текущая длиннее и яркая, рядом счётчик */
 .tour-prog {
-  flex: none;
   display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.tour-dots {
+  display: flex;
+  align-items: center;
   gap: 6px;
-  padding: 12px 24px 0;
 }
 
-.tour-prog i {
-  flex: 1;
-  height: 4px;
-  border-radius: 2px;
+.tour-dots i {
+  width: 16px;
+  height: 6px;
+  border-radius: 3px;
   background: var(--line2);
-  transition: background-color var(--mo) ease-out;
+  transition:
+    width var(--mo) var(--ease),
+    background-color var(--mo) ease-out;
 }
 
-.tour-prog i.done,
-.tour-prog i.on {
+.tour-dots i.done {
+  background: color-mix(in srgb, var(--acc) 50%, var(--line2));
+}
+
+.tour-dots i.on {
+  width: 40px;
   background: var(--acc);
 }
 
-.tour-prog i.done {
-  opacity: 0.5;
+.tour-count {
+  font-size: calc(15px * var(--k));
+  color: var(--tx2);
+  white-space: nowrap;
 }
 
 .tour-main {
@@ -3924,8 +4044,17 @@ button.sp-link {
   border-top: 1px solid var(--line2);
 }
 
-.tour-bot .btn.pri {
-  min-width: calc(180px * var(--k));
+/* «Назад» и «Далее» одного размера, стоят рядом справа */
+.tour-nav {
+  width: calc(400px * var(--k));
+  max-width: 100%;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.tour-nav .btn {
+  padding: 0 12px;
 }
 
 @keyframes in-left {
@@ -3949,10 +4078,6 @@ button.sp-link {
 @media (max-width: 900px) {
   .tour-top {
     padding: 0 12px;
-  }
-
-  .tour-prog {
-    padding: 10px 12px 0;
   }
 
   /* Пример сверху, текст под ним */
@@ -4018,18 +4143,24 @@ button.sp-link {
     line-height: calc(26px * var(--k));
   }
 
+  /* На телефоне индикатор по центру над кнопками, кнопки делят ширину поровну */
   .tour-bot {
     min-height: 0;
-    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    flex-direction: column;
+    align-items: stretch;
+    padding: 12px 12px calc(12px + env(safe-area-inset-bottom));
+  }
+
+  .tour-prog {
+    justify-content: center;
+  }
+
+  .tour-nav {
+    width: auto;
   }
 
   .tour-bot .btn {
     height: calc(56px * var(--k));
-  }
-
-  .tour-bot .btn.pri {
-    flex: 1;
-    min-width: 0;
   }
 }
 
@@ -4054,74 +4185,9 @@ button.sp-link {
   color: var(--ok);
 }
 
-.sp-how {
+/* Пункт под кнопкой установки или подсказкой отделён, сразу под подписью группы стоит без отступа */
+.sp-g > :not(.sp-l) + .sp-link {
   margin-top: 8px;
-  border: 1px solid var(--line);
-}
-
-.sp-how > summary {
-  min-height: calc(48px * var(--k));
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 14px;
-  font-size: calc(15px * var(--k));
-  cursor: pointer;
-  list-style: none;
-  user-select: none;
-}
-
-.sp-how > summary::-webkit-details-marker {
-  display: none;
-}
-
-.sp-how > summary .ti {
-  color: var(--tx3);
-  transition: transform 0.12s;
-}
-
-.sp-how[open] > summary .ti {
-  transform: rotate(90deg);
-}
-
-.sp-how ol {
-  list-style: none;
-  padding: 0 14px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  font-size: calc(15px * var(--k));
-  line-height: calc(22px * var(--k));
-  color: var(--tx2);
-}
-
-.sp-how b {
-  display: block;
-  color: var(--tx);
-  font-weight: 600;
-}
-
-.sp-how > .sp-s {
-  padding: 0 14px 14px;
-  margin-top: 10px;
-}
-
-.sp-g > .sp-link {
-  margin-top: 8px;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .sp-how::details-content {
-    block-size: 0;
-    overflow: clip;
-    transition:
-      block-size var(--mo) var(--ease),
-      content-visibility var(--mo) allow-discrete;
-  }
-
-  .sp-how[open]::details-content {
-    block-size: auto;
-  }
 }
 
 /* ---------- Один экран без прокрутки страницы ----------
@@ -4144,23 +4210,49 @@ button.sp-link {
   min-height: 0;
   overflow: auto;
   overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Таблица занимает область целиком: остаток высоты меньше строки остаётся внутри её рамки,
+   и перелистывание стоит вплотную под таблицей, без пустой полосы между ними */
+.body.fit > .fit-area > .ftable {
+  flex: 1 0 auto;
+}
+
+.body.fit > .fit-area > .ftable > .frow:last-child,
+.body.fit > .fit-area > .ftable > .lrow:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.body.fit > .center {
+  flex: 1;
 }
 
 .body.fit > .box.center {
   flex: 1;
 }
 
+/* Перелистывание: нижняя строка таблицы в той же рамке. Кнопки 48 px, под палец на планшете и телефоне */
 .pager {
-  min-height: calc(40px * var(--k));
+  min-height: 64px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin-top: 12px;
+  padding: 8px 8px 8px 24px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-top: none;
+}
+
+.pager .hb {
+  width: 48px;
+  height: 48px;
 }
 
 .pg-info {
-  font-size: calc(14px * var(--k));
+  font-size: calc(16px * var(--k));
   color: var(--tx2);
   white-space: nowrap;
 }
@@ -4177,14 +4269,14 @@ button.sp-link {
 }
 
 .pg-n {
-  min-width: 40px;
-  height: 40px;
+  min-width: 48px;
+  height: 48px;
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
   color: var(--tx2);
-  font: 500 calc(15px * var(--k)) / 1 var(--mono);
+  font: 500 calc(17px * var(--k)) / 1 var(--mono);
   cursor: pointer;
 }
 
@@ -4206,23 +4298,15 @@ button.sp-link {
 }
 
 .pg-cur {
-  min-width: 64px;
+  min-width: 72px;
   text-align: center;
-  font-size: calc(15px * var(--k));
-  color: var(--tx2);
+  font-size: calc(17px * var(--k));
+  color: var(--tx);
 }
 
 .pager .hb:disabled {
   opacity: 0.4;
   cursor: default;
-}
-
-/* Поиск по парку в верхней строке: на всю свободную ширину между разделами и моделью */
-.top > .search {
-  flex: 1;
-  width: auto;
-  min-width: 0;
-  margin-left: 0;
 }
 
 /* Журнал: строки одной высоты, длинный текст обрезается, иначе страницу не посчитать */
@@ -4255,8 +4339,8 @@ button.sp-link {
 }
 
 @media (max-width: 900px) {
-  .fbar.only-m {
-    padding: 10px 12px;
+  .pager {
+    padding-left: 16px;
   }
 
   /* Журнал на телефоне: карточка одной высоты, вопрос, ответ и источники по одной строке */

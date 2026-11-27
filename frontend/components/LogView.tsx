@@ -42,18 +42,49 @@ function Sources({ item }: { item: AuditItem }) {
   );
 }
 
-function tools(item: AuditItem): string {
-  if (!item.tools.length) return 'без инструментов';
-  return item.tools.map((t) => TOOL_LABEL[t] ?? t).join(' → ');
+/** Инструменты обращения в порядке первого вызова; повторные вызовы сложены в счётчик. */
+function toolGroups(item: AuditItem): { label: string; count: number }[] {
+  const groups = new Map<string, number>();
+  for (const t of item.tools) {
+    const label = TOOL_LABEL[t] ?? t;
+    groups.set(label, (groups.get(label) ?? 0) + 1);
+  }
+  return [...groups].map(([label, count]) => ({ label, count }));
 }
 
-function cost(item: AuditItem): string {
+/** Расход и инструменты: сверху время и токены числами, ниже метки инструментов. */
+function Usage({ item }: { item: AuditItem }) {
   const u = item.usage;
-  if (!u) return '';
-  const tokens = (u.input_tokens ?? 0) + (u.output_tokens ?? 0);
-  const parts = [`${int(tokens)} ${plural(tokens, 'токен', 'токена', 'токенов')}`];
-  if (u.duration_ms !== undefined) parts.push(`${num(u.duration_ms / 1000, 1)} с`);
-  return parts.join(' · ');
+  const tokens = u ? (u.input_tokens ?? 0) + (u.output_tokens ?? 0) : 0;
+  const groups = toolGroups(item);
+  return (
+    <span className="lu">
+      {u ? (
+        <span className="lu-c">
+          {u.duration_ms !== undefined ? (
+            <span>
+              <b className="m">{num(u.duration_ms / 1000, 1)}</b> с
+            </span>
+          ) : null}
+          <span>
+            <b className="m">{int(tokens)}</b> {plural(tokens, 'токен', 'токена', 'токенов')}
+          </span>
+        </span>
+      ) : null}
+      {groups.length ? (
+        <span className="lu-t">
+          {groups.map((g) => (
+            <span key={g.label}>
+              {g.label}
+              {g.count > 1 ? <b className="m">×{g.count}</b> : null}
+            </span>
+          ))}
+        </span>
+      ) : (
+        <span className="mut">без инструментов</span>
+      )}
+    </span>
+  );
 }
 
 /** Журнал обращений: кто что спросил, что ответил агент и на какие страницы сослался. */
@@ -79,27 +110,35 @@ export function LogView() {
   useEffect(load, [load]);
 
   return (
-    <>
-      <div className="fbar lbar">
-        <div className="h1">Журнал</div>
-        <span className="st only-d">Обращения к агенту: вопрос, ответ, источники, инструменты</span>
-        <button type="button" className="btn lrefresh" onClick={load} disabled={loading}>
-          <Icon name="refresh" className={loading ? 'spin' : ''} />
+    <div className="body fit">
+      {/* Отдельной полосы под шапкой нет: название, число обращений и обновление стоят в панели таблицы */}
+      <div className="ftools">
+        <div className="ft-t">
+          <Icon name="history" size="s" />
+          <b>Журнал обращений</b>
+          {items ? <span className="ft-n">{items.length}</span> : null}
+        </div>
+        <button type="button" className="btn sm" onClick={load} disabled={loading}>
+          <Icon name="refresh" size="s" className={loading ? 'spin' : ''} />
           Обновить
         </button>
       </div>
       {error ? (
-        <ErrorState text={error} onRetry={load} />
+        <div className="box center">
+          <ErrorState text={error} onRetry={load} />
+        </div>
       ) : !items ? (
-        <Loading text="Загружаю журнал…" />
+        <div className="box center">
+          <Loading text="Загружаю журнал…" />
+        </div>
       ) : !items.length ? (
-        <div className="center">
+        <div className="box center">
           <Icon name="history" size="xl" />
           <div className="e1">Обращений пока нет</div>
           <div>Они появятся здесь после первого сообщения агенту.</div>
         </div>
       ) : (
-        <div className="body fit">
+        <>
           <div className="fit-area" ref={areaRef}>
             <div className="ftable">
               <div className="lhead" data-head>
@@ -108,7 +147,7 @@ export function LogView() {
               <span>Вопрос</span>
               <span>Ответ</span>
               <span>Источники</span>
-              <span>Инструменты и расход</span>
+              <span>Расход и инструменты</span>
             </div>
               {paged.rows.map((it) => (
                 <div className="lrow" key={it.id} data-row>
@@ -131,17 +170,14 @@ export function LogView() {
                   <span className="l2">{it.answer}</span>
                 </span>
                 <Sources item={it} />
-                <span className="lu">
-                  <span>{tools(it)}</span>
-                  <span className="l2 m">{cost(it)}</span>
-                </span>
+                <Usage item={it} />
               </div>
               ))}
             </div>
           </div>
           <Pager paged={paged} label="обращения" />
-        </div>
+        </>
       )}
-    </>
+    </div>
   );
 }

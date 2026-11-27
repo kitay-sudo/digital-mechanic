@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { api, chatStream, confirmDraftStream } from '@/lib/api';
 import { dateTime } from '@/lib/format';
 import { usePresence } from '@/lib/presence';
@@ -38,13 +38,13 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const [steps, setSteps] = useState<Step[]>([]);
   const [manual, setManual] = useState<ManualTarget | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
-  /** Место выпадающего подтверждения очистки чата: под кнопкой. null — закрыто */
-  const [clearAt, setClearAt] = useState<{ top: number; right: number } | null>(null);
+  /** Открыто ли подтверждение очистки чата: панель выезжает снизу по центру */
+  const [clearOpen, setClearOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
   const manualView = usePresence(manual);
   const sideView = usePresence(sideOpen ? true : null);
-  const clearView = usePresence(clearAt);
+  const clearView = usePresence(clearOpen ? true : null);
   const settings = useSettings();
   const profile = profileOf(settings);
   const profileRef = useRef(profile);
@@ -141,7 +141,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   );
 
   const clearChat = useCallback(() => {
-    setClearAt(null);
+    setClearOpen(false);
     if (busy) return;
     api
       .clearConversation(vehicleId)
@@ -149,20 +149,17 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
       .catch((e: Error) => setMessages((list) => [...list, localNotice(e.message)]));
   }, [busy, vehicleId]);
 
-  // Подтверждение очистки выпадает под кнопкой, отдельного окна браузера нет
-  const askClear = useCallback((e: ReactMouseEvent<HTMLButtonElement>) => {
-    const r = e.currentTarget.getBoundingClientRect();
-    setClearAt((cur) => (cur ? null : { top: Math.round(r.bottom + 8), right: Math.max(12, Math.round(window.innerWidth - r.right)) }));
-  }, []);
+  // Подтверждение очистки выезжает снизу, отдельного окна браузера нет
+  const askClear = useCallback(() => setClearOpen((cur) => !cur), []);
 
   useEffect(() => {
-    if (!clearAt) return;
+    if (!clearOpen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setClearAt(null);
+      if (e.key === 'Escape') setClearOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [clearAt]);
+  }, [clearOpen]);
 
   // Повторное нажатие на ту же ссылку закрывает страницу руководства
   const openManual = useCallback((target: ManualTarget) => {
@@ -215,11 +212,11 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           <div className="rt">
             <button
               type="button"
-              className={`hb${clearAt ? ' on' : ''}`}
+              className={`hb${clearOpen ? ' on' : ''}`}
               onClick={askClear}
               disabled={busy}
               aria-label="Очистить чат"
-              aria-expanded={Boolean(clearAt)}
+              aria-expanded={clearOpen}
               title="Очистить чат"
             >
               <Icon name="eraser" />
@@ -270,21 +267,16 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
 
       {clearView.shown ? (
         <>
-          <button type="button" className={`veil${clearView.leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={() => setClearAt(null)} />
-          <div
-            className={`pop${clearView.leaving ? ' leaving' : ''}`}
-            role="dialog"
-            aria-label="Очистить чат"
-            style={{ top: clearView.shown.top, right: clearView.shown.right }}
-          >
+          <button type="button" className={`veil${clearView.leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={() => setClearOpen(false)} />
+          <div className={`pop${clearView.leaving ? ' leaving' : ''}`} role="dialog" aria-label="Очистить чат">
             <div className="pop-t">Очистить чат по этой машине?</div>
             <div className="pop-s">Заявки и история проверок останутся.</div>
             <div className="pop-f">
-              <button type="button" className="btn sm" onClick={() => setClearAt(null)}>
+              <button type="button" className="btn" onClick={() => setClearOpen(false)}>
                 Отмена
               </button>
-              <button type="button" className="btn sm pri" onClick={clearChat} autoFocus>
-                <Icon name="eraser" size="s" />
+              <button type="button" className="btn pri" onClick={clearChat} autoFocus>
+                <Icon name="eraser" />
                 Очистить
               </button>
             </div>

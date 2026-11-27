@@ -781,8 +781,8 @@ export function MessageView({
       <div className="q">
         {m.text}
         <div className="mt">
-          {m.session_id ? `${m.session_id} · ` : ''}
-          {timeShort(m.created_at)}
+          {m.session_id ? <span>{m.session_id}</span> : null}
+          <span>{timeShort(m.created_at)}</span>
         </div>
       </div>
     );

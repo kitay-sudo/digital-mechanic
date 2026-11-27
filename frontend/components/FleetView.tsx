@@ -72,15 +72,19 @@ export function FleetView() {
 
   useEffect(load, [load]);
 
-  const rows = useMemo(() => {
+  // Машины выбранной плитки: от их числа считается «найдено N из M»
+  const inFilter = useMemo(() => {
     if (!fleet) return [];
+    return filter ? fleet.vehicles.filter((v) => v.fleet_status === filter) : fleet.vehicles;
+  }, [fleet, filter]);
+
+  const rows = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return fleet.vehicles.filter((v) => {
-      if (filter && v.fleet_status !== filter) return false;
-      if (!q) return true;
-      return [v.vehicle_id, v.garage_no, v.title, v.make, v.model ?? '', v.engine_model].some((f) => f.toLowerCase().includes(q));
-    });
-  }, [fleet, filter, query]);
+    if (!q) return inFilter;
+    return inFilter.filter((v) =>
+      [v.vehicle_id, v.garage_no, v.title, v.make, v.model ?? '', v.engine_model].some((f) => f.toLowerCase().includes(q)),
+    );
+  }, [inFilter, query]);
 
   // Страница не прокручивается: в таблице столько строк, сколько помещается, остальное листается
   const { areaRef, pageSize } = useFitRows([settings.size, fleet, rows.length === 0]);
@@ -93,18 +97,6 @@ export function FleetView() {
 
   return (
     <>
-      {/* На компьютере поиск стоит в верхней строке приложения, отдельная полоса нужна только телефону */}
-      <div className="fbar only-m">
-        <label className="search">
-          <Icon name="search" />
-          <input
-            value={query}
-            onChange={(e) => setFleetQuery(e.target.value)}
-            placeholder="Госномер, гаражный номер или модель"
-            aria-label="Поиск машины"
-          />
-        </label>
-      </div>
       <div className="body fit">
         <div className="tiles">
           {TILES.map((t) => (
@@ -126,11 +118,13 @@ export function FleetView() {
             </button>
           ))}
         </div>
-        <div className="sec">
-          <b>
+        {/* Панель таблицы: что показано и сколько, сброс, поиск. Высота постоянная, таблица под ней не сдвигается */}
+        <div className="ftools">
+          <div className="ft-t">
             <Icon name="list-details" size="s" />
-            {filter ? TILES.find((t) => t.key === filter)?.label : 'Все машины'} · {rows.length}
-          </b>
+            <b>{filter ? TILES.find((t) => t.key === filter)?.label : 'Все машины'}</b>
+            <span className="ft-n">{query.trim() ? `${rows.length} из ${inFilter.length}` : rows.length}</span>
+          </div>
           {filter || query ? (
             <button
               type="button"
@@ -144,8 +138,20 @@ export function FleetView() {
               Сбросить
             </button>
           ) : (
-            <span className="only-d">сначала те, кому нужна дефектовка</span>
+            <span className="ft-hint only-d">сначала те, кому нужна дефектовка</span>
           )}
+          <label className="search">
+            <Icon name="search" />
+            <input
+              value={query}
+              onChange={(e) => setFleetQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') setFleetQuery('');
+              }}
+              placeholder="Госномер, гаражный номер или модель"
+              aria-label="Поиск машины"
+            />
+          </label>
         </div>
         {rows.length ? (
           <div className="fit-area" ref={areaRef}>

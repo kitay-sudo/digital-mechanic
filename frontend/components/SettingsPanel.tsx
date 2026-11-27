@@ -47,7 +47,7 @@ function Choice<T extends string>({
 /** Файл приложения для Android. Собирается скриптом android/build.sh и кладётся в public/app */
 const APK_URL = '/app/digital-mechanic.apk';
 
-/** Настройки механика: размер текста, подача, тема, установка приложения. */
+/** Настройки механика: размер текста, тема, подача, приложение на телефон, какая модель отвечает. */
 export function SettingsPanel({ config, leaving = false, onClose }: { config: Config | null; leaving?: boolean; onClose: () => void }) {
   const settings = useSettings();
   const pwa = usePwa();
@@ -103,11 +103,6 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
             />
           </div>
           <div className="sp-g">
-            <div className="sp-l">Подача</div>
-            <Choice label="Подача" value={settings.level} options={levels} onChange={(level) => setSettings({ level })} />
-            {levelHint ? <div className="sp-s">{levelHint}</div> : null}
-          </div>
-          <div className="sp-g">
             <div className="sp-l">Тема</div>
             <Choice
               label="Тема"
@@ -118,6 +113,11 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
               ]}
               onChange={applyTheme}
             />
+          </div>
+          <div className="sp-g">
+            <div className="sp-l">Подача</div>
+            <Choice label="Подача" value={settings.level} options={levels} onChange={(level) => setSettings({ level })} />
+            {levelHint ? <div className="sp-s">{levelHint}</div> : null}
           </div>
           <div className="sp-g">
             <div className="sp-l">Приложение на телефон</div>
@@ -149,29 +149,9 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
               <div className="sp-s">Установка из браузера доступна, когда система открыта по защищённому адресу (https). Приложение для Android работает с любым адресом.</div>
             ) : null}
             {pwa.shell ? null : (
-            <details className="sp-how" open={pwa.ios && !pwa.installed}>
-              <summary>
-                <Icon name="chevron-right" />
-                Как установить
-              </summary>
-              <ol>
-                <li>
-                  <b>Android, Chrome.</b> Меню «⋮» → «Установить приложение» или «Добавить на главный экран».
-                </li>
-                <li>
-                  <b>iPhone, Safari.</b> Кнопка «Поделиться» → «На экран „Домой“».
-                </li>
-                <li>
-                  <b>Компьютер, Chrome или Edge.</b> Значок установки справа в адресной строке.
-                </li>
-              </ol>
-              <div className="sp-s">После установки система открывается со значка, как обычное приложение, без адресной строки.</div>
-            </details>
-            )}
-            {pwa.shell ? null : (
               <a href={APK_URL} className="sp-link" download="digital-mechanic.apk">
                 <Icon name="brand-android" />
-                <span>Скачать приложение для Android (APK)</span>
+                <span>Скачать для Android</span>
                 <Icon name="download" className="mut" />
               </a>
             )}
@@ -193,6 +173,13 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
             <span>Журнал обращений</span>
             <Icon name="chevron-right" className="mut" />
           </Link>
+          {config ? (
+            <div className="sp-model" title="Модель, которая отвечает механику">
+              <Icon name="cpu" />
+              <span>Модель</span>
+              <span className="m">{config.llm.model}</span>
+            </div>
+          ) : null}
         </div>
       </aside>
     </>

@@ -286,21 +286,11 @@ export function Onboarding() {
           <Icon name="engine" size="l" />
           Цифровой механик
         </span>
-        <span className="tour-count m" aria-live="polite">
-          {index + 1} из {total}
-        </span>
         {!first ? (
           <button type="button" className="hb" onClick={() => setReplay(false)} aria-label="Закрыть обучение" title="Закрыть">
             <Icon name="x" />
           </button>
         ) : null}
-      </div>
-
-      {/* Индикатор шагов: сколько пройдено и сколько осталось */}
-      <div className="tour-prog" aria-hidden="true">
-        {Array.from({ length: total }, (_, i) => (
-          <i key={i} className={i < index ? 'done' : i === index ? 'on' : ''} />
-        ))}
       </div>
 
       <div className={`tour-main${back ? ' back' : ''}`} key={index}>
@@ -347,14 +337,28 @@ export function Onboarding() {
       </div>
 
       <div className="tour-bot">
-        <button type="button" className="btn" onClick={prev} disabled={index === 0}>
-          <Icon name="arrow-left" />
-          Назад
-        </button>
-        <button type="button" className="btn pri" onClick={next} disabled={onConsent && !checked}>
-          {last ? (first ? 'Начать работу' : 'Понятно') : 'Далее'}
-          {last ? null : <Icon name="arrow-right" />}
-        </button>
+        {/* Индикатор шагов: короткие метки, текущая длиннее, рядом счётчик */}
+        <div className="tour-prog">
+          <span className="tour-dots" aria-hidden="true">
+            {Array.from({ length: total }, (_, i) => (
+              <i key={i} className={i < index ? 'done' : i === index ? 'on' : ''} />
+            ))}
+          </span>
+          <span className="tour-count m" aria-live="polite">
+            {index + 1} из {total}
+          </span>
+        </div>
+        {/* Кнопки одного размера и стоят рядом */}
+        <div className="tour-nav">
+          <button type="button" className="btn" onClick={prev} disabled={index === 0}>
+            <Icon name="arrow-left" />
+            Назад
+          </button>
+          <button type="button" className="btn pri" onClick={next} disabled={onConsent && !checked}>
+            {last ? (first ? 'Начать работу' : 'Понятно') : 'Далее'}
+            {last ? null : <Icon name="arrow-right" />}
+          </button>
+        </div>
       </div>
     </div>
   );
