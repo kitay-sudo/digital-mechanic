@@ -96,9 +96,12 @@
   color: var(--tx3);
 }
 
-/* PIN демо-механика прямо в строке: моноширинно, спокойным цветом */
+/* PIN демо-механика прямо в строке: значок ключа, «PIN:» спокойным цветом, цифры моноширинно */
 .lg-row .lg-pin {
   flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-size: calc(15px * var(--k));
   font-weight: 500;
   color: var(--tx3);
@@ -146,14 +149,6 @@
   min-height: calc(56px * var(--k));
   font-size: calc(17px * var(--k));
   color: var(--tx2);
-}
-
-.lg-row .lg-sub {
-  flex: none;
-  font-size: calc(14px * var(--k));
-  font-weight: 500;
-  color: var(--tx3);
-  white-space: nowrap;
 }
 
 /* ---------- PIN ---------- */
@@ -590,9 +585,37 @@
     padding: 0 14px 0 16px;
   }
 
-  /* На телефоне подпись «логин и пароль» не помещается рядом с «Администратор» — не показываем */
-  .lg-row .lg-sub {
-    display: none;
+  /* Строка с PIN демо-механика: PIN под фамилией, чтобы фамилия не обрезалась многоточием */
+  .lg-row:has(.lg-pin) {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-areas:
+      'ic name ch'
+      'ic pin ch';
+    align-items: center;
+    /* Таблица растягивает строки по высоте: фамилия и PIN держатся вместе по центру */
+    align-content: center;
+    column-gap: 16px;
+    row-gap: 2px;
+    padding-block: 10px;
+  }
+
+  .lg-row:has(.lg-pin) > .ti:first-child {
+    grid-area: ic;
+  }
+
+  .lg-row:has(.lg-pin) > span {
+    grid-area: name;
+  }
+
+  .lg-row:has(.lg-pin) > .lg-pin {
+    grid-area: pin;
+    justify-self: start;
+    line-height: calc(20px * var(--k));
+  }
+
+  .lg-row:has(.lg-pin) > .ti:last-child {
+    grid-area: ch;
   }
 
   .lg .ftools .search {

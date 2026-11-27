@@ -106,7 +106,6 @@ function WhoList({
           <Link href="/admin/login" className="lg-row">
             <Icon name="shield-lock" size="l" />
             <span>Администратор</span>
-            <b className="lg-sub">логин и пароль</b>
             <Icon name="chevron-right" />
           </Link>
         )}
@@ -165,10 +164,12 @@ function WhoList({
               <button type="button" key={m.id} className="lg-row" data-row onClick={() => onPick(m)}>
                 <Icon name="user" size="l" />
                 <span>{m.full_name}</span>
-                {/* Демо-стенд: PIN прямо в строке, чтобы проверяющему не искать его отдельно */}
+                {/* Демо-стенд: PIN прямо в строке, чтобы проверяющему не искать его отдельно.
+                    Ключ и двоеточие показывают, что это код для входа, а не часть имени */}
                 {m.demo_pin ? (
-                  <b className="lg-pin" title="PIN демо-механика">
-                    PIN <span className="m">{m.demo_pin}</span>
+                  <b className="lg-pin" title="PIN демо-механика для входа">
+                    <Icon name="key" />
+                    PIN: <span className="m">{m.demo_pin}</span>
                   </b>
                 ) : null}
                 <Icon name="chevron-right" />
