@@ -37,9 +37,24 @@ def _extension(content_type: str) -> str:
     return _EXT.get(subtype, "webm")
 
 
+# На записи без речи (тон, шум мотора) модель иногда возвращает саму подсказку со словарём терминов
+_ECHO = re.compile(r"механик автопарка спрашивает|термины\s*:", re.I)
+_TERMS = [t.strip().lower() for t in GLOSSARY.split("Термины:")[1].rstrip(".").split(",")]
+
+
+def _echo(text: str) -> bool:
+    """Распознанное — эхо подсказки, а не слова механика: её начало или длинный перечень терминов через запятую."""
+    if _ECHO.search(text):
+        return True
+    low = text.lower()
+    return text.count(",") >= 5 and sum(term in low for term in _TERMS) >= 6
+
+
 def clean(text: str) -> str:
     text = " ".join((text or "").split())
     if _PHANTOM.search(text) and len(text) < 80:
+        return ""
+    if _echo(text):
         return ""
     return text
 

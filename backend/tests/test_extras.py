@@ -326,3 +326,11 @@ def test_usage_summary_since_with_other_timezone(store):  # запись в UTC,
     assert store.usage_summary("2026-11-27T23:37:42+03:00")["scenarios"] == 1
     assert store.usage_summary("2026-11-27T23:45:00+03:00")["scenarios"] == 0
     assert store.usage_summary(None)["scenarios"] >= 1
+
+
+def test_stt_drops_prompt_echo():  # на записи без речи сервис вернул подсказку со словарём — это не вопрос механика
+    assert stt.clean(stt.GLOSSARY) == ""
+    assert stt.clean("Механик автопарка спрашивает про двигатель. Термины: ЯМЗ-236М2, ЯМЗ-536") == ""
+    assert stt.clean("ТНВД, форсунка, ГРМ, коленвал, распредвал, клапан, тепловой зазор") == ""
+    question = "Какой момент затяжки коренных подшипников на ЯМЗ-236М2, и чем затягивать?"
+    assert stt.clean(question) == question
