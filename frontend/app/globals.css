@@ -477,7 +477,13 @@ a {
   color: var(--tx2);
 }
 
+/* Норма — зелёная везде: значок статуса, плитка парка, полоса вердикта, точки графика */
 .c-norm {
+  color: var(--ok);
+}
+
+/* Проверка пришла, результата ещё нет */
+.c-wait {
   color: var(--tx3);
 }
 
@@ -710,6 +716,10 @@ a {
   border-left-color: var(--crit);
 }
 
+.tile.t-ok {
+  border-left-color: var(--ok);
+}
+
 .tile.on {
   background: var(--acc-bg);
   border-top-color: var(--acc);
@@ -746,6 +756,10 @@ a {
 
 .tile.t-q > .ti {
   color: var(--crit);
+}
+
+.tile.t-ok > .ti {
+  color: var(--ok);
 }
 
 .ftable {
@@ -1654,11 +1668,9 @@ details.fold > .fin {
   cursor: pointer;
 }
 
-.ack input {
-  width: 20px;
-  height: 20px;
-  flex: none;
-  accent-color: var(--acc);
+.ack > span {
+  flex: 1;
+  min-width: 0;
 }
 
 .okline {
@@ -3938,11 +3950,9 @@ button.sp-link {
   cursor: pointer;
 }
 
-.tour-ack input {
-  width: calc(24px * var(--k));
-  height: calc(24px * var(--k));
-  flex: none;
-  accent-color: var(--acc);
+.tour-ack > span {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Пример на слайде: настоящие элементы интерфейса, нажать их нельзя */
@@ -4161,9 +4171,10 @@ button.sp-link {
   border-top: 1px solid var(--line2);
 }
 
-/* «Назад» и «Далее» одного размера, стоят рядом справа */
+/* «Назад» и «Далее» одного размера, справа ровно под примером: ширина правой колонки слайда
+   (та же сетка, что у .tour-main: две равные колонки с промежутком 56 px, те же поля) */
 .tour-nav {
-  width: calc(400px * var(--k));
+  width: calc((100% - 56px) / 2);
   max-width: 100%;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -5070,4 +5081,50 @@ button.navrow {
 .vinfo .ti {
   flex: none;
   color: var(--acc);
+}
+
+/* ---------- Переключатель вместо галочки: согласие, подтверждение предупреждения ----------
+   Обычный checkbox с role="switch": читается экранным диктором, нажимается всей строкой-подписью */
+input.switch {
+  appearance: none;
+  -webkit-appearance: none;
+  flex: none;
+  position: relative;
+  width: calc(48px * var(--k));
+  height: calc(28px * var(--k));
+  margin: 0;
+  border-radius: 999px;
+  background: var(--line2);
+  cursor: pointer;
+  transition: background-color var(--mo) ease;
+}
+
+input.switch::before {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: calc(28px * var(--k) - 6px);
+  height: calc(28px * var(--k) - 6px);
+  border-radius: 50%;
+  background: #ffffff;
+  transition: transform var(--mo) var(--ease);
+}
+
+input.switch:checked {
+  background: var(--acc);
+}
+
+input.switch:checked::before {
+  transform: translateX(calc(20px * var(--k)));
+}
+
+input.switch:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+input.switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

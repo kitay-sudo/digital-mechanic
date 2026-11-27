@@ -51,7 +51,7 @@ export function ScoreChart({
       {sessions.map((s, i) => {
         const cx = x(i);
         const isSel = s.session_id === selected;
-        const color = s.status === 'anomaly' ? 'var(--warn)' : 'var(--tx3)';
+        const color = s.status === 'anomaly' ? 'var(--warn)' : s.status === 'normal' ? 'var(--ok)' : 'var(--tx3)';
         return (
           <g key={s.session_id}>
             {isSel ? <line x1={cx} x2={cx} y1={top} y2={top + plotH} style={{ stroke: 'var(--acc)' }} strokeWidth={1} /> : null}

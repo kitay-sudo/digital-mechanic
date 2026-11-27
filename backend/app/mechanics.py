@@ -6,6 +6,7 @@ PIN подряд вход этого механика закрыт на мину
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import hmac
 import logging
@@ -48,6 +49,11 @@ def hash_pin(pin: str, salt: bytes | None = None) -> str:
     salt = salt or secrets.token_bytes(16)
     digest = hashlib.pbkdf2_hmac("sha256", pin.encode(), salt, ITERATIONS)
     return f"pbkdf2_sha256${ITERATIONS}${salt.hex()}${digest.hex()}"
+
+
+@functools.lru_cache(maxsize=64)
+def _demo_match(pin: str, stored: str) -> bool:
+    return check_pin(pin, stored)
 
 
 def check_pin(pin: str, stored: str) -> bool:
@@ -104,6 +110,19 @@ class Mechanics:
     def get(self, mechanic_id: int) -> dict | None:
         row = self.db.one("SELECT * FROM mechanics WHERE id=?", (mechanic_id,))
         return self.public(row) if row else None
+
+    def demo_pins(self) -> dict[int, str]:
+        """PIN демо-механиков для экрана входа на демонстрационном стенде (DEMO_SEED=1).
+        Только пока PIN не сменили: сверка по хэшу, результат запоминается по самому хэшу."""
+        if os.environ.get("DEMO_SEED", "").strip() not in ("1", "true", "yes"):
+            return {}
+        known = {m["full_name"]: m["pin"] for m in DEMO}
+        out = {}
+        for row in self.db.all("SELECT id, full_name, pin_hash FROM mechanics WHERE active=1"):
+            pin = known.get(row["full_name"])
+            if pin and _demo_match(pin, row["pin_hash"]):
+                out[row["id"]] = pin
+        return out
 
     def session_version(self, mechanic_id: int) -> int | None:
         """Версия входа: меняется при смене PIN и отключении, старые сессии механика перестают действовать."""

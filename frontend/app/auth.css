@@ -96,31 +96,23 @@
   color: var(--tx3);
 }
 
-.lg-foot {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  padding-top: 16px;
-}
-
-.lg-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
-  border-left: 4px solid var(--acc);
-  background: var(--panel);
+/* PIN демо-механика прямо в строке: моноширинно, спокойным цветом */
+.lg-row .lg-pin {
+  flex: none;
   font-size: calc(15px * var(--k));
-  line-height: calc(22px * var(--k));
-  color: var(--tx2);
+  font-weight: 500;
+  color: var(--tx3);
+  white-space: nowrap;
 }
 
-.lg-hint .ti {
-  color: var(--acc);
+.lg-row .lg-pin .m {
+  flex: none;
+  color: var(--tx);
+  font-weight: 600;
+  letter-spacing: 0.08em;
 }
 
+/* Ссылка-действие на экранах входа и подключений */
 .lg-link {
   min-height: 48px;
   display: inline-flex;
@@ -137,6 +129,31 @@
 
 .lg-link:hover {
   text-decoration: underline;
+}
+
+/* Вход администратора — отдельной строкой под списком, тот же вид, чуть тише */
+/* Отступ — внутренним полем, а не margin: его высоту учитывает расчёт строк на странице */
+.lg-more {
+  flex: none;
+  padding-top: 16px;
+}
+
+.lg-more-box {
+  border: 1px solid var(--line);
+}
+
+.lg-more .lg-row {
+  min-height: calc(56px * var(--k));
+  font-size: calc(17px * var(--k));
+  color: var(--tx2);
+}
+
+.lg-row .lg-sub {
+  flex: none;
+  font-size: calc(14px * var(--k));
+  font-weight: 500;
+  color: var(--tx3);
+  white-space: nowrap;
 }
 
 /* ---------- PIN ---------- */
@@ -526,6 +543,11 @@
 
   .lg-row {
     padding: 0 14px 0 16px;
+  }
+
+  /* На телефоне подпись «логин и пароль» не помещается рядом с «Администратор» — не показываем */
+  .lg-row .lg-sub {
+    display: none;
   }
 
   .lg .ftools .search {

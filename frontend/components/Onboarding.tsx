@@ -300,8 +300,8 @@ export function Onboarding() {
           <p>{slide ? slide.text : CONSENT_TEXT}</p>
           {onConsent ? (
             <label className="tour-ack">
-              <input type="checkbox" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
-              Согласен на обработку данных
+              <span>Согласен на обработку данных</span>
+              <input type="checkbox" role="switch" className="switch" checked={checked} onChange={(e) => setChecked(e.target.checked)} />
             </label>
           ) : null}
         </div>

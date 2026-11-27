@@ -14,7 +14,7 @@ import { Pager } from './Pager';
 import { ErrorState, Loading } from './States';
 
 const TILES: { key: FleetStatus; label: string; hint: string; cls: string; icon: string }[] = [
-  { key: 'ok', label: 'Норма', hint: 'Готовы к работе', cls: '', icon: 'circle-check' },
+  { key: 'ok', label: 'Норма', hint: 'Готовы к работе', cls: 't-ok', icon: 'circle-check' },
   { key: 'attention', label: 'Требует внимания', hint: 'Плановый контроль', cls: 't-att', icon: 'alert-triangle' },
   { key: 'quarantine', label: 'Карантин', hint: 'На дефектовку до рейса', cls: 't-q', icon: 'alert-octagon' },
 ];

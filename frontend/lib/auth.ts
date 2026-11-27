@@ -28,6 +28,8 @@ export interface Me {
 export interface MechanicName {
   id: number;
   full_name: string;
+  /** PIN демо-механика на демонстрационном стенде, иначе не приходит */
+  demo_pin?: string | null;
 }
 
 /** Механик в списке администратора */

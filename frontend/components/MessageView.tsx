@@ -401,6 +401,7 @@ function CopyBlock({ text, title = 'Рекомендация на дефекто
 /* ---------- Вердикт ---------- */
 
 function verdictTone(a: Assessment | null | undefined): string {
+  if (a?.outcome === 'normal') return ' v-ok';
   if (!a || a.outcome !== 'anomaly' || a.flags.engine_mismatch) return '';
   return a.priority === 'high' ? ' v-h' : a.priority === 'low' ? ' v-l' : ' v-m';
 }
@@ -706,8 +707,8 @@ function DraftCard({ m, ctx, onConfirm }: { m: Message; ctx: Ctx; onConfirm: (dr
 
       {draft.status === 'draft' && draft.requires_warning_ack ? (
         <label className="ack">
-          <input type="checkbox" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={!editable} />
-          Понимаю, что запись с помехами и вывод предварительный
+          <span>Понимаю, что запись с помехами и вывод предварительный</span>
+          <input type="checkbox" role="switch" className="switch" checked={ack} onChange={(e) => setAck(e.target.checked)} disabled={!editable} />
         </label>
       ) : null}
 

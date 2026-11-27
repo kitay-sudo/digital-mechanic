@@ -217,8 +217,12 @@ async def me(request: Request):
 
 @router.get("/mechanics")
 async def mechanic_list():
-    """Список для экрана «Кто работает»: только работающие механики, только ФИО."""
-    items = [{"id": m["id"], "full_name": m["full_name"]} for m in mechanics.repo().list(include_inactive=False)]
+    """Список для экрана «Кто работает»: только работающие механики, только ФИО.
+    На демонстрационном стенде (DEMO_SEED=1) у демо-механиков ещё и PIN — он виден прямо в строке."""
+    repo = mechanics.repo()
+    pins = repo.demo_pins()
+    items = [{"id": m["id"], "full_name": m["full_name"], "demo_pin": pins.get(m["id"])}
+             for m in repo.list(include_inactive=False)]
     return {"items": items, "hint": demo_hint()}
 
 

@@ -10,7 +10,7 @@ export function StatusBadge({ status, code, mismatch }: { status: Status | null;
   // Проверка пришла от «НейроДВС» веб-хуком, результата ещё нет: агент запросит его у ML-сервиса
   if (!status) {
     return (
-      <span className="sev c-norm">
+      <span className="sev c-wait">
         <Icon name="clock" />
         Ждёт результата
       </span>

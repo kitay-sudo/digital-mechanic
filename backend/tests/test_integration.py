@@ -373,3 +373,18 @@ def test_admin_decision_signed_by_login_and_shift_is_admin_only(secured):
     card = secured.get(f"/api/audit/{sent.json()['id']}").json()
     assert card["reviewer"] == "Администратор"
     assert secured.get("/api/shift-summary").status_code == 200
+
+
+def test_demo_pin_shown_only_while_unchanged(secured, monkeypatch):
+    monkeypatch.setenv("DEMO_SEED", "1")
+    repo = mechanics.repo()
+    repo.seed_demo()
+    items = {m["full_name"]: m for m in secured.get("/api/auth/mechanics").json()["items"]}
+    assert items["Иванов Иван"]["demo_pin"] == "1111"
+    # PIN сменили — в списке его больше нет
+    repo.update(items["Иванов Иван"]["id"], {"pin": "9876"})
+    items = {m["full_name"]: m for m in secured.get("/api/auth/mechanics").json()["items"]}
+    assert items["Иванов Иван"]["demo_pin"] is None and items["Петров Пётр"]["demo_pin"] == "2222"
+    # Без демо-режима PIN не отдаются вовсе
+    monkeypatch.setenv("DEMO_SEED", "0")
+    assert all(m["demo_pin"] is None for m in secured.get("/api/auth/mechanics").json()["items"])

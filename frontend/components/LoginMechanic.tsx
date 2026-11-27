@@ -54,38 +54,32 @@ export function LoginMechanic({ hint, canClose = false }: { hint: string | null;
         <WhoList
           items={items}
           notice={notice}
+          hint={hint}
+          canClose={canClose}
           onPick={(m) => {
             setNotice(null);
             setPicked(m);
           }}
         />
       )}
-      <div className="lg-foot">
-        {hint ? (
-          <span className="lg-hint">
-            <Icon name="info-circle" />
-            {hint}
-          </span>
-        ) : (
-          <span />
-        )}
-        {canClose ? (
-          <button type="button" className="lg-link" onClick={closeLogin}>
-            <Icon name="x" size="s" />
-            Отмена
-          </button>
-        ) : (
-          <Link href="/admin/login" className="lg-link">
-            <Icon name="shield-lock" size="s" />
-            Вход администратора
-          </Link>
-        )}
-      </div>
     </div>
   );
 }
 
-function WhoList({ items, notice, onPick }: { items: MechanicName[]; notice: string | null; onPick: (m: MechanicName) => void }) {
+function WhoList({
+  items,
+  notice,
+  hint,
+  canClose,
+  onPick,
+}: {
+  items: MechanicName[];
+  notice: string | null;
+  /** Подсказка стенда (DEMO_LOGIN_HINT): нужна, только если PIN не пришли в строках */
+  hint: string | null;
+  canClose: boolean;
+  onPick: (m: MechanicName) => void;
+}) {
   const [query, setQuery] = useState('');
   const settings = useSettings();
   const rows = useMemo(() => {
@@ -95,11 +89,33 @@ function WhoList({ items, notice, onPick }: { items: MechanicName[]; notice: str
   const { areaRef, pageSize } = useFitRows([settings.size, items, rows.length === 0]);
   const paged = usePaged(rows, pageSize, query);
 
+  // Второй выход с экрана — отдельной строкой того же вида, что и список, сразу под ним.
+  // data-head: расчёт строк на странице вычитает её высоту, как шапку таблицы
+  const more = (
+    <div className="lg-more" data-head>
+      <div className="lg-more-box">
+        {canClose ? (
+          <button type="button" className="lg-row" onClick={closeLogin}>
+            <Icon name="arrow-left" size="l" />
+            <span>Вернуться к работе</span>
+          </button>
+        ) : (
+          <Link href="/admin/login" className="lg-row">
+            <Icon name="shield-lock" size="l" />
+            <span>Администратор</span>
+            <b className="lg-sub">логин и пароль</b>
+            <Icon name="chevron-right" />
+          </Link>
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <>
       <div className="lg-h">
         <h1>Кто работает?</h1>
-        <p>Нажмите свою фамилию</p>
+        <p>Нажмите свою фамилию{hint && !items.some((m) => m.demo_pin) ? `. ${hint}` : ''}</p>
       </div>
       {notice ? (
         <div className="alert a-warn lg-note" role="alert">
@@ -146,13 +162,21 @@ function WhoList({ items, notice, onPick }: { items: MechanicName[]; notice: str
               <button type="button" key={m.id} className="lg-row" data-row onClick={() => onPick(m)}>
                 <Icon name="user" size="l" />
                 <span>{m.full_name}</span>
+                {/* Демо-стенд: PIN прямо в строке, чтобы проверяющему не искать его отдельно */}
+                {m.demo_pin ? (
+                  <b className="lg-pin" title="PIN демо-механика">
+                    PIN <span className="m">{m.demo_pin}</span>
+                  </b>
+                ) : null}
                 <Icon name="chevron-right" />
               </button>
             ))}
           </div>
+          {paged.pages > 1 ? null : more}
         </div>
       )}
       {paged.pages > 1 ? <Pager paged={paged} label="механики" /> : null}
+      {paged.pages > 1 || !rows.length ? more : null}
     </>
   );
 }
