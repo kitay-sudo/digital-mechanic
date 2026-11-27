@@ -6,12 +6,14 @@ import { GAPS_EVENT } from '@/lib/api';
 import { dateTime, int, num, plural } from '@/lib/format';
 import {
   NO_FILTERS,
+  STATUS_LABEL,
   activeFilters,
   exportUrl,
   filtersFromUrl,
   filtersToUrl,
   journalApi,
   type CaseStatus,
+  type CaseType,
   type JournalFilters,
   type JournalItem,
   type JournalPage,
@@ -20,7 +22,7 @@ import { useFitRows, type Paged } from '@/lib/paging';
 import { usePresence } from '@/lib/presence';
 import { useSettings } from '@/lib/settings';
 import type { MessageKind } from '@/lib/types';
-import { CaseSheet, StatusChip } from './CaseSheet';
+import { CaseSheet } from './CaseSheet';
 import { FilterSheet } from './JournalFilters';
 import { Icon } from './Icon';
 import { Pager } from './Pager';
@@ -104,6 +106,26 @@ function Usage({ item }: { item: JournalItem }) {
 
 const isOpen = (it: JournalItem) => it.status === 'new' || it.status === 'in_work';
 
+/** Что делать администратору с пометкой системы: строка под подписью случая */
+const SYSTEM_HINT: Record<Exclude<CaseType, 'report'>, string> = {
+  no_answer: 'Агент не нашёл ответа в руководстве. Помогите механику и отметьте «Разобрано».',
+  kb_missing: 'Агент не может отвечать: руководства этого двигателя не загружены.',
+  ml_mismatch: 'Сервис диагностики выдал неисправность, которой нет у этого двигателя. Проверьте сервис.',
+  injection: 'В данных от сервиса диагностики была команда агенту. Агент её не выполнил, проверьте сервис.',
+};
+
+const STATE_ICON: Record<CaseStatus, string> = { new: '', in_work: 'progress', reviewed: 'circle-check' };
+
+/** Статус случая текстом рядом с его подписью: у нового — точка, как у непрочитанного письма */
+function CaseState({ status }: { status: CaseStatus }) {
+  return (
+    <span className={`lst st-${status}`}>
+      {status === 'new' ? <i className="lst-dot" aria-hidden /> : <Icon name={STATE_ICON[status]} size="s" />}
+      {STATUS_LABEL[status]}
+    </span>
+  );
+}
+
 function Row({
   it,
   selected,
@@ -117,9 +139,18 @@ function Row({
 }) {
   const who = whoOf(it);
   const gap = it.gap;
+  // Сообщение механика — человек пишет администратору; остальные случаи отметила система
+  const fromMechanic = gap?.type === 'report';
+  const caseLabel = !gap
+    ? ''
+    : fromMechanic
+      ? it.source === 'admin'
+        ? 'Сообщение механика'
+        : 'Механик сообщил о проблеме'
+      : `Система: ${gap.label.toLowerCase()}`;
   return (
     <div
-      className={`lrow jrow${isOpen(it) ? ' gap' : ''}${selected ? ' sel' : ''}`}
+      className={`lrow jrow${isOpen(it) ? ` gap${fromMechanic ? ' msg' : ''}` : ''}${it.status === 'new' ? ' unread' : ''}${selected ? ' sel' : ''}`}
       data-row
       tabIndex={0}
       onClick={() => onOpen(it)}
@@ -141,7 +172,6 @@ function Row({
             {who}
           </span>
         ) : null}
-        {it.status ? <StatusChip status={it.status} /> : null}
       </span>
       <span className="lv">
         {it.vehicle_id ? (
@@ -159,9 +189,10 @@ function Row({
       <span className="lq">{it.question || <span className="mut">{it.photos ? 'фото без текста' : '—'}</span>}</span>
       <span className="la">
         {gap ? (
-          <span className={`lkind lgap${gap.status === 'reviewed' ? ' done' : ''}`} title={gap.title}>
-            <Icon name="alert-triangle" size="s" />
-            {gap.label}
+          <span className={`lkind lcase ${fromMechanic ? 'k-msg' : 'k-sys'}${gap.status === 'reviewed' ? ' done' : ''}`} title={gap.title}>
+            <Icon name={fromMechanic ? 'message-circle' : 'robot'} size="s" />
+            <span>{caseLabel}</span>
+            {it.status ? <CaseState status={it.status} /> : null}
           </span>
         ) : (
           <span className="lkind">
@@ -176,8 +207,10 @@ function Row({
           {it.report
             ? `${it.report.reason}${it.report.text ? `: ${it.report.text}` : ''}`
             : it.source === 'admin'
-              ? 'Вопрос напрямую, без ответа агента'
-              : it.answer}
+              ? 'Написал вам напрямую, агент не отвечал. Свяжитесь с механиком.'
+              : gap && gap.type !== 'report'
+                ? SYSTEM_HINT[gap.type]
+                : it.answer}
         </span>
       </span>
       <Sources item={it} />

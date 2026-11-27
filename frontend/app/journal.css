@@ -111,7 +111,7 @@
 }
 
 .lrow.jrow.gap:hover {
-  background: color-mix(in srgb, var(--warn) 12%, var(--panel));
+  background: color-mix(in srgb, var(--case) 12%, var(--panel));
 }
 
 .lrow.jrow.sel,
@@ -123,12 +123,6 @@
 .jgap:not(:first-child),
 .lkind > .jgap {
   margin-left: 10px;
-}
-
-.jtable .lgap {
-  white-space: nowrap;
-  min-width: 0;
-  overflow: hidden;
 }
 
 /* «повторилось N раз» — в начале второй строки ответа */

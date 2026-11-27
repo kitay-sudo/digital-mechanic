@@ -4666,10 +4666,20 @@ button.sp-link {
 
 /* ---------- Журнал: случаи для администратора ---------- */
 
-/* Неразобранный случай: полоса слева и подпись цветом предупреждения */
+/* Неразобранный случай: полоса слева цветом вида случая.
+   Пометка системы — цвет предупреждения, сообщение механика — акцент.
+   Новый случай, как непрочитанное письмо: строка подсвечена, вопрос жирным. В работе — только полоса */
 .lrow.gap {
   position: relative;
-  background: color-mix(in srgb, var(--warn) 7%, var(--panel));
+  --case: var(--warn);
+}
+
+.lrow.gap.msg {
+  --case: var(--acc);
+}
+
+.lrow.gap.unread {
+  background: color-mix(in srgb, var(--case) 8%, var(--panel));
 }
 
 .lrow.gap::before {
@@ -4679,7 +4689,58 @@ button.sp-link {
   top: 0;
   bottom: 0;
   width: 4px;
-  background: var(--warn);
+  background: var(--case);
+}
+
+.lrow.unread .lq {
+  font-weight: 600;
+  color: var(--tx);
+}
+
+/* Подпись случая: значок и вид (кто сообщил), рядом статус текстом */
+.lcase {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px 6px;
+}
+
+.lcase.k-msg {
+  color: var(--acc);
+}
+
+.lcase.k-sys {
+  color: var(--warn-tx);
+}
+
+.lcase.done {
+  color: var(--tx3);
+}
+
+.lst {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-left: 6px;
+  font-size: calc(13px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lst.st-in_work {
+  color: var(--tx2);
+}
+
+.lst.st-reviewed {
+  color: var(--tx3);
+  font-weight: 500;
+}
+
+.lst-dot {
+  width: calc(8px * var(--k));
+  height: calc(8px * var(--k));
+  border-radius: 50%;
+  background: currentColor;
 }
 
 .lrow .lt {
@@ -4687,17 +4748,6 @@ button.sp-link {
   flex-direction: column;
   align-items: flex-start;
   gap: 6px;
-}
-
-.lgap {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--warn-tx);
-}
-
-.lgap.done {
-  color: var(--tx3);
 }
 
 .lrev {
