@@ -6,7 +6,7 @@ import { FALLBACK_LEVELS, setSettings, useSettings } from '@/lib/settings';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 import { openTour } from './Onboarding';
-import { appVersion, changeAppServer, installApp, usePwa } from '@/lib/pwa';
+import { appVersion, changeAppServer, usePwa } from '@/lib/pwa';
 
 function Choice<T extends string>({
   label,
@@ -44,10 +44,7 @@ function Choice<T extends string>({
   );
 }
 
-/** Файл приложения для Android. Собирается скриптом android/build.sh и кладётся в public/app */
-const APK_URL = '/app/digital-mechanic.apk';
-
-/** Настройки механика: размер текста, тема, подача, приложение на телефон, какая модель отвечает. */
+/** Настройки механика: фамилия, размер текста, тема, подача, какая модель отвечает. */
 export function SettingsPanel({ config, leaving = false, onClose }: { config: Config | null; leaving?: boolean; onClose: () => void }) {
   const settings = useSettings();
   const pwa = usePwa();
@@ -132,43 +129,23 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
             <Choice label="Подача" value={settings.level} options={levels} onChange={(level) => setSettings({ level })} />
             {levelHint ? <div className="sp-s">{levelHint}</div> : null}
           </div>
-          <div className="sp-g">
-            <div className="sp-l">Приложение на телефон</div>
-            {pwa.shell ? (
-              // Система открыта в приложении для Android: устанавливать нечего, можно сменить сервер
-              <>
-                <div className="sp-ok">
-                  <Icon name="circle-check" />
-                  Приложение для Android{appVersion() ? `, версия ${appVersion()}` : ''}
-                </div>
-                <button type="button" className="sp-link" onClick={changeAppServer}>
-                  <Icon name="server-2" />
-                  <span>Сменить адрес сервера</span>
-                  <Icon name="chevron-right" className="mut" />
-                </button>
-              </>
-            ) : pwa.installed ? (
+          {/* Пока работаем только как веб-версия: установку приложения и APK в интерфейсе не показываем.
+              Код PWA и оболочки Android остаётся, включается возвратом этого блока. Внутри оболочки
+              (если её всё же поставили) остаётся смена адреса сервера, иначе из неё не выйти на другой стенд */}
+          {pwa.shell ? (
+            <div className="sp-g">
+              <div className="sp-l">Приложение</div>
               <div className="sp-ok">
                 <Icon name="circle-check" />
-                Приложение установлено
+                Приложение для Android{appVersion() ? `, версия ${appVersion()}` : ''}
               </div>
-            ) : pwa.canInstall ? (
-              <button type="button" className="btn pri sp-inst" onClick={() => void installApp()}>
-                <Icon name="download" />
-                Установить приложение
+              <button type="button" className="sp-link" onClick={changeAppServer}>
+                <Icon name="server-2" />
+                <span>Сменить адрес сервера</span>
+                <Icon name="chevron-right" className="mut" />
               </button>
-            ) : null}
-            {!pwa.shell && !pwa.secure ? (
-              <div className="sp-s">Установка из браузера доступна, когда система открыта по защищённому адресу (https). Приложение для Android работает с любым адресом.</div>
-            ) : null}
-            {pwa.shell ? null : (
-              <a href={APK_URL} className="sp-link" download="digital-mechanic.apk">
-                <Icon name="brand-android" />
-                <span>Скачать для Android</span>
-                <Icon name="download" className="mut" />
-              </a>
-            )}
-          </div>
+            </div>
+          ) : null}
           <button
             type="button"
             className="sp-link"
