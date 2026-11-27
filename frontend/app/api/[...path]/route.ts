@@ -17,6 +17,13 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   if (ct) headers.set('content-type', ct);
   const accept = req.headers.get('accept');
   if (accept) headers.set('accept', accept);
+  // Вход: кука сессии механика или администратора; внешние системы — ключ X-API-Key (/api/docs)
+  for (const h of ['cookie', 'x-api-key']) {
+    const v = req.headers.get(h);
+    if (v) headers.set(h, v);
+  }
+  // Кука сессии ставится с флагом Secure, если интерфейс открыт по HTTPS
+  headers.set('x-forwarded-proto', req.headers.get('x-forwarded-proto') || req.nextUrl.protocol.replace(':', ''));
 
   const init: RequestInit = { method: req.method, headers, cache: 'no-store', redirect: 'manual' };
   if (req.method !== 'GET' && req.method !== 'HEAD') init.body = await req.arrayBuffer();
@@ -28,6 +35,7 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
       const v = upstream.headers.get(h);
       if (v) out.set(h, v);
     }
+    for (const c of upstream.headers.getSetCookie()) out.append('set-cookie', c);
     if (!out.has('cache-control')) out.set('cache-control', 'no-store');
     out.set('x-accel-buffering', 'no');
     return new Response(upstream.body, { status: upstream.status, headers: out });

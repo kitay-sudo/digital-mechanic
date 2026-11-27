@@ -5,7 +5,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+import sqlite3
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 
@@ -80,6 +81,10 @@ class Settings:
     stt_api_key: str
     stt_model: str
     stt_price_per_min: float
+    # Доступ к внешним сервисам: токен (Authorization: Bearer) и кто принимает заявки (clients.py)
+    ml_token: str = ""
+    toir_token: str = ""
+    ticket_sink: str = "toir"
 
     @property
     def pdf_dir(self) -> Path:
@@ -100,7 +105,7 @@ def get_settings() -> Settings:
     if not provider:
         # Без ключа сервер работает на заглушке модели.
         provider = "anthropic" if os.environ.get("ANTHROPIC_API_KEY") else "mock"
-    return Settings(
+    settings = Settings(
         ml_url=os.environ.get("MOCK_ML_URL", "http://127.0.0.1:8001").rstrip("/"),
         toir_url=os.environ.get("MOCK_TOIR_URL", "http://127.0.0.1:8002").rstrip("/"),
         fleet_path=_path("FLEET_DATA_PATH", ROOT / "mocks" / "data" / "vehicles.json"),
@@ -141,4 +146,31 @@ def get_settings() -> Settings:
         stt_api_key=os.environ.get("STT_API_KEY") or os.environ.get("LLM_API_KEY") or os.environ.get("ANTHROPIC_API_KEY", ""),
         stt_model=os.environ.get("STT_MODEL", "gpt-4o-mini-transcribe").strip(),
         stt_price_per_min=_float("STT_PRICE_PER_MIN", 0.0),
+        ml_token=os.environ.get("ML_API_TOKEN", "").strip(),
+        toir_token=os.environ.get("TOIR_API_TOKEN", "").strip(),
+        ticket_sink=os.environ.get("TICKET_SINK", "toir").strip() or "toir",
     )
+    return _with_overrides(settings)
+
+
+# Настройки подключений, которые администратор задал в интерфейсе или через API (integrations.py).
+# Хранятся в базе и перекрывают .env. После их изменения кэш get_settings сбрасывается.
+OVERRIDABLE = ("ml_url", "toir_url", "alert_webhook_url", "ml_token", "toir_token")
+OVERRIDE_PREFIX = "integration."
+
+
+def _with_overrides(settings: Settings) -> Settings:
+    path = settings.db_path
+    if not path.exists():
+        return settings
+    try:
+        con = sqlite3.connect(path.resolve().as_uri() + "?mode=ro", uri=True)
+        try:
+            rows = con.execute("SELECT key, value FROM app_settings WHERE key LIKE ?", (OVERRIDE_PREFIX + "%",)).fetchall()
+        finally:
+            con.close()
+    except sqlite3.Error:
+        return settings  # таблицы ещё нет: настройки только из .env
+    values = {key[len(OVERRIDE_PREFIX):]: value for key, value in rows}
+    patch = {k: (values[k].rstrip("/") if k.endswith("_url") else values[k]) for k in OVERRIDABLE if k in values}
+    return replace(settings, **patch) if patch else settings

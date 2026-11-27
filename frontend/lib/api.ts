@@ -3,6 +3,9 @@ import type { AuditItem, Config, Draft, Fleet, ManualPage, Marks, Message, Profi
 /** Событие страницы: число неразобранных случаев без ответа изменилось, шапка перечитывает его */
 export const GAPS_EVENT = 'mechanic:gaps';
 
+/** Событие страницы: сервер ответил «войдите» (сессия истекла или механику сменили PIN), экран входа перечитывает её */
+export const AUTH_EVENT = 'mechanic:auth';
+
 export class ApiError extends Error {
   status: number;
   constructor(message: string, status: number) {
@@ -35,6 +38,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   } catch {
     throw new ApiError('Нет связи с сервером', 0);
   }
+  if (res.status === 401) window.dispatchEvent(new Event(AUTH_EVENT));
   if (!res.ok) throw new ApiError(await readError(res), res.status);
   return (await res.json()) as T;
 }
@@ -95,6 +99,7 @@ async function stream(path: string, init: RequestInit, onEvent: (e: StreamEvent)
   } catch {
     throw new ApiError('Нет связи с сервером', 0);
   }
+  if (res.status === 401) window.dispatchEvent(new Event(AUTH_EVENT));
   if (!res.ok || !res.body) throw new ApiError(await readError(res), res.status);
 
   const reader = res.body.getReader();

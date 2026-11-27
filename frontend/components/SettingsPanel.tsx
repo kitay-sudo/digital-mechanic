@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
+import { canAdmin, logout, useAuth } from '@/lib/auth';
 import { FALLBACK_LEVELS, setSettings, useSettings } from '@/lib/settings';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
@@ -44,9 +45,11 @@ function Choice<T extends string>({
   );
 }
 
-/** Настройки механика: фамилия, размер текста, тема, подача, какая модель отвечает. */
+/** Настройки механика: кто вошёл, размер текста, тема, подача, какая модель отвечает. */
 export function SettingsPanel({ config, leaving = false, onClose }: { config: Config | null; leaving?: boolean; onClose: () => void }) {
   const settings = useSettings();
+  const { me } = useAuth();
+  const admin = canAdmin(me);
   const pwa = usePwa();
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
 
@@ -88,17 +91,27 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
         </div>
         <div className="sp-b">
           <div className="sp-g">
-            <div className="sp-l">Механик</div>
-            {/* Фамилия подписывает вопросы и отметки шагов: при смене сменщик видит, кто что сделал */}
-            <input
-              className="inp sp-in"
-              value={settings.mechanic}
-              onChange={(e) => setSettings({ mechanic: e.target.value })}
-              placeholder="Фамилия"
-              aria-label="Фамилия механика"
-              maxLength={60}
-            />
-            <div className="sp-s">Видна в чате и журнале. При смене впишите свою.</div>
+            {/* Кто вошёл: ФИО подписывает вопросы и отметки шагов. Вписывать руками не нужно, смена — через выход */}
+            <div className="sp-l">{me?.role === 'admin' ? 'Вход' : 'Механик'}</div>
+            <div className="sp-ok">
+              <Icon name={me?.role === 'admin' ? 'shield-check' : settings.mechanic ? 'user-check' : 'user-question'} />
+              {me?.role === 'admin' ? 'Администратор' : settings.mechanic || 'Не выбран'}
+            </div>
+            {me?.role || me?.required === false ? (
+              <button
+                type="button"
+                className="sp-link"
+                onClick={() => {
+                  onClose();
+                  void logout();
+                }}
+              >
+                <Icon name={me?.role === 'admin' ? 'logout' : 'switch-horizontal'} />
+                <span>{me?.role === 'admin' ? 'Выйти' : settings.mechanic ? 'Сменить механика' : 'Войти'}</span>
+                <Icon name="chevron-right" className="mut" />
+              </button>
+            ) : null}
+            {me?.role !== 'admin' ? <div className="sp-s">Видно в чате и журнале. Размер текста и подача ставятся при входе.</div> : null}
           </div>
           <div className="sp-g">
             <div className="sp-l">Размер текста</div>
@@ -158,11 +171,26 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
             <span>Как работать с системой</span>
             <Icon name="chevron-right" className="mut" />
           </button>
-          <Link href="/log" className="sp-link" onClick={onClose}>
-            <Icon name="history" />
-            <span>Журнал обращений</span>
-            <Icon name="chevron-right" className="mut" />
-          </Link>
+          {/* Разделы администратора: на телефоне в шапке их нет, они здесь */}
+          {admin ? (
+            <>
+              <Link href="/log" className="sp-link" onClick={onClose}>
+                <Icon name="history" />
+                <span>Журнал обращений</span>
+                <Icon name="chevron-right" className="mut" />
+              </Link>
+              <Link href="/admin/mechanics" className="sp-link" onClick={onClose}>
+                <Icon name="users" />
+                <span>Механики</span>
+                <Icon name="chevron-right" className="mut" />
+              </Link>
+              <Link href="/admin/integrations" className="sp-link" onClick={onClose}>
+                <Icon name="plug-connected" />
+                <span>Подключения</span>
+                <Icon name="chevron-right" className="mut" />
+              </Link>
+            </>
+          ) : null}
           {config ? (
             <div className="sp-model" title="Модель, которая отвечает механику">
               <Icon name="cpu" />

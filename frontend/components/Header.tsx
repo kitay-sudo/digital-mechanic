@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
 import { GAPS_EVENT, api } from '@/lib/api';
+import { canAdmin, useAuth } from '@/lib/auth';
 import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 import { usePresence } from '@/lib/presence';
@@ -16,6 +17,10 @@ export function Header() {
   const pathname = usePathname();
   const [config, setConfig] = useState<Config | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  // Разделы по ролям: механику — парк, администратору ещё журнал, механики и подключения
+  const { me } = useAuth();
+  const admin = canAdmin(me);
+  const signedIn = Boolean(me && (!me.required || me.role));
 
   useEffect(() => {
     api.config().then(setConfig).catch(() => setConfig(null));
@@ -25,6 +30,7 @@ export function Header() {
   const [gaps, setGaps] = useState(0);
   useEffect(() => {
     const load = () => {
+      if (!admin) return;
       if (document.visibilityState === 'visible') api.auditGaps().then((d) => setGaps(d.open)).catch(() => undefined);
     };
     load();
@@ -36,7 +42,7 @@ export function Header() {
       document.removeEventListener('visibilitychange', load);
       window.removeEventListener(GAPS_EVENT, load);
     };
-  }, [pathname]);
+  }, [pathname, admin]);
 
   const closeSettings = useCallback(() => setSettingsOpen(false), []);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
@@ -50,10 +56,13 @@ export function Header() {
         Цифровой механик
       </Link>
       <nav className="nav only-d">
-        <Link href="/" className={pathname === '/' ? 'on' : ''}>
-          <Icon name="list-details" size="s" />
-          Парк
-        </Link>
+        {signedIn ? (
+          <Link href="/" className={pathname === '/' ? 'on' : ''}>
+            <Icon name="list-details" size="s" />
+            Парк
+          </Link>
+        ) : null}
+        {admin ? (
         <Link href="/log" className={pathname === '/log' ? 'on' : ''}>
           <Icon name="history" size="s" />
           Журнал
@@ -63,6 +72,19 @@ export function Header() {
             </b>
           ) : null}
         </Link>
+        ) : null}
+        {admin ? (
+          <Link href="/admin/mechanics" className={pathname === '/admin/mechanics' ? 'on' : ''}>
+            <Icon name="users" size="s" />
+            Механики
+          </Link>
+        ) : null}
+        {admin ? (
+          <Link href="/admin/integrations" className={pathname === '/admin/integrations' ? 'on' : ''}>
+            <Icon name="plug-connected" size="s" />
+            Подключения
+          </Link>
+        ) : null}
       </nav>
       <div className="r">
         {/* Какая модель отвечает, написано в настройках. Здесь только предупреждение о заглушке */}

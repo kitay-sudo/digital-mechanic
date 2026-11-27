@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from . import alerts, clients, fleet, rules, stt, turns, uploads
+from . import alerts, api_v1, auth, clients, fleet, rules, stt, turns, uploads
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -41,8 +41,12 @@ async def lifespan(app: FastAPI):
     await turns.shutdown()
 
 
-app = FastAPI(title="Цифровой механик", version="0.1.0", lifespan=lifespan)
+# Документация API для внешних систем: под /api, чтобы открывалась и через прокси интерфейса
+app = FastAPI(title="Цифровой механик", version="0.1.0", lifespan=lifespan,
+              docs_url="/api/docs", openapi_url="/api/openapi.json", redoc_url=None)
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+api_v1.install(app)  # /api/v1 для внешних систем и маршруты экранов администратора
+auth.install(app)    # вход механика и администратора, проверка роли на /api/*
 
 
 def store() -> Store:

@@ -6,7 +6,16 @@ const STATUS_CLASS: Record<Status, string> = { anomaly: 'c-dev', check_failed: '
 const PRIORITY_CLASS: Record<Priority, string> = { high: 'c-h', medium: 'c-m', low: 'c-l' };
 
 /** Статус проверки: значок, слово и цвет. */
-export function StatusBadge({ status, code, mismatch }: { status: Status; code?: string | null; mismatch?: boolean }) {
+export function StatusBadge({ status, code, mismatch }: { status: Status | null; code?: string | null; mismatch?: boolean }) {
+  // Проверка пришла от «НейроДВС» веб-хуком, результата ещё нет: агент запросит его у ML-сервиса
+  if (!status) {
+    return (
+      <span className="sev c-norm">
+        <Icon name="clock" />
+        Ждёт результата
+      </span>
+    );
+  }
   // Результат модели не подходит двигателю машины: это ошибка данных, а не отклонение
   if (mismatch) {
     return (
