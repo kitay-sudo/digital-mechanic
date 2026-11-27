@@ -183,6 +183,35 @@ def test_integrations_override_env_and_mask_secrets(api, monkeypatch):
     assert bad.status_code == 422 and "ТОиР" in bad.json()["detail"]
 
 
+# --- приёмник заявок: переходник подключается переменной TICKET_SINK ---
+class FakeSink:
+    name = "fake"
+    sent: list[dict] = []
+
+    def __init__(self, settings):
+        self.url = settings.toir_url
+
+    async def create(self, payload: dict) -> dict:
+        FakeSink.sent.append(payload)
+        return {"ticket_id": "1C-0001", "status": "created"}
+
+    async def health(self) -> bool:
+        return True
+
+
+async def test_ticket_sink_is_pluggable(monkeypatch):
+    monkeypatch.setenv("TICKET_SINK", "tests.test_integration:FakeSink")
+    get_settings.cache_clear()
+    assert isinstance(clients.ticket_sink(), clients.TicketSink)
+    assert (await clients.create_ticket({"vehicle_id": "A101TT77"}))["ticket_id"] == "1C-0001"
+    assert (await clients.health())["toir"] is True
+
+    monkeypatch.setenv("TICKET_SINK", "tests.nowhere:Sink")
+    get_settings.cache_clear()
+    with pytest.raises(clients.ServiceError, match="TICKET_SINK"):
+        await clients.create_ticket({})
+
+
 # --- коннектор к агенту ---
 def test_agent_ask_and_diagnose_on_mock_model(api, services):
     verdict = api.post("/api/v1/agent/diagnose", headers=H, json={"vehicle_id": "A101TT77", "session_id": "S-9003"})

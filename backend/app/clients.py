@@ -112,7 +112,10 @@ def _sink_class(spec: str) -> type:
     module, _, name = spec.partition(":")
     if not name:
         raise ServiceError(f"TICKET_SINK задан неверно: «{spec}». Нужно «модуль:Класс» или «toir».")
-    return getattr(importlib.import_module(module), name)
+    try:
+        return getattr(importlib.import_module(module), name)
+    except (ImportError, AttributeError) as exc:
+        raise ServiceError(f"Переходник приёмника заявок TICKET_SINK={spec} не найден на сервере: заявка не отправлена.") from exc
 
 
 def ticket_sink() -> TicketSink:
