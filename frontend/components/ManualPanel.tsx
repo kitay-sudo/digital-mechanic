@@ -5,6 +5,9 @@ import { api } from '@/lib/api';
 import type { ManualPage, ManualTarget } from '@/lib/types';
 import { Icon } from './Icon';
 
+/** Через сколько миллисекунд показать «Загружаю страницу…»: быстрая загрузка проходит без мигания */
+const SLOW_MS = 400;
+
 /** Страница руководства: картинка страницы PDF с подсветкой цитаты. */
 export function ManualPanel({
   target,
@@ -21,6 +24,8 @@ export function ManualPanel({
   const [page, setPage] = useState<ManualPage | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [imgState, setImgState] = useState<'loading' | 'ok' | 'error'>('loading');
+  /** Страница грузится дольше, чем моргнуть: только тогда показываем «Загружаю страницу…» */
+  const [slow, setSlow] = useState(false);
 
   useEffect(() => {
     let alive = true;
@@ -38,6 +43,14 @@ export function ManualPanel({
       alive = false;
     };
   }, [target.manual_id, target.page]);
+
+  const quoteKey = target.quote ?? '';
+  useEffect(() => {
+    setSlow(false);
+    if (imgState !== 'loading') return;
+    const timer = window.setTimeout(() => setSlow(true), SLOW_MS);
+    return () => window.clearTimeout(timer);
+  }, [imgState, target.manual_id, target.page, quoteKey]);
 
   const current = page && page.manual_id === target.manual_id && page.page === target.page ? page : null;
   const pageCount = current?.page_count ?? page?.page_count ?? null;
@@ -79,7 +92,7 @@ export function ManualPanel({
           </div>
         ) : (
           <>
-            {imgState === 'loading' ? (
+            {imgState === 'loading' && slow ? (
               <div className="st" style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
                 <Icon name="loader-2" size="s" className="spin" />
                 Загружаю страницу…
@@ -102,7 +115,8 @@ export function ManualPanel({
                 onError={() => setImgState('error')}
               />
             )}
-            {target.quote ? (
+            {/* Цитату на странице подсвечивает сам снимок. Отдельно она нужна, только если снимка нет */}
+            {imgState === 'error' && target.quote ? (
               <div className="quote">
                 <span className="ql">Цитата со страницы, на которую ссылается агент</span>
                 {target.quote}

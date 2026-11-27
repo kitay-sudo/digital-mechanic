@@ -3340,8 +3340,8 @@ button.sp-link {
 
 .cdrop-in {
   display: grid;
-  grid-template-columns: minmax(0, 760px) minmax(280px, 1fr);
-  align-items: center;
+  grid-template-columns: minmax(0, 760px) minmax(280px, 400px);
+  align-items: start;
   gap: 32px;
   padding: var(--sy) var(--sx);
 }
@@ -3352,19 +3352,39 @@ button.sp-link {
   height: auto;
 }
 
+/* Справа от графика: блоки с подписями сверху, кнопка на всю ширину блока */
 .cd-side {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 16px;
+  align-items: stretch;
+  gap: 20px;
   min-width: 0;
+  padding-top: 4px;
 }
 
-.cd-side .cs-cap,
+.cd-blk + .cd-blk {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+
+.cd-l {
+  margin-bottom: 8px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--tx3);
+}
+
 .cd-side .cs-leg {
   margin: 0;
   padding: 0;
   border-top: none;
+}
+
+.cd-go {
+  width: 100%;
 }
 
 /* Телефон и планшет: панель выезжает снизу поверх размытого экрана */
@@ -3498,15 +3518,47 @@ button.sp-link {
   color: var(--tx);
 }
 
-.cs-cap > .ti {
-  margin-top: 4px;
+/* Тенденция: вывод крупно, цифры моноширинно под ним; рост — цветом отклонения */
+.cs-trend {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.cs-trend > .ti {
+  flex: none;
+  margin-top: 2px;
   color: var(--tx3);
 }
 
+.cs-trend.up > .ti {
+  color: var(--warn-tx);
+}
+
+.cs-trend.down > .ti {
+  color: var(--ok);
+}
+
+.cs-th {
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+}
+
+.cs-tt {
+  margin-top: 2px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx2);
+}
+
+/* Обозначения ровной сеткой в два столбца, без переносов посреди ряда */
 .cs-leg {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, max-content));
+  justify-content: start;
+  gap: 8px 28px;
   padding: 12px var(--sx);
   border-top: 1px solid var(--line);
   font-size: calc(13px * var(--k));
@@ -3521,13 +3573,22 @@ button.sp-link {
   white-space: nowrap;
 }
 
+/* Знак обозначения в ячейке одной ширины: подписи стоят ровно друг под другом */
+.cs-mk {
+  flex: none;
+  width: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .cs-dot {
   flex: none;
   display: block;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--tx3);
+  background: var(--ok);
 }
 
 .cs-dot-a {
@@ -5002,8 +5063,9 @@ button.sp-link {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0 10px 0 8px;
-  margin-left: -8px;
+  /* Фон при наведении не выходит за левый край карточки ответа */
+  padding: 0 10px;
+  margin-left: 0;
   border: none;
   border-radius: 4px;
   background: transparent;

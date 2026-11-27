@@ -37,27 +37,57 @@ function useWidth(ref: React.RefObject<HTMLDivElement | null>, active: boolean):
   return width;
 }
 
+/**
+ * Тенденция двумя строками: вывод крупно, цифры под ним.
+ * Сервер присылает её одной фразой «…: с 0,39 до 0,92», делим по двоеточию.
+ */
+function Trend({ icon, text }: { icon: string; text: string }) {
+  const cut = text.indexOf(': ');
+  const head = cut > 0 ? text.slice(0, cut) : text;
+  const tail = cut > 0 ? text.slice(cut + 2) : '';
+  const tone = icon.includes('up') ? ' up' : icon.includes('down') ? ' down' : '';
+  return (
+    <div className={`cs-trend${tone}`}>
+      <Icon name={icon} />
+      <div>
+        <div className="cs-th">{head}</div>
+        {tail ? <div className="cs-tt m">{tail}</div> : null}
+      </div>
+    </div>
+  );
+}
+
 function Legend() {
   return (
     <div className="cs-leg">
       <span>
-        <i className="cs-dot cs-dot-a" />
+        <b className="cs-mk">
+          <i className="cs-dot cs-dot-a" />
+        </b>
         отклонение
       </span>
       <span>
-        <i className="cs-dot" />
+        <b className="cs-mk">
+          <i className="cs-dot" />
+        </b>
         норма
       </span>
       <span>
-        <Icon name="x" size="s" />
+        <b className="cs-mk">
+          <Icon name="x" size="s" />
+        </b>
         сбой записи
       </span>
       <span>
-        <i className="cs-bar" />
+        <b className="cs-mk">
+          <i className="cs-bar" />
+        </b>
         эта проверка
       </span>
       <span>
-        <i className="cs-dash" />
+        <b className="cs-mk">
+          <i className="cs-dash" />
+        </b>
         порог 0,5
       </span>
     </div>
@@ -85,13 +115,17 @@ export function ChartDrop({ sessions, selected, trendIcon, trendText, chatHref, 
       <div className="cdrop-clip">
         <div className="cdrop-in">
           <Chart sessions={sessions} selected={selected} active max={760} />
+          {/* Справа от графика: вывод по тенденции, что значат знаки на графике, переход в чат */}
           <div className="cd-side">
-            <div className="cs-cap">
-              <Icon name={trendIcon} size="s" />
-              <span>{trendText}</span>
+            <div className="cd-blk">
+              <div className="cd-l">Тенденция</div>
+              <Trend icon={trendIcon} text={trendText} />
             </div>
-            <Legend />
-            <Link href={chatHref} className="btn pri" tabIndex={closing ? -1 : undefined}>
+            <div className="cd-blk">
+              <div className="cd-l">Обозначения</div>
+              <Legend />
+            </div>
+            <Link href={chatHref} className="btn pri cd-go" tabIndex={closing ? -1 : undefined}>
               <Icon name="message-2" />
               Разобрать {selected} в чате
             </Link>
@@ -218,8 +252,7 @@ export function ChartSheet({
         <Chart sessions={sessions} selected={selected} active={open} max={760} />
       </div>
       <div className="cs-cap">
-        <Icon name={trendIcon} size="s" />
-        <span>{trendText}</span>
+        <Trend icon={trendIcon} text={trendText} />
       </div>
       <Legend />
       <div className="cs-foot">
