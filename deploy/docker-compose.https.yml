@@ -1,0 +1,25 @@
+# Стенд в интернете с https. Запуск из корня проекта:
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.https.yml up -d --build
+# В .env задайте DOMAIN, а интерфейс и сервер откройте только для этой машины:
+#   FRONTEND_PORT=127.0.0.1:3000
+#   BACKEND_PORT=127.0.0.1:8000
+# Снаружи открыты только 80 и 443: их принимает Caddy и передаёт интерфейсу.
+services:
+  caddy:
+    image: caddy:2
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      DOMAIN: ${DOMAIN:?задайте DOMAIN в .env}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on: [frontend]
+    restart: unless-stopped
+
+volumes:
+  caddy_data:
+  caddy_config:

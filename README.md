@@ -80,6 +80,27 @@ LLM_MODEL=имя_модели_на_сервере
 
 Тем же слоем подключается российское облако Yandex AI Studio (YandexGPT и открытые модели): настройки в `.env.example`. Через него слой ещё не запускался.
 
+## Стенд в интернете (https)
+
+Голос в браузере работает только по https, поэтому стенд выкладывается за Caddy: он сам выпускает и продлевает сертификат Let's Encrypt. Нужны домен, который смотрит на сервер, и свободные порты 80 и 443. В `.env` сервера, кроме ключа модели и настроек входа:
+
+```bash
+DOMAIN=адрес.стенда
+FRONTEND_PORT=127.0.0.1:3000
+BACKEND_PORT=127.0.0.1:8000
+COOKIE_SECURE=1
+```
+
+```bash
+docker compose -f docker-compose.yml -f deploy/docker-compose.https.yml up -d --build
+```
+
+Интерфейс и сервер открыты только для самой машины, снаружи — 80 и 443. Проверка стенда после запуска (из папки `backend` на любом компьютере):
+
+```bash
+uv run python -m eval.smoke --web https://адрес.стенда --key ключ_из_INTEGRATION_API_KEYS --mechanic Иванов --pin 1111
+```
+
 ## Запуск без Docker
 
 Нужны Python 3.10+, [uv](https://docs.astral.sh/uv/), Node 20+ и pnpm. Проверено на Windows 11.
