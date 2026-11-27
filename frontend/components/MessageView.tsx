@@ -328,25 +328,21 @@ function AnswerBlocks({
         </section>
       ) : null}
       {answer.hypotheses.length ? (
-        <div className="cdiv">
-          <section className="hyp">
-            <div className="sec">
-              <b>
-                <Icon name="bulb" size="s" />
-                Гипотезы
-              </b>
-              <span className="hyp-tag">
-                <Icon name="info-circle" size="s" />
-                гипотеза, не из руководства
-              </span>
-            </div>
-            <ul className="plain">
-              {answer.hypotheses.map((t, i) => (
-                <li key={i}>{t}</li>
-              ))}
-            </ul>
-          </section>
-        </div>
+        // Предположения агента — тот же вид раздела, отличие сказано словами под заголовком
+        <section className="ab cdiv hyp">
+          <div className="sec">
+            <b>
+              <Icon name="bulb" size="s" />
+              Гипотезы
+            </b>
+          </div>
+          <div className="hyp-note">Предположения агента. В руководстве этого нет: подтверждайте проверками по шагам.</div>
+          <ul className="plain">
+            {answer.hypotheses.map((t, i) => (
+              <li key={i}>{t}</li>
+            ))}
+          </ul>
+        </section>
       ) : null}
       {answer.checks.length ? (
         <StepItems

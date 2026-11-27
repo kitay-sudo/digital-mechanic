@@ -93,8 +93,6 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const [steps, setSteps] = useState<Step[]>([]);
   const [manual, setManual] = useState<ManualTarget | null>(null);
   const [sideOpen, setSideOpen] = useState(false);
-  /** Открыто ли подтверждение очистки чата: панель выезжает снизу по центру */
-  const [clearOpen, setClearOpen] = useState(false);
   /** Отметки «сделано» по шагам: хранятся на сервере, видны сменщику */
   const [marks, setMarks] = useState<Marks>({});
   /** Сообщения механиков в поддержку по ответам агента */
@@ -108,7 +106,6 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   // Плавное закрытие: панель остаётся на экране, пока уезжает
   const manualView = usePresence(manual);
   const sideView = usePresence(sideOpen ? true : null);
-  const clearView = usePresence(clearOpen ? true : null);
   const whoView = usePresence(whoOpen ? true : null);
   const reportView = usePresence(reportFor);
   const adminView = usePresence(adminOpen ? true : null);
@@ -296,18 +293,6 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     [runTurn],
   );
 
-  const clearChat = useCallback(() => {
-    setClearOpen(false);
-    if (busy) return;
-    api
-      .clearConversation(vehicleId)
-      .then(() => {
-        setMessages([]);
-        setMarks({});
-      })
-      .catch((e: Error) => setMessages((list) => [...list, localNotice(e.message)]));
-  }, [busy, vehicleId]);
-
   /** Отметка шага сразу видна на экране, сервер её сохраняет с фамилией механика */
   const toggleStep = useCallback(
     (key: string, index: number) => {
@@ -351,21 +336,17 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     [me, vehicleId],
   );
 
-  // Подтверждение очистки выезжает снизу, отдельного окна браузера нет
-  const askClear = useCallback(() => setClearOpen((cur) => !cur), []);
-
   useEffect(() => {
-    if (!clearOpen && !whoOpen && !reportFor && !adminOpen) return;
+    if (!whoOpen && !reportFor && !adminOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
-      setClearOpen(false);
       setWhoOpen(false);
       setReportFor(null);
       setAdminOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [clearOpen, whoOpen, reportFor, adminOpen]);
+  }, [whoOpen, reportFor, adminOpen]);
 
   // Повторное нажатие на ту же ссылку закрывает страницу руководства
   const openManual = useCallback((target: ManualTarget) => {
@@ -433,17 +414,6 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
               <Icon name={me ? 'user-check' : 'user-question'} />
               <span className="only-d">{me || 'Кто работает?'}</span>
             </button>
-            <button
-              type="button"
-              className={`hb${clearOpen ? ' on' : ''}`}
-              onClick={askClear}
-              disabled={busy}
-              aria-label="Очистить чат"
-              aria-expanded={clearOpen}
-              title="Очистить чат"
-            >
-              <Icon name="eraser" />
-            </button>
             <button type="button" className="hb only-m" onClick={() => setSideOpen(true)} aria-label="Машина и проверки" title="Машина и проверки">
               <Icon name="list-details" />
             </button>
@@ -502,25 +472,6 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
 
       {manualView.shown ? (
         <ManualPanel target={manualView.shown} leaving={manualView.leaving} onNavigate={setManual} onClose={() => setManual(null)} />
-      ) : null}
-
-      {clearView.shown ? (
-        <>
-          <button type="button" className={`veil${clearView.leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={() => setClearOpen(false)} />
-          <div className={`pop${clearView.leaving ? ' leaving' : ''}`} role="dialog" aria-label="Очистить чат">
-            <div className="pop-t">Очистить чат по этой машине?</div>
-            <div className="pop-s">Заявки и история проверок останутся.</div>
-            <div className="pop-f">
-              <button type="button" className="btn" onClick={() => setClearOpen(false)}>
-                Отмена
-              </button>
-              <button type="button" className="btn pri" onClick={clearChat} autoFocus>
-                <Icon name="eraser" />
-                Очистить
-              </button>
-            </div>
-          </div>
-        </>
       ) : null}
 
       {whoView.shown ? (

@@ -516,11 +516,17 @@ a {
   display: flex;
   align-items: center;
   gap: 8px;
+  line-height: calc(16px * var(--k));
   font-size: calc(12px * var(--k));
   font-weight: 600;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--tx2);
+}
+
+/* Значок заголовка — на середину заглавных букв, а не всей строки (у заглавных нет нижних выносных) */
+.sec b > .ti {
+  transform: translateY(1px);
 }
 
 .blk {
@@ -1273,19 +1279,19 @@ details.fold > .fin {
 }
 
 .plain li {
-  padding: 4px 0 4px 16px;
+  padding: 4px 0 4px 22px;
   position: relative;
   overflow-wrap: anywhere;
 }
 
+/* Маркер — короткое тире на середине первой строки, как в технической документации */
 .plain li::before {
   content: '';
   position: absolute;
   left: 2px;
-  top: calc(12px * var(--k));
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
+  top: calc(4px + 12px * var(--k) - 1px);
+  width: 10px;
+  height: 2px;
   background: var(--tx3);
 }
 
@@ -1298,18 +1304,15 @@ details.fold > .fin {
   background: var(--warn);
 }
 
-.hyp {
-  margin: var(--sy) var(--sx);
-  padding: var(--by) var(--bx);
-  border: 1px dashed var(--line2);
-  background: var(--panel2);
+/* Гипотезы: раздел как остальные, пояснение под заголовком, текст на полтона тише ответа по руководству */
+.hyp-note {
+  margin: -6px 0 8px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx3);
 }
 
-.hyp-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: calc(13px * var(--k));
+.hyp .plain {
   color: var(--tx2);
 }
 
@@ -2175,11 +2178,6 @@ details.fold > .fin {
 
   .ab {
     padding: var(--sy) var(--sx);
-  }
-
-  .hyp {
-    margin: 10px 14px 12px;
-    padding: var(--by) var(--bx);
   }
 
   .item {
@@ -4610,15 +4608,28 @@ button.sp-link {
 
 .cph-x {
   position: absolute;
-  top: 2px;
-  right: 2px;
-  width: 24px;
-  height: 24px;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
   display: grid;
   place-items: center;
-  border-radius: 4px;
-  background: rgba(20, 24, 29, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.75);
+  border-radius: 50%;
+  background: rgba(20, 24, 29, 0.6);
   color: #ffffff;
+  cursor: pointer;
+}
+
+.cph-x .ti {
+  display: block;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.cph-x:hover {
+  background: rgba(20, 24, 29, 0.85);
 }
 
 .cph-n {
