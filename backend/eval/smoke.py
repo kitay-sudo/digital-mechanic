@@ -1,12 +1,13 @@
 """Быстрая проверка стенда так, как его проверил бы автоматический инструмент жюри.
 
-    python -m eval.smoke [--web URL] [--api URL] [--key КЛЮЧ_API]
+    python -m eval.smoke [--web URL] [--api URL] [--key КЛЮЧ_API] [--mechanic Иванов --pin 1111]
 
 Модель не вызывается, стоимость нулевая, прогон занимает секунды. Проверяет:
 - страница открывается, у неё есть заголовок, язык и разметка для телефона;
 - сервер жив, ML-сервис, ТОиР и база руководств подключены;
 - парк и каждая машина открываются, страница руководства отдаётся картинкой;
 - ошибки ввода отвечают понятным кодом и текстом по-русски, без трассировки стека;
+- без входа данные закрыты, механик входит по PIN, журнал механику закрыт;
 - документация API и API для внешних систем на месте, без ключа закрыты;
 - выгрузка расчёта стоимости отдаёт xlsx;
 - время ответа каждого адреса.
@@ -14,6 +15,8 @@
 «обязательно» — то, без чего стенд нельзя показывать. «сведения» — что стоит знать, но не ломает показ.
 --web — адрес интерфейса (запросы к API идут через его прокси, как у пользователя).
 --api — адрес сервера напрямую, если нужно проверить его отдельно от интерфейса.
+Когда на стенде включён вход, проверке нужен служебный ключ (--key, один из INTEGRATION_API_KEYS)
+или демо-механик (--mechanic и --pin): иначе парк и чат ответят 401.
 """
 from __future__ import annotations
 
@@ -31,14 +34,22 @@ _TRACE = ("Traceback", 'File "', "sqlite3.", "pydantic_core")
 
 class Smoke:
     def __init__(self, base: str, key: str | None):
-        self.http = httpx.Client(base_url=base.rstrip("/"), timeout=30, follow_redirects=True)
+        def client(headers: dict | None = None) -> httpx.Client:
+            return httpx.Client(base_url=base.rstrip("/"), timeout=30, follow_redirects=True, headers=headers or {})
+
+        self.client = client
+        self.anon = client()  # как посторонний без входа
+        self.http = client({"X-API-Key": key}) if key else self.anon
         self.key = key
+        self.mechanic: str | None = None
+        self.pin: str | None = None
         self.rows: list[dict] = []
 
-    def req(self, method: str, url: str, **kw) -> tuple[httpx.Response | None, float]:
+    def req(self, method: str, url: str, anon: bool = False, via: httpx.Client | None = None,
+            **kw) -> tuple[httpx.Response | None, float]:
         started = time.monotonic()
         try:
-            r = self.http.request(method, url, **kw)
+            r = (via or (self.anon if anon else self.http)).request(method, url, **kw)
         except httpx.HTTPError:
             return None, time.monotonic() - started
         return r, time.monotonic() - started
@@ -80,6 +91,9 @@ def run(s: Smoke, web: bool) -> None:
 
     s.section("Сервер и подключения")
     r, t = s.req("GET", "/api/health")
+    if r is None:
+        s.check("обязательно", "стенд отвечает", False, "нет связи: сервер не запущен или адрес неверный", t)
+        return
     health = r.json() if r is not None and r.status_code == 200 else {}
     s.check("обязательно", "сервер отвечает /api/health", health.get("status") == "ok", str(health)[:200], t)
     s.check("обязательно", "ML-сервис диагностики подключён", bool(health.get("ml")))
@@ -90,6 +104,39 @@ def run(s: Smoke, web: bool) -> None:
     s.check("сведения", f"модель: {llm.get('provider')} {llm.get('model')}", llm.get("provider") not in (None, "mock"), str(llm))
     r, t = s.req("GET", "/api/config")
     s.check("обязательно", "настройки интерфейса /api/config", r is not None and r.status_code == 200, "", t)
+
+    s.section("Вход и роли")
+    r, t = s.req("GET", "/api/fleet", anon=True)
+    code = getattr(r, "status_code", None)
+    auth_on = code == 401
+    s.check("сведения", "без входа данные парка закрыты", auth_on, f"код {code}: вход выключен (AUTH_REQUIRED=0)", t)
+    r, t = s.req("GET", "/api/auth/me", anon=True)
+    s.check("сведения", "проверка сессии /api/auth/me", r is not None and r.status_code in (200, 404),
+            str(getattr(r, "status_code", "")), t)
+    if auth_on and s.mechanic and s.pin:
+        mech = s.client()
+        r, t = s.req("GET", "/api/auth/mechanics", via=mech)
+        people = (r.json().get("items") or []) if r is not None and r.status_code == 200 else []
+        s.check("обязательно", f"список механиков на экране входа: {len(people)}", bool(people), "", t)
+        who = next((m for m in people if s.mechanic.lower() in m["full_name"].lower()), None)
+        if who:
+            wrong = "0000" if s.pin != "0000" else "9999"
+            r, t = s.req("POST", "/api/auth/mechanic", via=mech, json={"mechanic_id": who["id"], "pin": wrong})
+            good = r is not None and r.status_code in (401, 429) and _CYR.search(r.text) is not None
+            s.check("обязательно", "неверный PIN не пускает, ответ по-русски", good, str(getattr(r, "status_code", "")), t)
+            r, t = s.req("POST", "/api/auth/mechanic", via=mech, json={"mechanic_id": who["id"], "pin": s.pin})
+            s.check("обязательно", f"вход механика {who['full_name']} по PIN", r is not None and r.status_code == 200,
+                    getattr(r, "text", "")[:160], t)
+            r, t = s.req("GET", "/api/audit", via=mech)
+            s.check("обязательно", "механику журнал администратора закрыт", r is not None and r.status_code == 403,
+                    str(getattr(r, "status_code", "")), t)
+            if not s.key:
+                s.http = mech  # дальше проверяем глазами механика
+        else:
+            s.check("обязательно", f"механик «{s.mechanic}» есть в списке входа", False,
+                    ", ".join(m["full_name"] for m in people))
+    elif auth_on and not s.key:
+        s.check("обязательно", "есть чем войти для проверки: --key или --mechanic и --pin", False)
 
     s.section("Парк и машины")
     r, t = s.req("GET", "/api/fleet")
@@ -155,30 +202,35 @@ def run(s: Smoke, web: bool) -> None:
     v1 = sorted(p for p in paths if p.startswith("/api/v1/"))
     s.check("сведения", f"методов /api/v1: {len(v1)}", bool(v1), "")
     if v1:
-        r, t = s.req("GET", "/api/v1/vehicles")
+        r, t = s.req("GET", "/api/v1/vehicles", anon=True)
         s.check("обязательно", "без ключа API для внешних систем закрыт", r is not None and r.status_code in (401, 403, 503),
                 str(getattr(r, "status_code", "")), t)
         if s.key:
             r, t = s.req("GET", "/api/v1/vehicles", headers={"X-API-Key": s.key})
             s.check("обязательно", "с ключом список машин открывается", r is not None and r.status_code == 200,
                     str(getattr(r, "status_code", "")), t)
-            r, t = s.req("GET", "/api/v1/vehicles", headers={"X-API-Key": s.key + "x"})
+            r, t = s.req("GET", "/api/v1/vehicles", anon=True, headers={"X-API-Key": s.key + "x"})
             s.check("обязательно", "с неверным ключом закрыт", r is not None and r.status_code in (401, 403),
                     str(getattr(r, "status_code", "")), t)
 
     s.section("Администратор и стоимость")
-    r, t = s.req("GET", "/api/audit")
+    r, t = s.req("GET", "/api/audit", anon=True)
     code = getattr(r, "status_code", None)
     s.check("сведения", "журнал без входа администратора закрыт", code in (401, 403), f"код {code}: журнал открыт без входа", t)
-    r, t = s.req("GET", "/api/usage/export.xlsx")
+    r, t = s.req("GET", "/api/usage/export.xlsx", anon=True)
     code = getattr(r, "status_code", None)
-    ok = r is not None and code == 200 and "spreadsheet" in r.headers.get("content-type", "")
-    if code in (401, 403):
-        s.check("сведения", "выгрузка расчёта стоимости закрыта входом администратора", True, "", t)
-    else:
-        s.check("обязательно", "выгрузка расчёта стоимости отдаёт xlsx", ok, f"код {code}", t)
-    r, t = s.req("GET", "/api/usage/summary")
-    s.check("сведения", "сводка расходов", r is not None and r.status_code in (200, 401, 403), str(code), t)
+    s.check("сведения", "выгрузка расчёта без входа закрыта", code in (401, 403), f"код {code}", t)
+    if s.key:
+        for path, name in (("/api/audit?page=1&page_size=20", "журнал с ключом открывается"),
+                           ("/api/audit/gaps", "число случаев для шапки"),
+                           ("/api/shift-summary", "сводка смены"),
+                           ("/api/metrics", "метрики пилота"),
+                           ("/api/usage/summary", "сводка расходов")):
+            r, t = s.req("GET", path)
+            s.check("обязательно", name, r is not None and r.status_code == 200, str(getattr(r, "status_code", "")), t)
+        r, t = s.req("GET", "/api/usage/export.xlsx")
+        ok = r is not None and r.status_code == 200 and "spreadsheet" in r.headers.get("content-type", "")
+        s.check("обязательно", "выгрузка расчёта стоимости отдаёт xlsx", ok, str(getattr(r, "status_code", "")), t)
 
 
 def main() -> int:
@@ -187,10 +239,13 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--web", default="http://127.0.0.1:3210", help="адрес интерфейса")
     parser.add_argument("--api", default=None, help="адрес сервера напрямую (по умолчанию — через интерфейс)")
-    parser.add_argument("--key", default=None, help="ключ API для внешних систем, если он задан на стенде")
+    parser.add_argument("--key", default=None, help="служебный ключ X-API-Key (один из INTEGRATION_API_KEYS)")
+    parser.add_argument("--mechanic", default=None, help="часть ФИО демо-механика для проверки входа по PIN")
+    parser.add_argument("--pin", default=None, help="PIN этого механика")
     args = parser.parse_args()
 
     smoke = Smoke(args.api or args.web, args.key)
+    smoke.mechanic, smoke.pin = args.mechanic, args.pin
     print(f"Проверяю {args.api or args.web}")
     run(smoke, web=args.api is None)
     must = [r for r in smoke.rows if r["kind"] == "обязательно"]
