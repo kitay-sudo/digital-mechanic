@@ -3,7 +3,6 @@
 import { type CSSProperties, type ClipboardEvent, type DragEvent, useCallback, useEffect, useRef, useState } from 'react';
 import { api } from '@/lib/api';
 import { MAX_PHOTOS, photoFromFile } from '@/lib/photos';
-import { usePresence } from '@/lib/presence';
 import { sounds } from '@/lib/sounds';
 import { serverVoiceSupported, useServerVoice } from '@/lib/voice';
 import { Icon } from './Icon';
@@ -195,11 +194,9 @@ export function Composer({
     return () => clearTimeout(timer);
   }, [ok]);
 
-  // Плавное появление и уход: ушедшее сообщение ещё LEAVE_MS остаётся на экране и гаснет
-  const noteText = notice ?? info ?? ok;
-  const noteKind = notice ? 'err' : info ? 'info' : ok ? 'ok' : null;
-  const noteView = usePresence(noteText ? `${noteKind}\u0000${noteText}` : null);
-  const [shownKind, shownText] = noteView.shown ? noteView.shown.split('\u0000') : [null, null];
+  // Сообщение появляется и уходит сразу, без анимации: полупрозрачный текст поверх переписки выглядел как сбой
+  const shownText = notice ?? info ?? ok;
+  const shownKind = notice ? 'err' : info ? 'info' : ok ? 'ok' : null;
 
   const submit = () => {
     if (busy || preparing || (!text.trim() && !photos.length)) return;
@@ -329,12 +326,12 @@ export function Composer({
       }}
       onDrop={onDrop}
     >
-      {noteView.shown || photos.length || preparing ? (
+      {shownText || photos.length || preparing ? (
         <div className="cextra">
-          {noteView.shown ? (
+          {shownText ? (
             <div
-              key={noteView.shown}
-              className={`cnote ${shownKind === 'err' ? 'verr' : shownKind === 'ok' ? 'vok' : 'vinfo'}${noteView.leaving ? ' leaving' : ''}`}
+              key={`${shownKind}\u0000${shownText}`}
+              className={`cnote ${shownKind === 'err' ? 'verr' : shownKind === 'ok' ? 'vok' : 'vinfo'}`}
               role={shownKind === 'err' ? 'alert' : 'status'}
               style={{ '--note-ms': `${NOTE_MS}ms` } as CSSProperties}
             >

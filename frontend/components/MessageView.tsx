@@ -427,6 +427,10 @@ function CopyBlock({ text, title = 'Рекомендация на дефекто
 
 /* ---------- Вердикт ---------- */
 
+function priorityClass(p: Priority): string {
+  return p === 'high' ? 'c-h' : p === 'low' ? 'c-l' : 'c-m';
+}
+
 function verdictTone(a: Assessment | null | undefined): string {
   if (a?.outcome === 'normal') return ' v-ok';
   if (!a || a.outcome !== 'anomaly' || a.flags.engine_mismatch) return '';
@@ -455,6 +459,16 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
           {a?.priority ? <PriorityBadge priority={a.priority} long /> : null}
         </div>
         <div className="vtitle">{title}</div>
+        {/* Решение сразу под заголовком: на телефоне оно видно на первом экране, объяснение — ниже */}
+        {a?.priority && a.priority_action ? (
+          <div className="pact vact">
+            <Icon name="flag" size="l" className={priorityClass(a.priority)} />
+            <div>
+              <div className="pl">Что делать</div>
+              <div className={`pa ${priorityClass(a.priority)}`}>{a.priority_action}</div>
+            </div>
+          </div>
+        ) : null}
         {m.text ? (
           <div className="vtext">
             <SummaryText text={m.text} />
@@ -474,15 +488,6 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
 
       {a?.priority && a.priority_action ? (
         <div className="cdiv">
-          <div className="cpad" style={{ paddingBottom: 4 }}>
-            <div className="pact">
-              <Icon name="flag" size="l" className={a.priority === 'high' ? 'c-h' : a.priority === 'low' ? 'c-l' : 'c-m'} />
-              <div>
-                <div className="pl">Что делать</div>
-                <div className="pa">{a.priority_action}</div>
-              </div>
-            </div>
-          </div>
           <details className="fold">
             <summary>
               <Icon name="chevron-right" />

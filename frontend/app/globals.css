@@ -14,7 +14,7 @@
   --line2: #b6bdc6;
   --tx: #14181d;
   --tx2: #46505a;
-  --tx3: #737d88;
+  --tx3: #5f6872;
   --acc: #1d5fc4;
   --acc-tx: #ffffff;
   --acc-bg: #e8f0fc;
@@ -61,7 +61,7 @@ html[data-size='large'] {
   --line2: #3a424b;
   --tx: #e6e9ec;
   --tx2: #a9b1ba;
-  --tx3: #7a848e;
+  --tx3: #8d97a1;
   --acc: #5c9dff;
   --acc-tx: #0b1220;
   --acc-bg: #16263f;
@@ -1266,6 +1266,11 @@ details.fold > .fin {
 .kv .over {
   color: var(--warn-tx);
   font-weight: 600;
+}
+
+/* Число рядом с пояснением не сжимается: на узком телефоне «0,77» не рвётся на «0,» и «77» */
+.kv > div > .m {
+  flex: none;
 }
 
 .ab {
@@ -2590,6 +2595,11 @@ button.sp-link {
   overflow-wrap: anywhere;
 }
 
+/* «Что делать» в вердикте: сразу под заголовком, над объяснением */
+.pact.vact {
+  margin: 12px 0 16px;
+}
+
 /* ---------- Журнал обращений ---------- */
 
 .lhead,
@@ -3669,8 +3679,7 @@ button.sp-link {
   /* Новые сообщения в чате и подсказки под шагами */
   .chat > .a,
   .chat > .q,
-  .nextstep,
-  .verr {
+  .nextstep {
     animation: in-rise var(--mo) var(--ease);
   }
 
@@ -4872,10 +4881,14 @@ button.sp-link {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  /* Шрифт подписи ужимается по ширине экрана: «Диагностика» крупным текстом
+     целиком помещается и на узком Android (360 px), и на 320 px */
   .cacts .btn {
     width: 100%;
     min-width: 0;
-    padding: 0 12px;
+    padding: 0 8px;
+    gap: 6px;
+    font-size: min(calc(16px * var(--k)), 4.8cqi);
   }
 
   .cacts .lbl {
@@ -5337,7 +5350,7 @@ input.switch:disabled {
   color: var(--tx2);
 }
 
-/* ---------- Сообщения над панелью ввода: плавно появляются и гаснут, полоса — сколько осталось ---------- */
+/* ---------- Сообщения над панелью ввода: появляются и уходят сразу, полоса — сколько осталось ---------- */
 
 .cnote {
   position: relative;
@@ -5347,15 +5360,10 @@ input.switch:disabled {
   padding-bottom: 6px;
   font-size: calc(14px * var(--k));
   line-height: calc(20px * var(--k));
-  animation: note-in var(--mo) var(--ease);
 }
 
 .cnote > .ti {
   flex: none;
-}
-
-.cnote.leaving {
-  animation: note-out var(--mo) ease-in forwards;
 }
 
 .vok {
@@ -5389,33 +5397,12 @@ input.switch:disabled {
   opacity: 0.6;
 }
 
-@keyframes note-in {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-}
-
-@keyframes note-out {
-  to {
-    opacity: 0;
-    transform: translateY(4px);
-  }
-}
-
 @keyframes note-timer {
   from {
     transform: scaleX(1);
   }
   to {
     transform: scaleX(0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .cnote,
-  .cnote.leaving {
-    animation: none;
   }
 }
 
@@ -5426,11 +5413,16 @@ input.switch:disabled {
 }
 
 .chatcol > .hdr,
-.chatcol > .composer,
-.chatcol > .composer .cextra {
+.chatcol > .composer {
   background: color-mix(in srgb, var(--panel) 72%, transparent);
   -webkit-backdrop-filter: blur(16px) saturate(1.6);
   backdrop-filter: blur(16px) saturate(1.6);
+}
+
+/* Сообщение над панелью ввода на сплошном фоне: размытие внутри размытой панели не работает,
+   и сквозь полупрозрачный фон читались буквы переписки */
+.chatcol > .composer .cextra {
+  background: var(--panel);
 }
 
 .chatcol > .hdr,
