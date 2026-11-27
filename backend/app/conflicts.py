@@ -89,9 +89,26 @@ def _sentence(page_text: str, markers: list[str]) -> str | None:
             if _has_markers(sentence[match.end():], markers):
                 sentence = sentence[match.end():]
                 break
+        sentence = _trim_tail(sentence, markers)
         if len(sentence) <= MAX_QUOTE:
             return sentence
     return _table_lines(page_text, markers)
+
+
+_TAIL = re.compile(r"[.;!?](?=\s+[а-яёa-z])")
+
+
+def _trim_tail(sentence: str, markers: list[str]) -> str:
+    """Обрывок после конца фразы (шапка таблицы, подпись к рисунку) в цитату не берём.
+
+    PDF склеивает фразу со следующей строкой, если та начинается со строчной буквы:
+    «…(от 9 до 12 кгс·м). контроля мм без без или». Режем по первому концу фразы, где маркеры уже есть.
+    """
+    for match in _TAIL.finditer(sentence):
+        head = sentence[:match.end()]
+        if _has_markers(head, markers):
+            return head
+    return sentence
 
 
 _PRIVATE = re.compile(r"[-]")  # значки списков из шрифтов PDF

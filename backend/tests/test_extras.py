@@ -280,3 +280,17 @@ async def test_mechanic_report_reaches_admin(store, index, services, monkeypatch
     assert item["gap"]["type"] == "report" and item["gap"]["reviewed_at"] is None  # сообщение вернуло случай в работу
     assert item["report"]["author"] == "Петров" and store.open_gaps() == 1
     assert store.reports_by_message("A101TT77")[item["id"]]["reason"] == "Ответ неверный"
+
+
+def test_conflict_quote_drops_glued_table_header():
+    page = ("2 При измерении размера отверстий болты крепления крышек коренных подшипников должны быть затянуты "
+            "моментом силы от 421 до 461 Н·м ( от 43 до 47 кгс·м), стяжные болты моментом от 88 до 118 Н·м. "
+            "контроля мм без без или")
+    quote = conflicts._sentence(page, ["421 до 461", "43 до 47"])
+    assert quote.endswith("от 88 до 118 Н·м.") and "контроля" not in quote
+
+
+def test_context_time_is_local_not_server_utc():
+    from app.agent.prompt import when
+
+    assert when("2026-11-27T16:29:05+00:00") == "27.11.2026 19:29"  # сервер в контейнере живёт по UTC

@@ -2,10 +2,20 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime
+import os
+from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 from .. import fleet, rules
 from ..manuals import manuals_for_engine
+
+
+def _local_tz():
+    """Время для механика — местное (по умолчанию московское), а не время сервера: в контейнере оно UTC."""
+    try:
+        return ZoneInfo(os.environ.get("APP_TZ", "Europe/Moscow"))
+    except Exception:  # в образе может не быть базы часовых поясов
+        return timezone(timedelta(hours=3))
 
 SYSTEM = """Ты «Цифровой механик»: помощник механика автопарка. Система акустической диагностики «НейроДВС» \
 записывает звук двигателя на посту ТО, ML-сервис выдаёт статус и тип отклонения. Механику нужен понятный ответ \
@@ -158,7 +168,11 @@ def _parse_time(value: str | None) -> datetime | None:
 def when(value: str | None) -> str:
     """Дата и время для контекста: «27.11.2026 18:40»."""
     moment = _parse_time(value)
-    return moment.strftime("%d.%m.%Y %H:%M") if moment else "время неизвестно"
+    if moment is None:
+        return "время неизвестно"
+    if moment.tzinfo is not None:
+        moment = moment.astimezone(_local_tz())
+    return moment.strftime("%d.%m.%Y %H:%M")
 
 
 def _ago(value: str | None) -> str:
