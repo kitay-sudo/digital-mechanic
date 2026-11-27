@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { TYPE_LABEL, activeFilters, type CaseType, type JournalFacets, type JournalFilters, type StatusFilter } from '@/lib/journal';
+import { TYPE_LABEL, activeFilters, exportUrl, type CaseType, type JournalFacets, type JournalFilters, type StatusFilter } from '@/lib/journal';
 import { Icon } from './Icon';
 
 const STATUS_OPTIONS: { code: StatusFilter; label: string }[] = [
@@ -143,6 +143,14 @@ export function FilterSheet({
           <div className="sp-g">
             <div className="sp-l">Статус разбора</div>
             <Chips label="Статус разбора" value={filters.status} options={STATUS_OPTIONS} onChange={(status) => onChange({ status })} />
+          </div>
+          {/* На компьютере кнопка выгрузки стоит в панели журнала, на телефоне — здесь */}
+          <div className="only-m">
+            <a className="sp-link" href={exportUrl(filters)} download>
+              <Icon name="file-spreadsheet" />
+              <span>Выгрузить xlsx</span>
+              <Icon name="download" className="mut" />
+            </a>
           </div>
         </div>
         <div className="jf-f">

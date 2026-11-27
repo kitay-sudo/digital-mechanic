@@ -7,6 +7,7 @@ import { dateTime, int, num, plural } from '@/lib/format';
 import {
   NO_FILTERS,
   activeFilters,
+  exportUrl,
   filtersFromUrl,
   filtersToUrl,
   journalApi,
@@ -381,7 +382,7 @@ export function LogView() {
           </div>
         )}
         {!selected.size && updatedAt ? (
-          <span className="ft-hint only-d" title="Журнал обновляется сам каждые 10 секунд">
+          <span className="ft-hint jt-hint" title="Журнал обновляется сам каждые 10 секунд">
             обновлено <span className="m">{dateTime(updatedAt)}</span>
           </span>
         ) : null}
@@ -423,7 +424,7 @@ export function LogView() {
               title="Период, машина, механик, тип и статус случая"
             >
               <Icon name="filter" size="s" />
-              <span className="only-d">Фильтры</span>
+              <span className="only-d jl-wide">Фильтры</span>
               {extra ? <b className="m">{extra}</b> : null}
             </button>
             {/* Случаи, которые ждут разбора: новые и в работе. Повторы считаются одним случаем */}
@@ -436,14 +437,25 @@ export function LogView() {
               title="Случаи, которые ждут разбора: новые и в работе"
             >
               <Icon name="alert-triangle" size="s" />
-              <span className="only-d">Требуют внимания</span>
+              <span className="only-d jl-wide">Требуют внимания</span>
               <b className="m">{gapsOpen}</b>
             </button>
+            {/* Выгрузка журнала с тем же периодом, машиной и механиком. На телефоне — в панели фильтров */}
+            <a
+              className="btn sm only-d"
+              href={exportUrl(filters)}
+              download
+              aria-label="Выгрузить журнал в xlsx"
+              title="Выгрузить в xlsx: период, машина и механик как в фильтрах"
+            >
+              <Icon name="file-spreadsheet" size="s" />
+              <span className="jl-wide">Выгрузить xlsx</span>
+            </a>
             <button type="button" className="btn sm" onClick={() => load(false)} disabled={loading} aria-label="Обновить журнал" title="Обновить">
               <Icon name="refresh" size="s" className={loading ? 'spin' : ''} />
-              <span className="only-d">Обновить</span>
-              {/* На телефоне подписи «обновлено» нет: время стоит на кнопке */}
-              {updatedAt ? <span className="only-m m">{dateTime(updatedAt).split(' ')[1]}</span> : null}
+              <span className="jt-l">Обновить</span>
+              {/* Где подписи «обновлено» нет (телефон, узкий экран), время стоит на кнопке */}
+              {updatedAt ? <span className="jt-time m">{dateTime(updatedAt).split(' ')[1]}</span> : null}
             </button>
           </>
         )}

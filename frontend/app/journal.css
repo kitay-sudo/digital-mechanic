@@ -20,6 +20,29 @@
   font-weight: 600;
 }
 
+/* Время обновления: на широком экране подписью «обновлено», на узком и на телефоне — на кнопке «Обновить» */
+.jtools .jt-time {
+  display: none;
+}
+
+@media (max-width: 1279px) {
+  .jtools .jt-hint,
+  .jtools .jt-l {
+    display: none;
+  }
+
+  .jtools .jt-time {
+    display: inline;
+  }
+}
+
+/* На узком компьютере у кнопок панели остаются значки и числа */
+@media (min-width: 901px) and (max-width: 1100px) {
+  .jtools .jl-wide {
+    display: none;
+  }
+}
+
 .jsel {
   gap: 10px;
   margin-left: -16px;
@@ -48,8 +71,9 @@
   .jtable .lhead,
   .jtable .lrow {
     grid-template-columns:
-      calc(24px * var(--k)) calc(118px * var(--k)) calc(140px * var(--k)) minmax(120px, 1fr) minmax(160px, 1.5fr)
-      calc(190px * var(--k)) calc(92px * var(--k)) calc(72px * var(--k));
+      calc(24px * var(--k)) calc(110px * var(--k)) calc(130px * var(--k)) minmax(100px, 1fr) minmax(140px, 1.4fr)
+      calc(160px * var(--k)) calc(84px * var(--k)) calc(64px * var(--k));
+    column-gap: 12px;
   }
 
   .jtable .lhead > :nth-child(7),
@@ -202,8 +226,10 @@
 
 /* ---------- Панели снизу: фильтры и карточка случая ---------- */
 
-/* Содержимое в один столбец, у нижнего края — кнопки */
+/* Содержимое в один столбец и прокручивается, кнопки у нижнего края остаются на экране */
 .jsheet .sp-b {
+  flex: 1 1 auto;
+  min-height: 0;
   grid-template-columns: minmax(0, 1fr);
   padding-bottom: 16px;
 }
