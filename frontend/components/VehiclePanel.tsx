@@ -15,6 +15,7 @@ export function VehiclePanel({
   open,
   leaving = false,
   onClose,
+  onWriteAdmin,
 }: {
   vehicle: VehicleDetail;
   /** Проверка, которая сейчас в чате */
@@ -24,6 +25,8 @@ export function VehiclePanel({
   /** Шторка на телефоне закрывается: проигрывается анимация ухода */
   leaving?: boolean;
   onClose: () => void;
+  /** Вопрос администратору не по конкретному ответу: нет нужного руководства, система ведёт себя странно */
+  onWriteAdmin: () => void;
 }) {
   const sid = session?.session_id ?? null;
 
@@ -131,6 +134,12 @@ export function VehiclePanel({
               <span className="m">{vehicle.tickets.length}</span>
               <Icon name="chevron-right" />
             </Link>
+            <button type="button" className="navrow" onClick={onWriteAdmin}>
+              <Icon name="message-circle" />
+              <span>Написать администратору</span>
+              <span />
+              <Icon name="chevron-right" />
+            </button>
           </div>
         </div>
       </div>

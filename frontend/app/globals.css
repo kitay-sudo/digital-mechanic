@@ -1720,13 +1720,13 @@ details.fold > .fin {
 
 @media (min-width: 901px) {
   @container (max-width: 700px) {
-    .composer .diag {
+    .composer .cacts .btn {
       width: calc(48px * var(--k));
       padding: 0;
       flex: none;
     }
 
-    .composer .diag .lbl {
+    .composer .cacts .lbl {
       display: none;
     }
   }
@@ -2821,40 +2821,6 @@ button.sp-link {
   padding-top: 2px;
 }
 
-.cfl-rec {
-  display: grid;
-  grid-template-columns: calc(36px * var(--k)) minmax(0, 1fr);
-  column-gap: 14px;
-  align-items: start;
-  margin-top: 12px;
-  padding: 0 var(--bx);
-  font-size: calc(16px * var(--k));
-  line-height: calc(24px * var(--k));
-  font-weight: 600;
-  color: var(--tx);
-}
-
-.cfl-rec .ti {
-  justify-self: center;
-  margin-top: 2px;
-  color: var(--warn-tx);
-}
-
-.cfl-res {
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--line);
-  font-size: calc(15px * var(--k));
-  line-height: calc(22px * var(--k));
-  color: var(--tx2);
-  overflow-wrap: anywhere;
-}
-
-.cfl-res b {
-  color: var(--tx);
-  font-weight: 600;
-}
-
 .cfl-src {
   display: block;
   margin-top: 4px;
@@ -2890,12 +2856,7 @@ button.sp-link {
     border-right: none;
   }
 
-  .cfl-rec {
-    padding: 0 10px;
-    column-gap: 10px;
-  }
-
-  .cfl-res {
+  .cfl-how {
     margin-left: 10px;
     margin-right: 10px;
   }
@@ -4482,146 +4443,6 @@ button.sp-link {
   }
 }
 
-/* ---------- Голос через сервер: запись с индикатором уровня ----------
-   --lv (0…1) пишет запись голоса: сколько звука слышит микрофон прямо сейчас */
-
-.composer {
-  --lv: 0;
-}
-
-/* Кольцо вокруг кнопки микрофона растёт вместе с голосом: видно, что система слышит. Теней нет — это обводка */
-.btn.mic.live {
-  animation: none;
-  outline: calc(2px + var(--lv) * 10px) solid rgba(198, 40, 40, 0.28);
-  outline-offset: 0;
-  transition: outline-width 80ms linear;
-}
-
-/* Распознавание в браузере уровень не даёт: обводка ровно пульсирует */
-.composer:not(.rec) .btn.mic.live {
-  animation: micring 1.4s ease-out infinite;
-}
-
-@keyframes micring {
-  0% {
-    outline-width: 2px;
-    outline-color: rgba(198, 40, 40, 0.45);
-  }
-  70% {
-    outline-width: 12px;
-    outline-color: rgba(198, 40, 40, 0);
-  }
-  100% {
-    outline-width: 2px;
-    outline-color: rgba(198, 40, 40, 0);
-  }
-}
-
-.vbar {
-  flex: 1;
-  min-width: 0;
-  height: calc(48px * var(--k));
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 0 4px 0 16px;
-  border: 1px solid var(--crit);
-  border-radius: 4px;
-  background: var(--panel);
-  font-size: calc(16px * var(--k));
-  color: var(--tx2);
-}
-
-.vbar.on {
-  color: var(--tx);
-}
-
-.vbar.busy {
-  border-color: var(--line2);
-}
-
-.vdot {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  background: var(--crit);
-}
-
-.vbar.busy .vdot {
-  background: var(--tx3);
-}
-
-/* Столбики уровня: высота каждого следует за голосом, средний выше */
-.vlv {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 3px;
-  height: calc(28px * var(--k));
-}
-
-.vlv i {
-  width: 4px;
-  height: calc(4px + var(--lv) * var(--h) * var(--k));
-  border-radius: 2px;
-  background: var(--crit);
-  transition: height 80ms linear;
-}
-
-.vlv i:nth-child(1),
-.vlv i:nth-child(5) {
-  --h: 10px;
-}
-
-.vlv i:nth-child(2),
-.vlv i:nth-child(4) {
-  --h: 18px;
-}
-
-.vlv i:nth-child(3) {
-  --h: 24px;
-}
-
-.vbar.busy .vlv i {
-  background: var(--tx3);
-}
-
-.vtx {
-  flex: 1;
-  min-width: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  font-weight: 500;
-}
-
-.vtm {
-  flex: none;
-  font-size: calc(14px * var(--k));
-  color: var(--tx3);
-  font-variant-numeric: tabular-nums;
-}
-
-.vx {
-  flex: none;
-  width: calc(40px * var(--k));
-  height: calc(40px * var(--k));
-  display: grid;
-  place-items: center;
-  border-radius: 4px;
-  color: var(--tx2);
-}
-
-.vx:hover {
-  background: var(--panel2);
-}
-
-.vsp {
-  flex: none;
-  margin-right: 10px;
-  color: var(--tx3);
-}
-
 /* ---------- Над панелью ввода: ошибки и приложенные фото ---------- */
 
 .cextra {
@@ -4728,12 +4549,6 @@ button.sp-link {
     padding: 8px 12px;
   }
 
-  .vbar {
-    height: calc(56px * var(--k));
-    gap: 10px;
-    padding-left: 12px;
-  }
-
   .qph a {
     width: calc(108px * var(--k));
     height: calc(108px * var(--k));
@@ -4824,18 +4639,6 @@ button.sp-link {
   font-weight: 600;
 }
 
-/* Пока идёт запись, кнопка фото не нужна: её место отдаём подписи «Слышу вас» (на телефоне иначе не помещается) */
-.composer.rec .btn.photo {
-  display: none;
-}
-
-/* На телефоне в полосе записи важнее подпись «Слышу вас», чем таймер */
-@media (max-width: 900px) {
-  .vtm {
-    display: none;
-  }
-}
-
 /* ---------- Смены: кто работает с машиной ---------- */
 
 /* Кнопка в шапке чата: фамилия механика. Пока не указана — подпись цветом предупреждения */
@@ -4888,51 +4691,6 @@ button.sp-link {
   font-size: calc(16px * var(--k));
 }
 
-/* Причина сообщения в поддержку: выбор одной из нескольких, кнопками в несколько строк */
-.rsn {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.rsn button {
-  height: calc(40px * var(--k));
-  padding: 0 14px;
-  border: 1px solid var(--line2);
-  border-radius: 4px;
-  background: var(--panel);
-  font-size: calc(15px * var(--k));
-  white-space: nowrap;
-}
-
-.rsn button.on {
-  background: var(--tx);
-  border-color: var(--tx);
-  color: var(--panel);
-}
-
-/* «Сообщить о проблеме» в подписи ответа агента: справа, неприметно, пока не нужно */
-.who .rep {
-  margin-left: auto;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  color: var(--tx3);
-  font-size: calc(12px * var(--k));
-}
-
-button.rep:hover {
-  color: var(--warn-tx);
-  background: var(--panel2);
-}
-
-.who .rep.done {
-  color: var(--warn-tx);
-}
-
 /* Кто и когда отметил шаг сделанным */
 .byline {
   margin-top: 2px;
@@ -4969,4 +4727,299 @@ button.rep:hover {
 /* Журнал: фамилия механика под временем */
 .lrow .lwho {
   color: var(--tx2);
+}
+
+/* ---------- Панель ввода: «Получить результат диагностики» и «Создать заявку» ---------- */
+
+.cacts {
+  flex: none;
+  display: flex;
+  gap: 8px;
+}
+
+/* Недоступная заявка выглядит выключенной, но нажимается: нажатие объясняет причину над панелью ввода */
+.btn.tkt.off {
+  background: var(--panel2);
+  border-color: var(--line);
+  color: var(--tx3);
+  cursor: default;
+}
+
+.btn.tkt.off:hover {
+  border-color: var(--line2);
+}
+
+.btn.tkt.done {
+  color: var(--tx2);
+}
+
+.btn.tkt.done .ti {
+  color: var(--ok);
+}
+
+.card.v-ok {
+  border-left-color: var(--ok);
+}
+
+.c-ok {
+  color: var(--ok);
+}
+
+@media (max-width: 900px) {
+  /* На телефоне обе кнопки одной строкой и одного размера */
+  .cacts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .cacts .btn {
+    width: 100%;
+    min-width: 0;
+    padding: 0 12px;
+  }
+
+  .cacts .lbl {
+    min-width: 0;
+    overflow: hidden;
+  }
+}
+
+/* ---------- Голос: запись видна по самой кнопке микрофона ----------
+   --lv (0…1) пишет запись голоса (lib/voice.ts): столбики внутри кнопки идут за голосом. Теней и колец нет */
+
+.composer {
+  --lv: 0;
+}
+
+.btn.mic.live {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: #ffffff;
+}
+
+.mlv {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: calc(24px * var(--k));
+}
+
+.mlv i {
+  width: 4px;
+  height: calc((4px + var(--lv) * var(--h)) * var(--k));
+  border-radius: 2px;
+  background: currentColor;
+  transition: height 80ms linear;
+}
+
+.mlv i:nth-child(1),
+.mlv i:nth-child(4) {
+  --h: 10px;
+}
+
+.mlv i:nth-child(2) {
+  --h: 20px;
+}
+
+.mlv i:nth-child(3) {
+  --h: 16px;
+}
+
+/* Распознавание в браузере уровень звука не даёт: столбики ровно покачиваются */
+.composer:not(.rec) .mlv i {
+  height: calc(6px * var(--k));
+  animation: mlv 900ms ease-in-out infinite;
+}
+
+.composer:not(.rec) .mlv i:nth-child(2) {
+  animation-delay: 150ms;
+}
+
+.composer:not(.rec) .mlv i:nth-child(3) {
+  animation-delay: 300ms;
+}
+
+.composer:not(.rec) .mlv i:nth-child(4) {
+  animation-delay: 450ms;
+}
+
+@keyframes mlv {
+  50% {
+    height: calc(18px * var(--k));
+  }
+}
+
+/* Распознаю речь: кнопка ждёт, значок крутится */
+.btn.mic.wait:disabled {
+  color: var(--crit);
+  border-color: var(--crit);
+}
+
+@media (max-width: 900px) {
+  .composer .cgroup .btn.mic.wait:disabled {
+    background: var(--panel);
+    color: var(--crit);
+  }
+}
+
+.btn.vx {
+  color: var(--tx2);
+}
+
+/* ---------- Сообщение администратору: панель снизу, как настройки ---------- */
+
+@media (min-width: 901px) {
+  .sp.rp {
+    width: calc(560px * var(--k));
+  }
+}
+
+.sp-b.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.sp-g .pop-ta {
+  margin-top: 0;
+}
+
+/* Кнопки внизу панели одного размера */
+.sp-f {
+  flex: none;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 16px 20px calc(16px + env(safe-area-inset-bottom));
+  border-top: 1px solid var(--line);
+}
+
+/* Причины — список на всю ширину, как выбор в настройках */
+.rsn {
+  display: grid;
+  gap: 1px;
+  background: var(--line2);
+  border: 1px solid var(--line2);
+}
+
+.rsn button {
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  border: none;
+  background: var(--panel);
+  color: var(--tx);
+  font: inherit;
+  font-size: calc(16px * var(--k));
+  text-align: left;
+  cursor: pointer;
+}
+
+.rsn button .ti {
+  color: var(--tx3);
+}
+
+.rsn button:hover {
+  background: var(--panel2);
+}
+
+.rsn button.on {
+  background: var(--tx);
+  color: var(--panel);
+}
+
+.rsn button.on .ti {
+  color: var(--panel);
+}
+
+/* «Сообщить о проблеме» — отдельной строкой под ответом, с подписью: заметно, но не мешает */
+.afoot {
+  display: flex;
+}
+
+.afoot .rep {
+  min-height: calc(36px * var(--k));
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 8px;
+  margin-left: -8px;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--tx3);
+  font: inherit;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+}
+
+button.rep {
+  cursor: pointer;
+}
+
+button.rep:hover {
+  color: var(--warn-tx);
+  background: var(--panel2);
+}
+
+.afoot .rep.done {
+  color: var(--warn-tx);
+}
+
+/* Строка «Написать администратору» в панели машины — кнопка, выглядит как соседние ссылки */
+button.navrow {
+  width: 100%;
+  border-top: none;
+  border-left: none;
+  border-right: none;
+  background: transparent;
+  font: inherit;
+  font-size: calc(15px * var(--k));
+  text-align: left;
+  cursor: pointer;
+}
+
+/* ---------- Расхождение: как поступить ---------- */
+
+.cfl-how {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.cfl-hl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(16px * var(--k));
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--warn-tx);
+}
+
+.cfl-ht {
+  margin-top: 4px;
+  font-size: calc(16px * var(--k));
+  line-height: calc(24px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+  overflow-wrap: anywhere;
+}
+
+/* Подсказка над панелью ввода: спокойным цветом, это не ошибка */
+.vinfo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--tx2);
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+}
+
+.vinfo .ti {
+  flex: none;
+  color: var(--acc);
 }

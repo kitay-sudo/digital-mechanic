@@ -53,7 +53,11 @@ function voiceErrorText(code: string | undefined): string | null {
 /** Язык распознавания речи: система работает только на русском. */
 const SPEECH_LANG = 'ru-RU';
 
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+/** Кнопка «Создать заявку» в панели ввода: доступна, недоступна с причиной или заявка уже создана */
+export type TicketButton =
+  | { state: 'on' }
+  | { state: 'off'; reason: string }
+  | { state: 'done'; ticketId: string; reason: string };
 
 interface Attached {
   key: number;
@@ -70,17 +74,23 @@ export function Composer({
   busy,
   canDiagnose,
   onDiagnose,
+  ticket,
+  onTicket,
   onSend,
 }: {
   busy: boolean;
   canDiagnose: boolean;
   onDiagnose: () => void;
+  ticket: TicketButton;
+  onTicket: () => void;
   onSend: (text: string, images: string[]) => void;
 }) {
   const [text, setText] = useState('');
   const [photos, setPhotos] = useState<Attached[]>([]);
   const [preparing, setPreparing] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  /** Подсказка, не ошибка: например, почему заявку пока нельзя создать */
+  const [info, setInfo] = useState<string | null>(null);
   /** Распознавание на сервере: запись с индикатором уровня, работает в любом браузере с микрофоном */
   const [serverVoice, setServerVoice] = useState(false);
   const [browserVoice, setBrowserVoice] = useState(false);
@@ -127,12 +137,18 @@ export function Composer({
     };
   }, []);
 
-  // Сообщение об ошибке само исчезает
+  // Сообщение об ошибке и подсказка сами исчезают
   useEffect(() => {
     if (!notice) return;
     const timer = setTimeout(() => setNotice(null), 6000);
     return () => clearTimeout(timer);
   }, [notice]);
+
+  useEffect(() => {
+    if (!info) return;
+    const timer = setTimeout(() => setInfo(null), 6000);
+    return () => clearTimeout(timer);
+  }, [info]);
 
   const submit = () => {
     if (busy || preparing || (!text.trim() && !photos.length)) return;
@@ -222,17 +238,20 @@ export function Composer({
 
   const hasVoice = serverVoice || browserVoice;
   const live = listening || voice.state === 'listening' || voice.state === 'starting';
-  const micDisabled = serverVoice ? (busy && !recording) || voice.state === 'transcribing' || voice.state === 'starting' : busy && !listening;
-  const status =
-    voice.state === 'transcribing'
-      ? 'Распознаю…'
-      : voice.state === 'starting'
-        ? 'Включаю микрофон…'
-        : voice.hearing
-          ? 'Слышу вас'
-          : voice.heard
-            ? 'Слушаю…'
-            : 'Говорите';
+  const transcribing = voice.state === 'transcribing';
+  const micDisabled = serverVoice ? (busy && !recording) || transcribing || voice.state === 'starting' : busy && !listening;
+  /** Подсказка в поле ввода, пока идёт запись: сама запись видна по кнопке микрофона */
+  const voiceHint = transcribing ? 'Распознаю…' : voice.state === 'starting' ? 'Включаю микрофон…' : 'Говорите';
+
+  /** Недоступная кнопка заявки не глохнет молча: нажатие объясняет, почему её нельзя создать */
+  const pressTicket = () => {
+    if (ticket.state === 'on') {
+      if (!busy) onTicket();
+      return;
+    }
+    setNotice(null);
+    setInfo(ticket.reason);
+  };
 
   const onPaste = (e: ClipboardEvent<HTMLInputElement>) => {
     const files = [...e.clipboardData.files];
@@ -256,8 +275,14 @@ export function Composer({
       }}
       onDrop={onDrop}
     >
-      {notice || photos.length || preparing ? (
+      {notice || info || photos.length || preparing ? (
         <div className="cextra">
+          {info && !notice ? (
+            <div className="vinfo" role="status">
+              <Icon name="info-circle" size="s" />
+              {info}
+            </div>
+          ) : null}
           {notice ? (
             <div className="verr" role="alert">
               <Icon name="alert-circle" size="s" />
@@ -297,18 +322,44 @@ export function Composer({
           ) : null}
         </div>
       ) : null}
-      {/* В узкой колонке (открыто руководство) от кнопки остаётся значок: подпись дублируют title и aria-label */}
-      <button
-        type="button"
-        className="btn pri diag"
-        onClick={onDiagnose}
-        disabled={busy || !canDiagnose}
-        aria-label="Получить результат диагностики"
-        title="Получить результат диагностики"
-      >
-        <Icon name="wave-sine" />
-        <span className="lbl">Получить результат диагностики</span>
-      </button>
+      {/* Две главные кнопки механика. В узкой колонке (открыто руководство) от них остаются значки:
+          подпись дублируют title и aria-label. На телефоне — одной строкой, одного размера */}
+      <div className="cacts">
+        <button
+          type="button"
+          // Залита та кнопка, что ведёт к следующему шагу: после вердикта с разрешённой заявкой — «Создать заявку»
+          className={`btn diag${ticket.state === 'on' && !busy ? '' : ' pri'}`}
+          onClick={onDiagnose}
+          disabled={busy || !canDiagnose}
+          aria-label="Получить результат диагностики"
+          title="Получить результат диагностики"
+        >
+          <Icon name="wave-sine" />
+          <span className="lbl only-d">Получить результат диагностики</span>
+          <span className="lbl only-m">Диагностика</span>
+        </button>
+        <button
+          type="button"
+          className={`btn tkt${ticket.state === 'on' && !busy ? ' pri' : ''}${ticket.state === 'done' ? ' done' : ''}${ticket.state !== 'on' || busy ? ' off' : ''}`}
+          onClick={pressTicket}
+          aria-disabled={ticket.state !== 'on' || busy}
+          aria-label={ticket.state === 'done' ? `Заявка ${ticket.ticketId} создана` : 'Создать заявку'}
+          title={ticket.state === 'on' ? 'Агент соберёт заявку по руководству, перед отправкой вы её подтвердите' : ticket.reason}
+        >
+          <Icon name={ticket.state === 'done' ? 'clipboard-check' : 'clipboard-list'} />
+          {ticket.state === 'done' ? (
+            <>
+              <span className="lbl only-d">Заявка {ticket.ticketId}</span>
+              <span className="lbl only-m m">{ticket.ticketId}</span>
+            </>
+          ) : (
+            <>
+              <span className="lbl only-d">Создать заявку</span>
+              <span className="lbl only-m">Заявка</span>
+            </>
+          )}
+        </button>
+      </div>
       <form
         className="cgroup"
         onSubmit={(e) => {
@@ -318,16 +369,28 @@ export function Composer({
         }}
       >
         {hasVoice ? (
+          // Запись видна по самой кнопке: внутри неё столбики идут за голосом. Нажатие заканчивает фразу и отправляет
           <button
             type="button"
-            className={`btn ic mic${live ? ' live' : ''}`}
+            className={`btn ic mic${live ? ' live' : ''}${transcribing ? ' wait' : ''}`}
             onClick={onMic}
             disabled={micDisabled}
-            aria-label={live ? 'Закончить и отправить' : 'Сказать голосом'}
+            aria-label={transcribing ? 'Распознаю речь' : live ? 'Закончить и отправить' : 'Сказать голосом'}
             aria-pressed={live}
-            title={live ? 'Слушаю… нажмите, чтобы закончить и отправить' : 'Сказать голосом: фраза сама уйдёт агенту'}
+            title={live ? 'Идёт запись. Нажмите, чтобы закончить и отправить' : 'Сказать голосом: фраза сама уйдёт агенту'}
           >
-            <Icon name={live ? 'player-stop' : 'microphone'} size="l" />
+            {transcribing ? (
+              <Icon name="loader-2" size="l" className="spin" />
+            ) : live ? (
+              <span className="mlv" aria-hidden>
+                <i />
+                <i />
+                <i />
+                <i />
+              </span>
+            ) : (
+              <Icon name="microphone" size="l" />
+            )}
           </button>
         ) : null}
         <button
@@ -352,46 +415,33 @@ export function Composer({
             void addFiles(files);
           }}
         />
-        {recording ? (
-          <div className={`vbar${voice.hearing ? ' on' : ''}${voice.state === 'transcribing' ? ' busy' : ''}`} role="status" aria-live="polite">
-            <span className="vdot" aria-hidden />
-            <span className="vlv" aria-hidden>
-              <i />
-              <i />
-              <i />
-              <i />
-              <i />
-            </span>
-            <span className="vtx">{status}</span>
-            <span className="vtm m">{clock(voice.elapsed)}</span>
-            {voice.state === 'transcribing' ? (
-              <Icon name="loader-2" className="spin vsp" />
-            ) : (
-              <button type="button" className="vx" onClick={voice.cancel} aria-label="Отменить запись" title="Отменить запись">
-                <Icon name="x" />
-              </button>
-            )}
-          </div>
+        <input
+          className={`inp${live || transcribing ? ' live' : ''}`}
+          value={recording ? '' : text}
+          onChange={(e) => setText(e.target.value)}
+          onPaste={onPaste}
+          placeholder={
+            recording ? voiceHint : listening ? 'Говорите' : photos.length ? 'Вопрос к фото' : hasVoice ? 'Ваш вопрос' : 'Вопрос по руководству или команда'
+          }
+          aria-label="Вопрос агенту"
+          enterKeyHint="send"
+          readOnly={listening || recording}
+        />
+        {/* Во время записи на месте отправки — отмена: запись выбрасывается, ничего не уходит */}
+        {voice.state === 'listening' || voice.state === 'starting' ? (
+          <button type="button" className="btn ic vx" onClick={voice.cancel} aria-label="Отменить запись" title="Отменить запись">
+            <Icon name="x" />
+          </button>
         ) : (
-          <input
-            className={`inp${listening ? ' live' : ''}`}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onPaste={onPaste}
-            placeholder={listening ? 'Слушаю…' : photos.length ? 'Вопрос к фото' : hasVoice ? 'Ваш вопрос' : 'Вопрос по руководству или команда'}
-            aria-label="Вопрос агенту"
-            enterKeyHint="send"
-            readOnly={listening}
-          />
+          <button
+            type="submit"
+            className="btn ic"
+            disabled={busy || listening || recording || preparing || (!text.trim() && !photos.length)}
+            aria-label="Отправить"
+          >
+            <Icon name="arrow-up" />
+          </button>
         )}
-        <button
-          type="submit"
-          className="btn ic"
-          disabled={voice.state === 'listening' ? false : busy || listening || recording || preparing || (!text.trim() && !photos.length)}
-          aria-label="Отправить"
-        >
-          <Icon name="arrow-up" />
-        </button>
       </form>
     </div>
   );

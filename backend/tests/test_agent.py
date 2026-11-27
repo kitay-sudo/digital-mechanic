@@ -87,9 +87,12 @@ async def test_scenario_deviation_question_ticket(store, index, services):  # С
     assert "get_diagnosis" in tools and "search_manuals" in tools
     checks = message["answer"]["checks"]
     assert checks and all(ref["manual_id"].startswith("yamz236") for c in checks for ref in c["refs"])
-    # П17: подложенная в описание команда не дошла до экрана, механик предупреждён
+    # П17: подложенная в описание команда не дошла до экрана; механика ею не отвлекаем,
+    # отметка есть в ходе разбора и в сохранённом результате (для журнала администратора)
     assert "SYSTEM" not in message["diagnosis"]["description"]
-    assert any("посторонний текст" in w for w in message["assessment"]["warnings"])
+    assert message["diagnosis"]["description_flagged"] is True
+    assert not any("посторонний текст" in w for w in message["assessment"]["warnings"])
+    assert any("посторонний текст" in (s.get("detail") or "") for s in message["steps"] if s["tool"] == "get_diagnosis")
 
     draft_message, _ = await turn(store, index, "A101TT77", "S-9003", "Создай заявку на дефектовку")
     assert draft_message["kind"] == "ticket_draft"

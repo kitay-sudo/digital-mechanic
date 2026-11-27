@@ -6,8 +6,8 @@ import { StreamLostError, api, chatStream, confirmDraftStream, turnStream } from
 import { dateTime } from '@/lib/format';
 import { usePresence } from '@/lib/presence';
 import { profileOf, setSettings, useSettings } from '@/lib/settings';
-import type { ManualTarget, Marks, Message, Report, Step, StreamEvent, VehicleDetail } from '@/lib/types';
-import { Composer } from './Composer';
+import type { ManualTarget, Marks, Message, Report, Session, Step, StreamEvent, VehicleDetail } from '@/lib/types';
+import { Composer, type TicketButton } from './Composer';
 import { Icon } from './Icon';
 import { ManualPanel } from './ManualPanel';
 import { MessageView, PendingSteps } from './MessageView';
@@ -47,6 +47,28 @@ function resumeLine(messages: Message[], marks: Marks, vehicle: VehicleDetail, m
   return parts.join(' ');
 }
 
+/**
+ * Состояние кнопки «Создать заявку» в панели ввода — по проверке, которая сейчас в чате:
+ * заявка уже есть, вердикт разрешил заявку, или почему её пока нельзя создать.
+ */
+function ticketButton(messages: Message[], vehicle: VehicleDetail, session: Session | null): TicketButton {
+  if (!session) return { state: 'off', reason: 'У машины нет проверок: заявку не к чему привязать.' };
+  const sid = session.session_id;
+  const made = [...vehicle.tickets].reverse().find((t) => t.session_id === sid);
+  if (made) {
+    return { state: 'done', ticketId: made.ticket_id, reason: `По проверке ${sid} заявка ${made.ticket_id} создана ${dateTime(made.created_at)}.` };
+  }
+  // Черновик уже собран и ждёт подтверждения: второй не нужен, отправка — из карточки черновика
+  const last = [...messages].reverse().find((m) => !m.localError && m.role === 'assistant' && m.session_id === sid);
+  if (last?.kind === 'ticket_draft' && last.draft?.status === 'draft') {
+    return { state: 'off', reason: 'Черновик заявки уже готов: проверьте состав и нажмите «Подтвердить и отправить в ТОиР» в его карточке.' };
+  }
+  const verdict = [...messages].reverse().find((m) => m.kind === 'verdict' && m.session_id === sid && m.assessment);
+  if (!verdict?.assessment) return { state: 'off', reason: 'Сначала нажмите «Получить результат диагностики»: заявка собирается по результату проверки.' };
+  if (verdict.assessment.ticket_allowed) return { state: 'on' };
+  return { state: 'off', reason: verdict.assessment.ticket_block_reason ?? 'По этой проверке заявку создать нельзя.' };
+}
+
 let localId = 0;
 const localNotice = (text: string): Message => ({
   id: `local_${++localId}`,
@@ -76,6 +98,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   /** Панель «Кто работает» (смена механика) и панель сообщения в поддержку */
   const [whoOpen, setWhoOpen] = useState(false);
   const [reportFor, setReportFor] = useState<string | null>(null);
+  /** Вопрос администратору не по конкретному ответу */
+  const [adminOpen, setAdminOpen] = useState(false);
   const chatRef = useRef<HTMLDivElement>(null);
   // Плавное закрытие: панель остаётся на экране, пока уезжает
   const manualView = usePresence(manual);
@@ -83,6 +107,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
   const clearView = usePresence(clearOpen ? true : null);
   const whoView = usePresence(whoOpen ? true : null);
   const reportView = usePresence(reportFor);
+  const adminView = usePresence(adminOpen ? true : null);
   const settings = useSettings();
   const me = settings.mechanic.trim();
   const profile = profileOf(settings);
@@ -291,20 +316,32 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     [me],
   );
 
+  const sendAdmin = useCallback(
+    (text: string) => {
+      setAdminOpen(false);
+      api
+        .adminMessage({ vehicle_id: vehicleId, text, author: me || null })
+        .then(() => setMessages((list) => [...list, { ...localNotice('Сообщение отправлено администратору. Он увидит его в журнале.'), localOk: true }]))
+        .catch((e: Error) => setMessages((list) => [...list, localNotice(`Сообщение не отправлено: ${e.message}`)]));
+    },
+    [me, vehicleId],
+  );
+
   // Подтверждение очистки выезжает снизу, отдельного окна браузера нет
   const askClear = useCallback(() => setClearOpen((cur) => !cur), []);
 
   useEffect(() => {
-    if (!clearOpen && !whoOpen && !reportFor) return;
+    if (!clearOpen && !whoOpen && !reportFor && !adminOpen) return;
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       setClearOpen(false);
       setWhoOpen(false);
       setReportFor(null);
+      setAdminOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [clearOpen, whoOpen, reportFor]);
+  }, [clearOpen, whoOpen, reportFor, adminOpen]);
 
   // Повторное нажатие на ту же ссылку закрывает страницу руководства
   const openManual = useCallback((target: ManualTarget) => {
@@ -338,6 +375,10 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         open={Boolean(sideView.shown)}
         leaving={sideView.leaving}
         onClose={() => setSideOpen(false)}
+        onWriteAdmin={() => {
+          setSideOpen(false);
+          setAdminOpen(true);
+        }}
       />
 
       <section className="col chatcol">
@@ -429,6 +470,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           busy={busy}
           canDiagnose={Boolean(session)}
           onDiagnose={() => send(DIAGNOSE_TEXT)}
+          ticket={ticketButton(messages, vehicle, session)}
+          onTicket={() => send(TICKET_TEXT)}
           onSend={send}
         />
       </section>
@@ -474,6 +517,10 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
           onClose={() => setReportFor(null)}
           onSend={(reason, text) => sendReport(reportView.shown as string, reason, text)}
         />
+      ) : null}
+
+      {adminView.shown ? (
+        <ReportPanel direct leaving={adminView.leaving} onClose={() => setAdminOpen(false)} onSend={(_, text) => sendAdmin(text)} />
       ) : null}
     </div>
   );
@@ -530,53 +577,86 @@ function WhoPanel({
   );
 }
 
-/** Сообщение в поддержку: администратор увидит его в журнале и поправит базу знаний или настройку */
+/**
+ * Сообщение администратору. По ответу агента: причина из списка и комментарий по желанию —
+ * администратор увидит вопрос и ответ в журнале. Напрямую (direct): свой текст, машина и фамилия подставятся сами.
+ * Выезжает снизу, как настройки.
+ */
 function ReportPanel({
+  direct = false,
   leaving,
   onClose,
   onSend,
 }: {
+  direct?: boolean;
   leaving: boolean;
   onClose: () => void;
   onSend: (reason: string, text: string) => void;
 }) {
   const [reason, setReason] = useState(REPORT_REASONS[0]);
   const [text, setText] = useState('');
+  const ready = !direct || text.trim().length > 0;
+  const title = direct ? 'Написать администратору' : 'Сообщить о проблеме';
   return (
     <>
-      <button type="button" className={`veil${leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={onClose} />
+      <button type="button" className={`sp-dim${leaving ? ' leaving' : ''}`} aria-label="Отмена" onClick={onClose} />
       <form
-        className={`pop${leaving ? ' leaving' : ''}`}
+        className={`sp rp${leaving ? ' leaving' : ''}`}
         role="dialog"
-        aria-label="Сообщить о проблеме"
+        aria-label={title}
         onSubmit={(e) => {
           e.preventDefault();
-          onSend(reason, text.trim());
+          if (ready) onSend(direct ? '' : reason, text.trim());
         }}
       >
-        <div className="pop-t">Сообщить о проблеме</div>
-        <div className="pop-s">Сообщение получит администратор системы. Ответ и ваш вопрос он увидит в журнале.</div>
-        <div className="rsn" role="radiogroup" aria-label="Что не так">
-          {REPORT_REASONS.map((r) => (
-            <button key={r} type="button" role="radio" aria-checked={reason === r} className={reason === r ? 'on' : ''} onClick={() => setReason(r)}>
-              {r}
-            </button>
-          ))}
+        <div className="handle">
+          <i />
         </div>
-        <textarea
-          className="inp pop-ta"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          placeholder="Что именно не так (по желанию)"
-          aria-label="Комментарий"
-          maxLength={1000}
-          rows={3}
-        />
-        <div className="pop-f">
+        <div className="sp-h">
+          <Icon name={direct ? 'message-circle' : 'flag'} />
+          <span>{title}</span>
+          <button type="button" className="hb" onClick={onClose} aria-label="Закрыть">
+            <Icon name="x" />
+          </button>
+        </div>
+        <div className="sp-b one">
+          {direct ? null : (
+            <div className="sp-g">
+              <div className="sp-l">Что не так</div>
+              <div className="rsn" role="radiogroup" aria-label="Что не так">
+                {REPORT_REASONS.map((r) => (
+                  <button key={r} type="button" role="radio" aria-checked={reason === r} className={reason === r ? 'on' : ''} onClick={() => setReason(r)}>
+                    <Icon name={reason === r ? 'circle-check' : 'circle'} />
+                    <span>{r}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          <div className="sp-g">
+            <div className="sp-l">{direct ? 'Сообщение' : 'Подробнее'}</div>
+            <textarea
+              className="inp pop-ta"
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              placeholder={direct ? 'Например: нет руководства на этот двигатель' : 'Что именно не так (по желанию)'}
+              aria-label={direct ? 'Сообщение администратору' : 'Комментарий'}
+              maxLength={1000}
+              rows={3}
+              autoFocus={direct}
+            />
+            <div className="sp-s">
+              {direct
+                ? 'Администратор увидит сообщение в журнале вместе с машиной и вашей фамилией.'
+                : 'Администратор увидит в журнале ваш вопрос, ответ агента и это сообщение.'}
+            </div>
+          </div>
+        </div>
+        <div className="sp-f">
           <button type="button" className="btn" onClick={onClose}>
             Отмена
           </button>
-          <button type="submit" className="btn pri">
+          <button type="submit" className="btn pri" disabled={!ready}>
             <Icon name="send" />
             Отправить
           </button>

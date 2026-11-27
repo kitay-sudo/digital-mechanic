@@ -25,9 +25,11 @@ from .kb.index import Index
 from .kb.text import split_sentences, squash
 from .manuals import manual_by_id
 
+# Что делать механику, пока расхождение не согласовано с технической службой. Для согласованных
+# расхождений экран показывает решение из реестра (resolution) вместо этого текста.
 RECOMMENDATION = (
-    "Не принимайте одну из формулировок как бесспорную. До ответа производителя работайте по более "
-    "осторожной из них и уточните у производителя для вашей модификации двигателя."
+    "Работайте по более осторожной формулировке и уточните у производителя, какая верна "
+    "для вашей модификации двигателя."
 )
 MAX_QUOTE = 360
 _WORD = re.compile(r"[a-zа-я0-9]+")
@@ -212,4 +214,5 @@ def mark_disputed(items: list[dict], blocks: list[dict]) -> None:
 
 def warning_line(block: dict) -> str:
     places = ", ".join(f"{s['ref']['short']} стр. {s['ref']['pdf_page']}" for s in block["statements"])
-    return f"В руководствах расхождение: {block['topic'].lower()} ({places}). До начала работы выберите более осторожный вариант и уточните у производителя."
+    advice = block.get("resolution") or "До начала работы выберите более осторожный вариант и уточните у производителя."
+    return f"В руководствах расхождение: {block['topic'].lower()} ({places}). {advice}"

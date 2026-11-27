@@ -58,6 +58,9 @@ export const api = {
   /** Сообщение механика в поддержку об ответе агента: попадает в журнал администратору */
   report: (body: { message_id: string; reason: string; text: string; author: string | null }) =>
     request<{ report: Report }>('/api/reports', { method: 'POST', ...json(body) }),
+  /** Вопрос администратору напрямую, не к ответу агента: попадает в журнал как «От механика» */
+  adminMessage: (body: { vehicle_id: string | null; text: string; author: string | null }) =>
+    request<{ id: string; created_at: string }>('/api/admin-messages', { method: 'POST', ...json(body) }),
   /** Ошибка хода показана механику: сервер перестаёт о ней напоминать */
   seenTurn: (id: string) =>
     request<unknown>(`/api/conversations/${encodeURIComponent(id)}/turn`, { method: 'DELETE' }),

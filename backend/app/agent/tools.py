@@ -267,6 +267,9 @@ def _outcome_instruction(assessment: dict) -> str:
     return text
 
 
+INJECTION_NOTE = "в описании был посторонний текст, он отброшен"
+
+
 async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str, bool]:
     session_id = str(args.get("session_id") or ctx.session_id)
     title = f"Получаю результат проверки {session_id}"
@@ -286,10 +289,6 @@ async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
     diagnosis["description_flagged"] = flagged
     previous = fleet.previous_sessions(ctx.vehicle, session_id)
     assessment = rules.assess(diagnosis, ctx.vehicle, previous, ctx.settings.confidence_min)
-    if flagged:
-        assessment["warnings"].append(
-            "В описании от ML-сервиса был посторонний текст с указаниями для агента. Он отброшен и на вывод не влияет."
-        )
     repeat = rules.repeat_after_repair(diagnosis, ctx.store.tickets(ctx.vehicle["vehicle_id"]), session_id)
     if repeat:
         assessment["warnings"].append(repeat)
@@ -299,9 +298,13 @@ async def get_diagnosis(ctx: TurnContext, args: dict, step_id: str) -> tuple[str
     detail = f"POST /diagnose → 200 · {diagnosis['status']}"
     if diagnosis.get("anomaly_type"):
         detail += f" {diagnosis['anomaly_type']}"
+    # Механику предупреждение о подложенном тексте не нужно: на вывод оно не влияет. Видно в ходе разбора
+    # и в журнале администратора (флаг остаётся в сохранённом результате проверки).
+    if flagged:
+        detail += f" · {INJECTION_NOTE}"
     await ctx.step(step_id, "get_diagnosis", title, "done", detail)
     return _dump({
-        "diagnosis": diagnosis,
+        "diagnosis": {k: v for k, v in diagnosis.items() if k != "description_flagged"},
         "assessment": assessment,
         "what_to_do": _outcome_instruction(assessment),
     }), False

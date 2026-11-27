@@ -294,3 +294,25 @@ def test_context_time_is_local_not_server_utc():
     from app.agent.prompt import when
 
     assert when("2026-11-27T16:29:05+00:00") == "27.11.2026 19:29"  # сервер в контейнере живёт по UTC
+
+
+def test_conflict_warning_uses_agreed_resolution():  # согласованное решение заменяет общий совет
+    from app import conflicts
+
+    ref = {"short": "РЭ", "pdf_page": 56}
+    block = {"topic": "Момент затяжки", "statements": [{"ref": ref}, {"ref": {**ref, "pdf_page": 248}}]}
+    assert "осторожный" in conflicts.warning_line(block)
+    line = conflicts.warning_line({**block, "resolution": "Ориентируйтесь на значение в кгс·м."})
+    assert line.endswith("Ориентируйтесь на значение в кгс·м.") and "осторожный" not in line
+    assert "специалист" not in conflicts.RECOMMENDATION and "Не принимайте" not in conflicts.RECOMMENDATION
+
+
+def test_registry_texts_speak_to_mechanic():  # в реестре нет «заказчик пояснил» и внутренних названий встреч
+    import json
+    from pathlib import Path
+
+    items = json.loads((Path(__file__).parents[2] / "config" / "conflicts.json").read_text(encoding="utf-8"))
+    items = items if isinstance(items, list) else items.get("conflicts", [])
+    for item in items:
+        text = f"{item.get('resolution', '')} {item.get('resolution_source', '')}"
+        assert "аказчик" not in text and "Q&A" not in text and "НейроДВС" not in text

@@ -61,6 +61,8 @@ function DisputedMark() {
   );
 }
 
+const upperFirst = (t: string) => t.charAt(0).toUpperCase() + t.slice(1);
+
 function ConflictBlocks({ conflicts, ctx }: { conflicts: Conflict[]; ctx: Ctx }) {
   return (
     <>
@@ -87,16 +89,15 @@ function ConflictBlocks({ conflicts, ctx }: { conflicts: Conflict[]; ctx: Ctx })
                 </div>
               ))}
             </div>
-            <div className="cfl-rec">
-              <Icon name="user-question" />
-              <span>{c.recommendation}</span>
-            </div>
-            {c.resolution ? (
-              <div className="cfl-res">
-                <b>Что решено.</b> {c.resolution}
-                {c.resolution_source ? <span className="cfl-src">Источник: {c.resolution_source}</span> : null}
+            {/* Согласованное решение заменяет общий совет: механику нужен один ответ, что делать */}
+            <div className="cfl-how">
+              <div className="cfl-hl">
+                <Icon name={c.resolution ? 'circle-check' : 'arrow-right'} size="s" />
+                Как поступить
               </div>
-            ) : null}
+              <div className="cfl-ht">{c.resolution || c.recommendation}</div>
+              {c.resolution && c.resolution_source ? <div className="cfl-src">{upperFirst(c.resolution_source)}</div> : null}
+            </div>
           </section>
         </div>
       ))}
@@ -517,18 +518,8 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
         </div>
       ) : null}
 
-      {a?.ticket_allowed ? (
-        <div className="cfoot">
-          <div className="cap">
-            <Icon name="info-circle" />
-            <span>Агент соберёт заявку по руководству. Перед отправкой вы увидите состав и подтвердите его.</span>
-          </div>
-          <button type="button" className="btn pri" onClick={onCreateTicket} disabled={ctx.busy}>
-            <Icon name="clipboard-list" />
-            Создать заявку
-          </button>
-        </div>
-      ) : a?.ticket_block_reason ? (
+      {/* Кнопка «Создать заявку» постоянно стоит в панели ввода. В карточке — только причина, если заявка недоступна */}
+      {!a?.ticket_allowed && a?.ticket_block_reason ? (
         <div className="cfoot">
           <div className="cap">
             <Icon name="lock" />
@@ -840,9 +831,9 @@ export function MessageView({
   let body;
   if (m.localError) {
     body = (
-      <div className="card strip v-err">
+      <div className={`card strip${m.localOk ? ' v-ok' : ' v-err'}`}>
         <div className="cpad" style={{ display: 'flex', gap: 12, alignItems: 'flex-start' }}>
-          <Icon name="alert-circle" className="c-h" />
+          <Icon name={m.localOk ? 'circle-check' : 'alert-circle'} className={m.localOk ? 'c-ok' : 'c-h'} />
           <div>{m.text}</div>
         </div>
       </div>
@@ -882,20 +873,24 @@ export function MessageView({
         <Icon name="engine" size="s" />
         Цифровой механик
         <span className="tm">{timeShort(m.created_at)}</span>
-        {/* Механик сообщает администратору: ответ неверный, в руководстве ошибка, система не работает */}
-        {m.localError ? null : report ? (
-          <span className="rep done" title={`${report.reason}${report.text ? `: ${report.text}` : ''}`}>
-            <Icon name="flag" size="s" />
-            <span className="only-d">Сообщено в поддержку</span>
-          </span>
-        ) : (
-          <button type="button" className="rep" onClick={() => onReport(m.id)} title="Сообщить администратору о проблеме с этим ответом">
-            <Icon name="flag" size="s" />
-            <span className="only-d">Сообщить о проблеме</span>
-          </button>
-        )}
       </div>
       {body}
+      {/* Механик сообщает администратору: ответ неверный, в руководстве ошибка, система не работает */}
+      {m.localError ? null : report ? (
+        <div className="afoot">
+          <span className="rep done" title={report.text || undefined}>
+            <Icon name="flag" size="s" />
+            <span>Отправлено администратору: {report.reason.toLowerCase()}</span>
+          </span>
+        </div>
+      ) : (
+        <div className="afoot">
+          <button type="button" className="rep" onClick={() => onReport(m.id)} title="Сообщить администратору о проблеме с этим ответом">
+            <Icon name="flag" size="s" />
+            <span>Сообщить о проблеме</span>
+          </button>
+        </div>
+      )}
     </div>
   );
 }
