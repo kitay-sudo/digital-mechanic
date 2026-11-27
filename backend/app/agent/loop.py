@@ -75,7 +75,8 @@ async def run_turn(
 ) -> None:
     started = time.monotonic()
     vehicle_id = vehicle["vehicle_id"]
-    turn_id = store.start_turn(vehicle_id, session_id)
+    author = ((profile or {}).get("name") or "").strip() or None
+    turn_id = store.start_turn(vehicle_id, session_id, author)
     ctx = TurnContext(vehicle=vehicle, session_id=session_id, store=store, index=index, settings=settings, emit=emit,
                       confirmed_draft_id=confirmed_draft_id, warning_ack=warning_ack)
     await ensure_diagnosis(ctx)
@@ -84,7 +85,6 @@ async def run_turn(
     earlier = store.messages(vehicle_id)
     history = _history_block(earlier)
     photos = photos or []
-    author = ((profile or {}).get("name") or "").strip() or None
     user_message = store.add_message(vehicle_id, session_id, "user", {
         "text": text, **({"images": photos} if photos else {}), **({"author": author} if author else {}),
     })
