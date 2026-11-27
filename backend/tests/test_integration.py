@@ -388,3 +388,14 @@ def test_demo_pin_shown_only_while_unchanged(secured, monkeypatch):
     # Без демо-режима PIN не отдаются вовсе
     monkeypatch.setenv("DEMO_SEED", "0")
     assert all(m["demo_pin"] is None for m in secured.get("/api/auth/mechanics").json()["items"])
+
+
+def test_admin_deletes_mechanic(secured):
+    m = mechanics.repo().create({"full_name": "Кузнецов Олег", "pin": "4444"})
+    assert secured.post("/api/auth/mechanic", json={"mechanic_id": m["id"], "pin": "4444"}).status_code == 200
+    secured.post("/api/auth/logout")
+    assert secured.post("/api/auth/admin", json={"login": "boss", "password": "s3cret"}).status_code == 200
+    assert secured.delete(f"/api/admin/mechanics/{m['id']}").json() == {"deleted": True}
+    assert secured.delete(f"/api/admin/mechanics/{m['id']}").status_code == 404
+    names = [x["full_name"] for x in secured.get("/api/auth/mechanics").json()["items"]]
+    assert "Кузнецов Олег" not in names

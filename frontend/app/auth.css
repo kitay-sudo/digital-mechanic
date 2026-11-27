@@ -128,7 +128,7 @@
 }
 
 .lg-link:hover {
-  text-decoration: underline;
+  color: color-mix(in srgb, var(--acc) 70%, var(--tx));
 }
 
 /* Вход администратора — отдельной строкой под списком, тот же вид, чуть тише */
@@ -475,18 +475,36 @@
   margin-bottom: 0;
 }
 
-.intg-src {
-  padding: 0 6px;
-  border: 1px solid var(--line2);
-  border-radius: 4px;
-  font-size: calc(12px * var(--k));
+/* Название поля и пояснение простыми словами: что это и зачем */
+.intg-t {
+  font-size: calc(16px * var(--k));
+  line-height: calc(22px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+}
+
+.intg-h {
+  max-width: 72ch;
+  font-size: calc(14px * var(--k));
   line-height: calc(20px * var(--k));
+  color: var(--tx2);
+}
+
+/* Откуда сейчас значение — спокойной строкой под полем */
+.intg-src {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  font-size: calc(13px * var(--k));
+  line-height: calc(18px * var(--k));
   color: var(--tx3);
 }
 
-.intg-src.db {
-  border-color: var(--acc);
-  color: var(--acc);
+.intg-src .lg-link {
+  min-height: 0;
+  padding: 0;
+  font-size: inherit;
 }
 
 .intg-in {
@@ -524,13 +542,40 @@
   color: var(--crit);
 }
 
+/* Строка сохранения внутри блока: прилипает к низу экрана, кнопки одного размера справа */
 .intg-f {
-  padding: 16px 0;
+  position: sticky;
+  bottom: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) calc(160px * var(--k)) calc(160px * var(--k));
+  align-items: center;
+  gap: 12px;
+  padding: 14px var(--bx) 14px 24px;
+  border-top: 1px solid var(--line);
+  background: color-mix(in srgb, var(--panel) 80%, transparent);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
 }
 
-.intg-f .pop-f {
-  max-width: calc(480px * var(--k));
-  margin-left: auto;
+.intg-fs {
+  min-width: 0;
+  font-size: calc(14px * var(--k));
+  color: var(--tx3);
+}
+
+.intg-f.on .intg-fs {
+  color: var(--warn-tx);
+}
+
+@media (max-width: 900px) {
+  .intg-f {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    padding: 12px;
+  }
+
+  .intg-fs {
+    grid-column: 1 / -1;
+  }
 }
 
 /* ---------- Телефон ---------- */
@@ -585,4 +630,77 @@
   .intg-f .pop-f {
     max-width: none;
   }
+}
+
+/* ---------- Механик: вход, удаление ---------- */
+
+.mst .mchev {
+  margin-left: auto;
+  color: var(--tx3);
+}
+
+.msw {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.msw > span {
+  flex: 1;
+  min-width: 0;
+}
+
+.msw b {
+  display: block;
+  font-size: calc(16px * var(--k));
+  font-weight: 600;
+}
+
+.msw .sp-s {
+  display: block;
+  margin-top: 2px;
+}
+
+.mdel {
+  margin-top: 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--crit);
+  font: inherit;
+  font-size: calc(15px * var(--k));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mdel:hover {
+  color: color-mix(in srgb, var(--crit) 70%, var(--tx));
+}
+
+.mdel.ask {
+  display: block;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--crit);
+  border-radius: 4px;
+  color: var(--tx);
+  font-weight: 500;
+  cursor: default;
+}
+
+.mdel.ask .pop-f {
+  margin-top: 12px;
+}
+
+.btn.danger {
+  background: var(--crit);
+  border-color: var(--crit);
+  color: #ffffff;
 }

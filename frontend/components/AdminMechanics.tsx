@@ -51,6 +51,11 @@ export function AdminMechanics() {
     setEditing(null);
   }, []);
 
+  const deleted = useCallback((id: number) => {
+    setItems((list) => (list ?? []).filter((x) => x.id !== id));
+    setEditing(null);
+  }, []);
+
   if (error) return <ErrorState text={error} onRetry={load} />;
   if (!items) return <Loading text="Загружаю механиков…" />;
 
@@ -119,6 +124,8 @@ export function AdminMechanics() {
                 <span className={`mst${m.active ? '' : ' off'}`}>
                   <Icon name={m.active ? 'circle-check' : 'circle-off'} size="s" />
                   {m.active ? 'Работает' : 'Отключён'}
+                  {/* Строка открывается: правка, отключение входа, удаление */}
+                  <Icon name="chevron-right" className="mchev" />
                 </span>
                 <span className="m2">
                   {LEVEL_LABEL[m.level]}, шрифт {SIZE_LABEL[m.font_size].toLowerCase()}
@@ -137,6 +144,7 @@ export function AdminMechanics() {
           leaving={sheet.leaving}
           onClose={() => setEditing(null)}
           onSaved={saved}
+          onDeleted={deleted}
         />
       ) : null}
     </div>
@@ -161,11 +169,13 @@ function MechanicSheet({
   leaving,
   onClose,
   onSaved,
+  onDeleted,
 }: {
   editing: Editing;
   leaving: boolean;
   onClose: () => void;
   onSaved: (m: Mechanic) => void;
+  onDeleted: (id: number) => void;
 }) {
   const current = editing.kind === 'edit' ? editing.mechanic : null;
   const [name, setName] = useState(current?.full_name ?? '');
@@ -176,6 +186,19 @@ function MechanicSheet({
   const [active, setActive] = useState(current?.active ?? true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  /** Удаление в два шага: сначала вопрос в самой панели */
+  const [askDelete, setAskDelete] = useState(false);
+
+  const remove = () => {
+    if (!current) return;
+    setBusy(true);
+    setError(null);
+    authApi
+      .deleteMechanic(current.id)
+      .then(() => onDeleted(current.id))
+      .catch((e: unknown) => setError(e instanceof LoginError ? e.message : 'Не получилось удалить'))
+      .finally(() => setBusy(false));
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -257,14 +280,35 @@ function MechanicSheet({
           </label>
           {current ? (
             <div className="sp-g">
-              <div className="sp-l">Статус</div>
-              <Seg
-                label="Статус"
-                value={active ? 'on' : 'off'}
-                options={[['on', 'Работает'], ['off', 'Отключён']]}
-                onChange={(v) => setActive(v === 'on')}
-              />
-              <div className="sp-s">Отключённого нет в списке входа, его подписи в журнале остаются</div>
+              <div className="sp-l">Вход</div>
+              <label className="msw">
+                <span>
+                  <b>Может входить</b>
+                  <span className="sp-s">Выключите, и механика не будет в списке «Кто работает». Его подписи в чате и журнале останутся.</span>
+                </span>
+                <input type="checkbox" role="switch" className="switch" checked={active} onChange={(e) => setActive(e.target.checked)} />
+              </label>
+              {askDelete ? (
+                <div className="mdel ask" role="alert">
+                  <span>
+                    Удалить механика насовсем? Вход пропадёт сразу, подписи в чате и журнале останутся текстом.
+                  </span>
+                  <div className="pop-f">
+                    <button type="button" className="btn" onClick={() => setAskDelete(false)} disabled={busy}>
+                      Не удалять
+                    </button>
+                    <button type="button" className="btn danger" onClick={remove} disabled={busy}>
+                      <Icon name="trash" />
+                      Удалить
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button type="button" className="mdel" onClick={() => setAskDelete(true)}>
+                  <Icon name="trash" size="s" />
+                  Удалить механика
+                </button>
+              )}
             </div>
           ) : null}
           <div className="msheet-f">

@@ -200,6 +200,12 @@ class Mechanics:
     def deactivate(self, mechanic_id: int) -> dict:
         return self.update(mechanic_id, {"active": False})
 
+    def delete(self, mechanic_id: int) -> None:
+        """Удаляет механика насовсем: вход пропадает сразу. Подписи в чате и журнале остаются текстом."""
+        if self.get(mechanic_id) is None:
+            raise MechanicError("Механик не найден", 404)
+        self.db.exec("DELETE FROM mechanics WHERE id=?", (mechanic_id,))
+
     # --- вход по PIN ---
     def login(self, mechanic_id: int, pin: str, clock=time.time) -> dict:
         """Проверяет PIN. Неверный PIN — MechanicError 401 с числом оставшихся попыток,

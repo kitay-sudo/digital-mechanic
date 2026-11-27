@@ -33,8 +33,24 @@ function customLabel(p: { from: string; to: string }): string {
   return `${p.from ? show(p.from) : '…'} – ${p.to ? show(p.to) : '…'}`;
 }
 
-/** Число с подписью: плитка сводки */
-function Stat({ label, value, hint, href, warn }: { label: string; value: string; hint?: string; href?: string; warn?: boolean }) {
+/** Число с подписью: плитка сводки. С onClick — вкладка: показывает свой список под плитками */
+function Stat({
+  label,
+  value,
+  hint,
+  href,
+  warn,
+  onClick,
+  on,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  href?: string;
+  warn?: boolean;
+  onClick?: () => void;
+  on?: boolean;
+}) {
   const body = (
     <>
       <span className="ss-l">{label}</span>
@@ -42,6 +58,13 @@ function Stat({ label, value, hint, href, warn }: { label: string; value: string
       <span className="ss-h">{hint}</span>
     </>
   );
+  if (onClick) {
+    return (
+      <button type="button" className={`ss link tab${on ? ' on' : ''}`} onClick={onClick} aria-pressed={Boolean(on)}>
+        {body}
+      </button>
+    );
+  }
   return href ? (
     <Link href={href} className={`ss${warn ? ' warn' : ''} link`}>
       {body}
@@ -106,7 +129,7 @@ function ListTable<T>({ rows, columns, label, empty }: { rows: T[]; columns: Col
   );
 }
 
-const LIST_TITLE: Record<List, string> = { mechanics: 'Кто работал', marks: 'Отмеченные шаги', tickets: 'Заявки' };
+const LIST_TITLE: Record<List, string> = { mechanics: 'Кто работал', marks: 'Отмеченные шаги', tickets: 'Заявки за смену' };
 
 /** Период смены: панель снизу с началом и концом */
 function PeriodSheet({
@@ -175,7 +198,8 @@ function PeriodSheet({
 export function ShiftView() {
   const [mode, setMode] = useState<Mode>('today');
   const [custom, setCustom] = useState({ from: '', to: '' });
-  const [list, setList] = useState<List | null>(null);
+  /** Какой список показан под плитками: плитки «Механики», «Шагов отмечено», «Заявок создано» — вкладки */
+  const [list, setList] = useState<List>('mechanics');
   const [summary, setSummary] = useState<ShiftSummary | null>(null);
   const [metrics, setMetrics] = useState<PilotMetrics | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -228,27 +252,14 @@ export function ShiftView() {
 
   const tools = (
     <div className="ftools stools">
-      {list ? (
-        <div className="ft-t">
-          <button type="button" className="btn sm sback" onClick={() => setList(null)}>
-            <Icon name="arrow-left" size="s" />
-            Смена
-          </button>
-          <b>{LIST_TITLE[list]}</b>
-          <span className="ft-n">
-            {list === 'mechanics' ? summary?.mechanics.length : list === 'marks' ? summary?.marks.length : summary?.tickets.length}
-          </span>
-        </div>
-      ) : (
-        <div className="ft-t">
-          <Icon name="users" size="s" />
-          {/* На телефоне при своём периоде вместо подписи стоит сам период: обе в строку не помещаются */}
-          <b className={mode === 'custom' ? 'only-d' : undefined}>
-            Смена<span className="only-d"> и метрики пилота</span>
-          </b>
-          {mode === 'custom' ? <span className="ft-hint only-m m">{customLabel(custom)}</span> : null}
-        </div>
-      )}
+      <div className="ft-t">
+        <Icon name="calendar-stats" size="s" />
+        {/* На телефоне при своём периоде вместо подписи стоит сам период: обе в строку не помещаются */}
+        <b className={mode === 'custom' ? 'only-d' : undefined}>
+          Смена<span className="only-d"> и метрики пилота</span>
+        </b>
+        {mode === 'custom' ? <span className="ft-hint only-m m">{customLabel(custom)}</span> : null}
+      </div>
       {updatedAt ? (
         <span className="ft-hint only-d" title="Сводка обновляется сама каждые 30 секунд">
           обновлено <span className="m">{dateTime(updatedAt)}</span>
@@ -298,69 +309,25 @@ export function ShiftView() {
     );
   }
 
-  if (list) {
-    return (
-      <div className="body fit">
-        {tools}
-        {list === 'mechanics' ? (
-          <ListTable
-            rows={summary.mechanics}
-            label="механики"
-            empty="За период никто не работал"
-            columns={[
-              { label: 'Механик', width: 'minmax(140px, 1.4fr)', render: (r) => r.name ?? <span className="mut">Фамилия не указана</span> },
-              { label: 'Вопросов', width: 'calc(110px * var(--k))', num: true, render: (r) => <span className="m">{r.questions}</span> },
-              { label: 'Отметок шагов', width: 'calc(130px * var(--k))', num: true, render: (r) => <span className="m">{r.marks}</span> },
-              { label: 'Сообщений', width: 'calc(110px * var(--k))', num: true, render: (r) => <span className="m">{r.messages}</span> },
-              { label: 'Первое действие', width: 'calc(150px * var(--k))', render: (r) => <span className="m">{dateTime(r.first_at)}</span> },
-              { label: 'Последнее действие', width: 'calc(170px * var(--k))', render: (r) => <span className="m">{dateTime(r.last_at)}</span> },
-            ]}
-          />
-        ) : list === 'marks' ? (
-          <ListTable
-            rows={summary.marks}
-            label="шаги"
-            empty="За период шаги не отмечали"
-            columns={[
-              { label: 'Шаг', width: 'minmax(200px, 2fr)', render: (r) => r.step },
-              { label: 'Машина', width: 'minmax(150px, 1fr)', render: (r) => <span className="m">{r.vehicle_id}</span> },
-              { label: 'Список', width: 'calc(110px * var(--k))', render: (r) => (r.list === 'checks' ? 'проверка' : 'ремонт') },
-              { label: 'Механик', width: 'minmax(120px, 1fr)', render: (r) => r.author ?? <span className="mut">не указан</span> },
-              { label: 'Время', width: 'calc(110px * var(--k))', render: (r) => <span className="m">{dateTime(r.at)}</span> },
-            ]}
-          />
-        ) : (
-          <ListTable
-            rows={summary.tickets}
-            label="заявки"
-            empty="За период заявок не создавали"
-            columns={[
-              { label: 'Заявка', width: 'calc(120px * var(--k))', render: (r) => <span className="m">{r.ticket_id}</span> },
-              { label: 'Машина', width: 'minmax(150px, 1fr)', render: (r) => <span className="m">{r.vehicle_id}</span> },
-              { label: 'Приоритет', width: 'calc(110px * var(--k))', render: (r) => (r.urgency ? capitalize(PRIORITY_LABEL[r.urgency]) : '—') },
-              { label: 'Заключение', width: 'minmax(200px, 2fr)', render: (r) => r.conclusion || '—' },
-              { label: 'Время', width: 'calc(110px * var(--k))', render: (r) => <span className="m">{dateTime(r.created_at)}</span> },
-            ]}
-          />
-        )}
-        {sheet}
-      </div>
-    );
-  }
-
   const t = summary.totals;
   const m = metrics;
   const share = m.refusals.share;
   return (
-    <div className="body sbody">
+    <div className="body fit sbody">
       {tools}
       <section className="ssec">
         <div className="ssec-h">За смену</div>
         <div className="sstats">
-          <Stat label="Вопросов механиков" value={int(t.questions)} hint={`по ${t.vehicles} ${plural(t.vehicles, 'машине', 'машинам', 'машинам')}`} />
+          <Stat
+            label="Механики"
+            value={int(summary.mechanics.length)}
+            hint={`${int(t.questions)} ${plural(t.questions, 'вопрос', 'вопроса', 'вопросов')} по ${t.vehicles} ${plural(t.vehicles, 'машине', 'машинам', 'машинам')}`}
+            onClick={() => setList('mechanics')}
+            on={list === 'mechanics'}
+          />
+          <Stat label="Шагов отмечено" value={int(t.marks)} hint="кем и когда" onClick={() => setList('marks')} on={list === 'marks'} />
+          <Stat label="Заявок создано" value={int(t.tickets)} hint="машина и приоритет" onClick={() => setList('tickets')} on={list === 'tickets'} />
           <Stat label="Ответов агента" value={int(t.answers)} />
-          <Stat label="Шагов отмечено" value={int(t.marks)} />
-          <Stat label="Заявок создано" value={int(t.tickets)} />
           <Stat
             label="Ждут разбора"
             value={int(t.open_cases)}
@@ -396,35 +363,49 @@ export function ShiftView() {
           />
         </div>
       </section>
-      <section className="ssec">
-        <div className="ssec-h">Списки</div>
-        <div className="box slinks">
-          <button type="button" className="navrow" onClick={() => setList('mechanics')}>
-            <Icon name="users" />
-            <span>Кто работал</span>
-            <span className="m">{summary.mechanics.length}</span>
-            <Icon name="chevron-right" />
-          </button>
-          <button type="button" className="navrow" onClick={() => setList('marks')}>
-            <Icon name="clipboard-check" />
-            <span>Отмеченные шаги</span>
-            <span className="m">{summary.marks.length}</span>
-            <Icon name="chevron-right" />
-          </button>
-          <button type="button" className="navrow" onClick={() => setList('tickets')}>
-            <Icon name="file-text" />
-            <span>Заявки</span>
-            <span className="m">{summary.tickets.length}</span>
-            <Icon name="chevron-right" />
-          </button>
-          <Link href={journalLink} className="navrow">
-            <Icon name="alert-triangle" />
-            <span>Случаи, которые ждут разбора</span>
-            <span className="m">{t.open_cases}</span>
-            <Icon name="chevron-right" />
-          </Link>
-        </div>
-      </section>
+      {/* Выбранный список — на всё оставшееся место, строки по высоте экрана, листание как в парке */}
+      <div className="ssec-h slist-h">{LIST_TITLE[list]}</div>
+        {list === 'mechanics' ? (
+          <ListTable
+            rows={summary.mechanics}
+            label="механики"
+            empty="За период никто не работал"
+            columns={[
+              { label: 'Механик', width: 'minmax(140px, 1.4fr)', render: (r) => r.name ?? <span className="mut">Фамилия не указана</span> },
+              { label: 'Вопросов агенту', width: 'calc(150px * var(--k))', num: true, render: (r) => <span className="m">{r.questions}</span> },
+              { label: 'Отметок шагов', width: 'calc(130px * var(--k))', num: true, render: (r) => <span className="m">{r.marks}</span> },
+              { label: 'Сообщений администратору', width: 'calc(210px * var(--k))', num: true, render: (r) => <span className="m">{r.messages}</span> },
+              { label: 'Первое действие', width: 'calc(150px * var(--k))', render: (r) => <span className="m">{dateTime(r.first_at)}</span> },
+              { label: 'Последнее действие', width: 'calc(170px * var(--k))', render: (r) => <span className="m">{dateTime(r.last_at)}</span> },
+            ]}
+          />
+        ) : list === 'marks' ? (
+          <ListTable
+            rows={summary.marks}
+            label="шаги"
+            empty="За период шаги не отмечали"
+            columns={[
+              { label: 'Шаг', width: 'minmax(200px, 2fr)', render: (r) => r.step },
+              { label: 'Машина', width: 'minmax(150px, 1fr)', render: (r) => <span className="m">{r.vehicle_id}</span> },
+              { label: 'Список', width: 'calc(110px * var(--k))', render: (r) => (r.list === 'checks' ? 'проверка' : 'ремонт') },
+              { label: 'Механик', width: 'minmax(120px, 1fr)', render: (r) => r.author ?? <span className="mut">не указан</span> },
+              { label: 'Время', width: 'calc(110px * var(--k))', render: (r) => <span className="m">{dateTime(r.at)}</span> },
+            ]}
+          />
+        ) : (
+          <ListTable
+            rows={summary.tickets}
+            label="заявки"
+            empty="За период заявок не создавали"
+            columns={[
+              { label: 'Заявка', width: 'calc(120px * var(--k))', render: (r) => <span className="m">{r.ticket_id}</span> },
+              { label: 'Машина', width: 'minmax(150px, 1fr)', render: (r) => <span className="m">{r.vehicle_id}</span> },
+              { label: 'Приоритет', width: 'calc(110px * var(--k))', render: (r) => (r.urgency ? capitalize(PRIORITY_LABEL[r.urgency]) : '—') },
+              { label: 'Заключение', width: 'minmax(200px, 2fr)', render: (r) => r.conclusion || '—' },
+              { label: 'Время', width: 'calc(110px * var(--k))', render: (r) => <span className="m">{dateTime(r.created_at)}</span> },
+            ]}
+          />
+        )}
       {sheet}
     </div>
   );

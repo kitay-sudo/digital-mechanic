@@ -779,3 +779,48 @@ button.navrow {
     text-align: left;
   }
 }
+
+/* ---------- Смена: плитки-вкладки, под ними таблица выбранного списка на всё оставшееся место ---------- */
+
+button.ss {
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.ss.tab.on {
+  background: var(--acc-bg);
+  border-color: var(--acc);
+  border-left-color: var(--acc);
+}
+
+.ss.tab.on .ss-l {
+  color: var(--acc);
+}
+
+/* Подпись таблицы стоит вплотную к ней, как подписи разделов */
+.sbody > .slist-h {
+  margin-bottom: -10px;
+}
+
+/* Таблица занимает остаток экрана; если экран низкий, страница прокручивается, а таблица не сжимается в ноль */
+.body.fit.sbody {
+  overflow: auto;
+}
+
+.body.fit.sbody > .fit-area {
+  min-height: calc(260px * var(--k));
+}
+
+.body.fit.sbody > .box.center {
+  flex: 1 0 calc(200px * var(--k));
+}
+
+@media (max-width: 900px) {
+  .body.fit.sbody > .fit-area {
+    flex: none;
+    height: 70vh;
+  }
+}

@@ -7,12 +7,24 @@ import { ErrorState, Loading } from './States';
 
 type Key = IntegrationItem['key'];
 
+/** Порядок полей: сервис и его ключ рядом */
+const ORDER: Key[] = ['ml_url', 'ml_token', 'toir_url', 'toir_token', 'alert_webhook_url'];
+
+const TITLE: Record<Key, string> = {
+  ml_url: 'Адрес ML-сервиса «НейроДВС»',
+  ml_token: 'Ключ доступа к ML-сервису',
+  toir_url: 'Адрес ТОиР',
+  toir_token: 'Ключ доступа к ТОиР',
+  alert_webhook_url: 'Уведомления администратору',
+};
+
 const HINT: Record<Key, string> = {
-  ml_url: 'Куда агент обращается за результатом проверки: POST /diagnose',
-  toir_url: 'Куда уходит подтверждённая заявка на дефектовку: POST /tickets',
-  alert_webhook_url: 'Сюда сервер сообщает о вопросах без ответа в руководстве и о сообщениях механиков',
-  ml_token: 'Если ML-сервис требует ключ: заголовок Authorization: Bearer',
-  toir_token: 'Если ТОиР требует ключ: заголовок Authorization: Bearer',
+  ml_url: 'Отсюда агент берёт результат проверки двигателя (POST /diagnose). Для пилота — адрес вашего сервиса диагностики.',
+  ml_token: 'Нужен, только если ML-сервис закрыт ключом: сервер передаёт его в заголовке Authorization: Bearer. Пусто — без ключа.',
+  toir_url: 'Сюда уходит заявка на дефектовку после подтверждения механика (POST /tickets).',
+  toir_token: 'Нужен, только если ТОиР закрыт ключом: передаётся в заголовке Authorization: Bearer. Пусто — без ключа.',
+  alert_webhook_url:
+    'Адрес входящего веб-хука вашего мессенджера (Mattermost, Slack, Rocket.Chat). Срочное приходит сразу: нет руководств, ошибка диагностики, сбой агента. Вопросы без ответа в руководстве и сообщения механиков — сводкой в 18:00. Пусто — только журнал.',
 };
 
 /** Экран администратора: адреса и токены внешних сервисов. Значения отсюда важнее .env и действуют сразу */
@@ -77,14 +89,14 @@ export function AdminIntegrations() {
           </button>
         </div>
         <div className="box intg-b">
-          {data.items.map((it) => (
+          {[...data.items].sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key)).map((it) => (
             <div className="intg-r" key={it.key}>
               <div className="intg-l">
-                <span className="sp-l">{it.label}</span>
-                <span className={`intg-src${it.source === 'db' ? ' db' : ''}`}>{it.source === 'db' ? 'задано здесь' : 'из .env'}</span>
+                <b className="intg-t">{TITLE[it.key] ?? it.label}</b>
                 {it.key === 'ml_url' && data.health ? <Health ok={data.health.ml} /> : null}
                 {it.key === 'toir_url' && data.health ? <Health ok={data.health.toir} /> : null}
               </div>
+              <div className="intg-h">{HINT[it.key]}</div>
               <div className="intg-in">
                 <input
                   className="inp"
@@ -97,19 +109,33 @@ export function AdminIntegrations() {
                   spellCheck={false}
                   aria-label={it.label}
                 />
-                {it.source === 'db' ? (
-                  <button type="button" className="btn" onClick={() => save({ [it.key]: '' })} disabled={busy} title="Вернуть значение из .env">
-                    <Icon name="arrow-back-up" />
-                    <span className="only-d">Как в .env</span>
-                  </button>
-                ) : null}
               </div>
-              <div className="sp-s">{HINT[it.key]}</div>
+              {/* Откуда сейчас значение: из файла настроек сервера или задано на этом экране */}
+              <div className="intg-src">
+                {it.source === 'db' ? (
+                  <>
+                    <Icon name="pencil" size="s" />
+                    <span>Задано на этом экране</span>
+                    <button type="button" className="lg-link" onClick={() => save({ [it.key]: '' })} disabled={busy}>
+                      Вернуть из файла настроек
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <Icon name="file-settings" size="s" />
+                    <span>{it.set ? 'Значение из файла настроек сервера' : 'Не задано ни здесь, ни в файле настроек сервера'}</span>
+                  </>
+                )}
+              </div>
             </div>
           ))}
           <div className="intg-r">
             <div className="intg-l">
-              <span className="sp-l">API для внешних систем</span>
+              <b className="intg-t">API для внешних систем</b>
+            </div>
+            <div className="intg-h">
+              Это обратное направление: внешние системы сами обращаются к нам по ключу в заголовке X-API-Key. Учётная система
+              парка передаёт машины, кадровая — механиков, «НейроДВС» — сигнал «проверка готова».
             </div>
             <div className="intg-api">
               {data.api.enabled ? (
@@ -128,16 +154,14 @@ export function AdminIntegrations() {
                 Документация API
               </a>
             </div>
-            <div className="sp-s">Учётная система парка, НейроДВС, 1С и кадровая система подключаются по ключу в заголовке X-API-Key.</div>
           </div>
-        </div>
-        <div className="intg-f">
-          <div className="al-err" role="alert">
-            {saveError}
-          </div>
-          <div className="pop-f">
+          {/* Сохранение — последней строкой того же блока, прилипает к низу экрана, пока есть правки */}
+          <div className={`intg-f${changed ? ' on' : ''}`}>
+            <span className="intg-fs">
+              {saveError ? <span className="intg-bad">{saveError}</span> : changed ? 'Есть несохранённые правки' : 'Правок нет'}
+            </span>
             <button type="button" className="btn" onClick={() => setDraft({})} disabled={!changed || busy}>
-              Отменить правки
+              Отменить
             </button>
             <button type="submit" className="btn pri" disabled={!changed || busy}>
               <Icon name={busy ? 'loader-2' : 'device-floppy'} className={busy ? 'spin' : ''} />

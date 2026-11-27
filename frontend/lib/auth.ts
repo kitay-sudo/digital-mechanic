@@ -121,6 +121,7 @@ export const authApi = {
   listMechanics: () => call<{ items: Mechanic[]; total: number }>('/api/admin/mechanics'),
   createMechanic: (body: MechanicInput) => call<Mechanic>('/api/admin/mechanics', json('POST', body)),
   updateMechanic: (id: number, body: MechanicInput) => call<Mechanic>(`/api/admin/mechanics/${id}`, json('PUT', body)),
+  deleteMechanic: (id: number) => call<{ deleted: boolean }>(`/api/admin/mechanics/${id}`, { method: 'DELETE' }),
   integrations: () => call<Integrations>('/api/admin/integrations'),
   saveIntegrations: (body: Partial<Record<IntegrationItem['key'], string>>) =>
     call<Integrations>('/api/admin/integrations', json('PUT', body)),
