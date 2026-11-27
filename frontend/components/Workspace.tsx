@@ -24,6 +24,9 @@ type TurnStart = (onEvent: (e: StreamEvent) => void, signal: AbortSignal) => Pro
 
 const pause = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
+/** Отступ над вопросом механика, когда ответ прокручивается к началу */
+const CHAT_TOP_GAP = 12;
+
 /** Через сколько часов после последнего сообщения чат напоминает, на чём остановились */
 const RESUME_HOURS = 6;
 
@@ -244,10 +247,30 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
 
   useEffect(loadAll, [loadAll]);
 
-  // Чат прокручивается вниз при новых сообщениях и шагах
+  /**
+   * Прокрутка чата. Пока агент работает — вниз: видно вопрос и шаги разбора.
+   * Пришёл ответ (или чат открыли) — наверх встаёт вопрос механика, под ним начало ответа:
+   * длинный ответ с таблицами читается сверху, а не с последней строки.
+   */
+  const shownRef = useRef<string | null>(null);
   useEffect(() => {
     const el = chatRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
+    if (!el) return;
+    if (busy) {
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    const last = messages[messages.length - 1];
+    if (!last || last.id === shownRef.current) return;
+    shownRef.current = last.id;
+    const prev = messages[messages.length - 2];
+    const anchor = last.role === 'assistant' && prev?.role === 'user' ? prev : last;
+    const node = el.querySelector<HTMLElement>(`[data-mid="${CSS.escape(anchor.id)}"]`);
+    if (!node) {
+      el.scrollTop = el.scrollHeight;
+      return;
+    }
+    el.scrollTop += node.getBoundingClientRect().top - el.getBoundingClientRect().top - CHAT_TOP_GAP;
   }, [messages, steps, busy]);
 
   const send = useCallback(

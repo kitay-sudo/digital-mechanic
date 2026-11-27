@@ -239,7 +239,20 @@ def _unsourced(ctx: TurnContext, answer: dict) -> bool:
         return False  # ответ про снимок: наблюдения по фото не нуждаются в странице руководства
     if ctx.draft or ctx.ticket or ctx.ticket_block or ctx.diagnosed_this_turn:
         return False
-    return not (answer["checks"] or answer["repair"] or answer["conflicts"])
+    if answer["checks"] or answer["repair"] or answer["conflicts"]:
+        return False
+    # Уточнение по уже разобранному («что в итоге делать»): шаги со ссылками механик получил выше по этой проверке,
+    # повторять их не нужно. Числа в выводе всё равно сверены: без цитаты в этом ответе их там быть не может.
+    return not _earlier_steps(ctx)
+
+
+def _earlier_steps(ctx: TurnContext) -> bool:
+    """В этом чате по выбранной проверке уже есть ответ агента с шагами по руководству."""
+    for m in reversed(ctx.store.messages(ctx.vehicle["vehicle_id"])[-12:]):
+        answer = m.get("answer") or {}
+        if m.get("role") == "assistant" and m.get("session_id") == ctx.session_id and (answer.get("checks") or answer.get("repair")):
+            return True
+    return False
 
 
 def _has_instruction(ctx: TurnContext, answer: dict) -> bool:

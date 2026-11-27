@@ -334,3 +334,20 @@ def test_stt_drops_prompt_echo():  # на записи без речи серв�
     assert stt.clean("ТНВД, форсунка, ГРМ, коленвал, распредвал, клапан, тепловой зазор") == ""
     question = "Какой момент затяжки коренных подшипников на ЯМЗ-236М2, и чем затягивать?"
     assert stt.clean(question) == question
+
+
+def test_follow_up_without_repeated_steps_is_accepted():  # «что в итоге делать» после вердикта со ссылками
+    from types import SimpleNamespace
+
+    from app.agent.loop import _unsourced
+
+    earlier = [{"role": "assistant", "session_id": "S-1", "answer": {"checks": [{"text": "шаг", "refs": [{}]}]}}]
+    store = SimpleNamespace(messages=lambda vehicle_id: earlier)
+    ctx = SimpleNamespace(searched=True, photos=[], draft=None, ticket=None, ticket_block=None, diagnosed_this_turn=False,
+                          store=store, vehicle={"vehicle_id": "A1"}, session_id="S-1")
+    answer = {"summary": "Сначала шаг 1 из проверок выше, затем шаг 3.", "checks": [], "repair": [],
+              "conflicts": [], "not_found": False, "observations": []}
+    assert not _unsourced(ctx, answer)
+    # По другой проверке шагов ещё не было — ответ без ссылок по-прежнему не принимается
+    ctx.session_id = "S-2"
+    assert _unsourced(ctx, answer)

@@ -257,6 +257,29 @@ function StepItems({
   );
 }
 
+/**
+ * Вывод агента. Если в нём шаги по порядку («1) … 2) … 3) …»), каждый шаг — своей строкой:
+ * так ответ «что делать» читается с телефона, а не одним абзацем.
+ */
+function SummaryText({ text }: { text: string }) {
+  const parts = text.split(/\s(?=\d\)\s)/);
+  if (parts.length < 3 || !/^\d\)\s/.test(parts[1])) return <>{text}</>;
+  const [lead, ...steps] = parts;
+  return (
+    <>
+      {lead.trim() ? <div>{lead.trim()}</div> : null}
+      <ol className="sumsteps">
+        {steps.map((step, i) => (
+          <li key={i}>
+            <span className="n m">{i + 1}</span>
+            <span>{step.replace(/^\d\)\s/, '')}</span>
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
 function AnswerBlocks({
   answer,
   ctx,
@@ -276,7 +299,7 @@ function AnswerBlocks({
       {showSummary && answer.summary ? (
         <div className="cpad">
           <div className="vtext" style={{ color: 'var(--tx)' }}>
-            {answer.summary}
+            <SummaryText text={answer.summary} />
           </div>
         </div>
       ) : null}
@@ -428,7 +451,11 @@ function VerdictCard({ m, ctx, onCreateTicket }: { m: Message; ctx: Ctx; onCreat
           {a?.priority ? <PriorityBadge priority={a.priority} long /> : null}
         </div>
         <div className="vtitle">{title}</div>
-        {m.text ? <div className="vtext">{m.text}</div> : null}
+        {m.text ? (
+          <div className="vtext">
+            <SummaryText text={m.text} />
+          </div>
+        ) : null}
         {a?.warnings.length ? (
           <div className="warns">
             {a.warnings.map((w, i) => (
@@ -805,7 +832,7 @@ export function MessageView({
 }) {
   if (m.role === 'user') {
     return (
-      <div className="q">
+      <div className="q" data-mid={m.id}>
         {/* Подпись отправителя: какой механик спрашивал (смены), без фамилии — просто «Механик» */}
         <div className="who">
           <Icon name="user" size="s" />
@@ -861,7 +888,7 @@ export function MessageView({
     body = (
       <div className="card">
         <div className="cpad" style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
-          {m.text}
+          <SummaryText text={m.text ?? ''} />
         </div>
         <StepsFold steps={m.steps} usage={m.usage} />
       </div>
@@ -869,7 +896,7 @@ export function MessageView({
   }
 
   return (
-    <div className="a">
+    <div className="a" data-mid={m.id}>
       <div className="who">
         <Icon name="engine" size="s" />
         Цифровой механик

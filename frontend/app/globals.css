@@ -5181,3 +5181,31 @@ input.switch:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Шаги по порядку в выводе агента: каждый своей строкой, номер в квадрате, как у шагов проверки */
+.sumsteps {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.sumsteps li {
+  display: grid;
+  grid-template-columns: calc(28px * var(--k)) minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: start;
+}
+
+.sumsteps .n {
+  width: calc(28px * var(--k));
+  height: calc(28px * var(--k));
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  font-size: calc(14px * var(--k));
+  font-weight: 600;
+  color: var(--tx);
+}
