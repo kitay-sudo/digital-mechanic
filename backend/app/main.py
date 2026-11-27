@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from . import admin_api, alerts, clients, fleet, rules, stt, turns, uploads
+from . import admin_api, alerts, clients, digest, fleet, rules, stt, turns, uploads
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -35,7 +35,10 @@ async def lifespan(app: FastAPI):
     stats = state["index"].stats()
     if not stats["chunks"]:
         log.warning("База знаний пуста (%s). Задайте MATERIALS_URL и выполните: python -m app.materials", settings.pdf_dir)
+    # Сводка администратору раз в день и срочные сообщения о сбоях агента
+    digest_task = asyncio.create_task(digest.run(lambda: state["store"], lambda: get_settings().alert_webhook_url))
     yield
+    digest_task.cancel()
     await turns.shutdown()
 
 

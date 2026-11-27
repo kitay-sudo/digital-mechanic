@@ -70,6 +70,7 @@ async def test_no_answer_is_flagged_for_admin_and_can_be_reviewed(store, index, 
         sent.append((url, body))
 
     monkeypatch.setenv("ALERT_WEBHOOK_URL", "http://alerts.test/hook")
+    monkeypatch.setenv("ALERT_MODE", "instant")  # по умолчанию несрочное уходит в сводку за день
     get_settings.cache_clear()
     monkeypatch.setattr(alerts, "_post", fake_post)
 

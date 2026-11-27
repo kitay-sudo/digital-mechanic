@@ -5,11 +5,13 @@
 from __future__ import annotations
 
 import re
+from datetime import date
 
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from . import journal
+from . import alerts, digest, journal
+from .config import get_settings
 from .store import Store
 
 router = APIRouter()
@@ -66,6 +68,19 @@ async def audit(
 async def audit_gaps():
     """Сколько случаев «новый» и «в работе»: число у пункта «Журнал»."""
     return {"open": journal.open_count(store())}
+
+
+@router.get("/api/audit/digest")
+async def audit_digest(day: str | None = Query(default=None, pattern=r"^\d{4}-\d{2}-\d{2}$")):
+    """Текст сводки администратору за день (по умолчанию сегодня), как он уйдёт на ALERT_WEBHOOK_URL."""
+    try:
+        when = date.fromisoformat(day) if day else None
+    except ValueError as exc:
+        raise HTTPException(400, f"Неверная дата: {day}") from exc
+    summary = digest.build(store(), when)
+    return {**summary, "mode": alerts.alert_mode(), "time": digest.digest_time().strftime("%H:%M"),
+            "sent_at": digest.sent_at(store(), date.fromisoformat(summary["day"])),
+            "webhook": bool(get_settings().alert_webhook_url)}
 
 
 def _item_id(item_id: str) -> str:
