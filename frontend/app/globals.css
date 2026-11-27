@@ -2040,7 +2040,6 @@ details.fold > .fin {
     z-index: 30;
     background: var(--bg);
     border: none;
-    border-radius: 12px 12px 0 0;
     overflow: hidden;
   }
 
@@ -2693,7 +2692,6 @@ button.sp-link {
     max-width: none;
     max-height: 88dvh;
     border: none;
-    border-radius: 12px 12px 0 0;
   }
 
   .sp-h {
@@ -3376,7 +3374,6 @@ button.sp-link {
   color: var(--tx);
   border: 1px solid var(--line2);
   border-width: 1px 0 0;
-  border-radius: 12px 12px 0 0;
   touch-action: none;
   opacity: 0;
   transition-property: opacity, transform, display, overlay;
@@ -3743,7 +3740,6 @@ button.sp-link {
     width: auto;
     max-width: none;
     border: none;
-    border-radius: 12px 12px 0 0;
   }
 }
 
