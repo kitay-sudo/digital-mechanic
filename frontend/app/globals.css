@@ -5456,3 +5456,88 @@ input.switch:disabled {
   scroll-padding-top: var(--hdr-h, 72px);
   scroll-padding-bottom: var(--cmp-h, 80px);
 }
+
+/* ---------- Чертёж двигателя: фон экрана входа и пустого чата ---------- */
+
+.bp * {
+  vector-effect: non-scaling-stroke;
+  stroke-width: 1.2;
+}
+
+.bp .bp-thin {
+  stroke-width: 0.8;
+}
+
+.bp .bp-dash {
+  stroke-width: 0.9;
+  stroke-dasharray: 6 5;
+}
+
+.bp .bp-axis {
+  stroke-width: 0.8;
+  stroke-dasharray: 18 4 2 4;
+}
+
+.bp-grid {
+  stroke: currentColor;
+  stroke-width: 0.5;
+  opacity: 0.45;
+}
+
+.bp .bp-t {
+  fill: currentColor;
+  stroke: none;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.bp .bp-t.bp-s {
+  font-size: 9.5px;
+  letter-spacing: 0.02em;
+}
+
+/* Экран входа: чертёж в правом нижнем углу, едва заметно, под списком */
+.body.fit.lg {
+  position: relative;
+  overflow-x: hidden;
+}
+
+.body.fit.lg > .lg-art {
+  position: absolute;
+  right: -2vw;
+  bottom: -3vh;
+  width: min(64vw, 1000px);
+  max-width: none;
+  height: auto;
+  color: var(--tx);
+  opacity: 0.07;
+  pointer-events: none;
+  z-index: 0;
+}
+
+[data-theme='light'] .body.fit.lg > .lg-art {
+  opacity: 0.1;
+}
+
+.body.fit.lg > :not(.lg-art) {
+  position: relative;
+  z-index: 1;
+}
+
+/* Пустой чат: чертёж вместо значка */
+.chat-art {
+  width: min(380px, 80%);
+  height: auto;
+  margin-bottom: 4px;
+  color: var(--tx3);
+  opacity: 0.6;
+}
+
+@media (max-width: 900px) {
+  .body.fit.lg > .lg-art {
+    width: 150vw;
+    right: -40vw;
+    bottom: -6vh;
+    opacity: 0.06;
+  }
+}

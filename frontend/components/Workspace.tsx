@@ -10,6 +10,7 @@ import { profileOf, useSettings } from '@/lib/settings';
 import type { ManualTarget, Marks, Message, Report, Session, Step, StreamEvent, VehicleDetail } from '@/lib/types';
 import { Composer, type Flash, type TicketButton } from './Composer';
 import { Icon } from './Icon';
+import { Blueprint } from './Blueprint';
 import { Parts } from './Parts';
 import { ManualPanel } from './ManualPanel';
 import { MessageView, PendingSteps } from './MessageView';
@@ -494,7 +495,7 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
         <div className="chat" ref={chatRef} onPointerDownCapture={(e) => (pressedRef.current = (e.target as Element).closest('button, a'))}>
           {messages.length === 0 && !busy ? (
             <div className="center">
-              <Icon name="message-2" size="xl" />
+              <Blueprint className="chat-art" />
               <div className="e1">Чат по машине {vehicle.vehicle_id}</div>
               <div style={{ maxWidth: 520 }}>
                 Выберите проверку и нажмите «Получить результат диагностики». Агент разберёт результат и ответит по руководствам двигателя{' '}

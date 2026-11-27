@@ -6,6 +6,7 @@ import { LoginError, authApi, closeLogin, loginMechanic, type MechanicName } fro
 import { useFitRows, usePaged } from '@/lib/paging';
 import { useSettings } from '@/lib/settings';
 import { Icon } from './Icon';
+import { Blueprint } from './Blueprint';
 import { Pager } from './Pager';
 import { ErrorState, Loading } from './States';
 
@@ -44,6 +45,8 @@ export function LoginMechanic({ hint, canClose = false }: { hint: string | null;
 
   return (
     <div className="body fit lg">
+      {/* Чертёж двигателя тонкими линиями — фоном, под списком и PIN */}
+      <Blueprint className="lg-art" grid />
       {picked ? (
         <PinPad who={picked} onBack={back} />
       ) : error ? (
