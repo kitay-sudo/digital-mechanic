@@ -1,0 +1,566 @@
+/*
+  Вход и разделы администратора: «Кто работает» и PIN, вход администратора, механики, подключения.
+  Те же правила, что в globals.css: без теней, у панелей нет скруглений, кнопки 48 px и крупнее,
+  всё поверх экрана — панелью снизу с размытым фоном (.sp, .pop).
+*/
+
+/* ---------- Кто работает ---------- */
+
+/* Узкая колонка по центру: список фамилий, внизу подсказка и вход администратора */
+.body.fit.lg {
+  align-items: center;
+  overflow: auto;
+}
+
+.body.fit.lg > * {
+  width: 100%;
+  max-width: calc(640px * var(--k));
+}
+
+/* Таблица своей высоты: три фамилии — три строки, без пустого поля под ними */
+.body.fit.lg > .fit-area > .ftable {
+  flex: 0 0 auto;
+}
+
+.lg-h {
+  padding: 8px 0 16px;
+}
+
+.lg-h h1 {
+  font-size: calc(28px * var(--k));
+  line-height: calc(36px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lg-h p {
+  margin-top: 4px;
+  font-size: calc(17px * var(--k));
+  line-height: calc(24px * var(--k));
+  color: var(--tx2);
+}
+
+.lg-note {
+  margin-bottom: 12px;
+}
+
+.lg .ftools .search {
+  flex: 1;
+  width: auto;
+  height: calc(48px * var(--k));
+}
+
+.lg .ftools .search input {
+  font-size: calc(17px * var(--k));
+}
+
+/* Строка механика: крупно, на всю ширину, под палец в перчатке */
+.lg-row {
+  width: 100%;
+  min-height: calc(64px * var(--k));
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 20px 0 24px;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--tx);
+  text-align: left;
+  font-size: calc(20px * var(--k));
+  line-height: calc(28px * var(--k));
+  font-weight: 500;
+}
+
+.lg-row:last-child {
+  border-bottom: none;
+}
+
+.lg-row:hover {
+  background: var(--panel2);
+}
+
+.lg-row:active {
+  background: var(--acc-bg);
+}
+
+.lg-row span {
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.lg-row .ti {
+  color: var(--tx3);
+}
+
+.lg-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  padding-top: 16px;
+}
+
+.lg-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-left: 4px solid var(--acc);
+  background: var(--panel);
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--tx2);
+}
+
+.lg-hint .ti {
+  color: var(--acc);
+}
+
+.lg-link {
+  min-height: 48px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 4px;
+  border: none;
+  background: none;
+  color: var(--acc);
+  font-size: calc(15px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.lg-link:hover {
+  text-decoration: underline;
+}
+
+/* ---------- PIN ---------- */
+
+.body.fit.lg > .pin {
+  flex: 1 0 auto;
+  max-width: calc(400px * var(--k));
+}
+
+.pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.pin-who {
+  max-width: 100%;
+  font-size: calc(26px * var(--k));
+  line-height: calc(32px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.pin-s {
+  font-size: calc(17px * var(--k));
+  line-height: calc(24px * var(--k));
+  color: var(--tx2);
+}
+
+.pin-dots {
+  display: flex;
+  gap: 20px;
+  padding: 8px 0 0;
+}
+
+.pin-dots i {
+  width: calc(20px * var(--k));
+  height: calc(20px * var(--k));
+  border-radius: 50%;
+  border: 2px solid var(--tx2);
+}
+
+.pin-dots i.on {
+  background: var(--tx);
+  border-color: var(--tx);
+}
+
+.pin-dots.bad i {
+  border-color: var(--crit);
+}
+
+/* Место под ошибку есть всегда: клавиши не прыгают, когда появляется текст */
+.pin-err {
+  min-height: calc(48px * var(--k));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  font-size: calc(16px * var(--k));
+  line-height: calc(22px * var(--k));
+  font-weight: 500;
+  color: var(--crit);
+}
+
+.pin-err.wait {
+  color: var(--tx3);
+}
+
+.pin-pad {
+  width: 100%;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.pin-pad button {
+  height: calc(72px * var(--k));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  background: var(--panel);
+  color: var(--tx);
+  font: 500 calc(30px * var(--k)) / 1 var(--mono);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.pin-pad button:hover:not(:disabled) {
+  border-color: var(--tx3);
+}
+
+.pin-pad button:active:not(:disabled) {
+  background: var(--acc-bg);
+  border-color: var(--acc);
+}
+
+.pin-pad button:disabled {
+  background: var(--panel2);
+  color: var(--tx3);
+  cursor: not-allowed;
+}
+
+/* «К списку» и «Стереть»: служебные клавиши, без рамки, чтобы цифры читались первыми */
+.pin-pad button.fn,
+.pin-pad button.fn:disabled {
+  background: transparent;
+  border-color: transparent;
+  color: var(--tx2);
+  font: 600 calc(16px * var(--k)) / 1 var(--sans);
+}
+
+.pin-pad button.fn:disabled {
+  color: var(--tx3);
+  opacity: 0.5;
+}
+
+@media (max-height: 720px) {
+  .pin-pad button {
+    height: calc(60px * var(--k));
+  }
+
+  .pin-err {
+    min-height: calc(36px * var(--k));
+  }
+}
+
+/* ---------- Вход администратора ---------- */
+
+.al-body {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.al {
+  width: 100%;
+  max-width: calc(440px * var(--k));
+  margin-top: 6vh;
+  padding: var(--sy) var(--sx);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.al-t {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: calc(22px * var(--k));
+  line-height: calc(28px * var(--k));
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.al-t .ti {
+  color: var(--acc);
+}
+
+.al-s {
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--tx2);
+}
+
+.al-f {
+  display: flex;
+  flex-direction: column;
+}
+
+.al-f .sp-l,
+.msheet .sp-l {
+  display: block;
+}
+
+.al-f .inp {
+  flex: none;
+  width: 100%;
+}
+
+.al-err {
+  min-height: calc(22px * var(--k));
+  font-size: calc(15px * var(--k));
+  line-height: calc(22px * var(--k));
+  color: var(--crit);
+}
+
+.al-go {
+  width: 100%;
+}
+
+.al-back {
+  align-self: flex-start;
+}
+
+.al .pop-f {
+  margin-top: 4px;
+}
+
+/* ---------- Механики ---------- */
+
+.mhead,
+.mrow {
+  display: grid;
+  grid-template-columns:
+    minmax(200px, 2fr) calc(100px * var(--k)) calc(150px * var(--k)) calc(150px * var(--k))
+    calc(150px * var(--k));
+  align-items: center;
+  column-gap: 16px;
+  padding: 0 20px 0 24px;
+}
+
+.mhead {
+  height: calc(40px * var(--k));
+  font-size: calc(12px * var(--k));
+  font-weight: 500;
+  color: var(--tx3);
+  background: var(--panel2);
+  border-bottom: 1px solid var(--line);
+}
+
+.mrow {
+  width: 100%;
+  height: calc(52px * var(--k));
+  border: none;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+  color: var(--tx);
+  text-align: left;
+  font-size: calc(16px * var(--k));
+}
+
+.mrow:last-child {
+  border-bottom: none;
+}
+
+.mrow:hover {
+  background: var(--panel2);
+}
+
+.mrow > * {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mrow .mn {
+  font-weight: 600;
+}
+
+.mrow.off .mn {
+  color: var(--tx3);
+}
+
+.mst {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(15px * var(--k));
+  color: var(--ok);
+}
+
+.mst.off {
+  color: var(--tx3);
+}
+
+.mrow .m2 {
+  display: none;
+}
+
+/* Панель механика: поля в два столбца на компьютере, кнопки внизу на всю ширину */
+.msheet label.sp-g {
+  display: block;
+}
+
+.msheet-f {
+  grid-column: 1 / -1;
+  padding-bottom: 16px;
+}
+
+/* ---------- Подключения ---------- */
+
+.intg {
+  max-width: calc(960px * var(--k));
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.intg-r {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: var(--by) var(--bx) var(--by) 24px;
+  border-bottom: 1px solid var(--line);
+}
+
+.intg-r:last-child {
+  border-bottom: none;
+}
+
+.intg-l {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+}
+
+.intg-l .sp-l {
+  margin-bottom: 0;
+}
+
+.intg-src {
+  padding: 0 6px;
+  border: 1px solid var(--line2);
+  border-radius: 4px;
+  font-size: calc(12px * var(--k));
+  line-height: calc(20px * var(--k));
+  color: var(--tx3);
+}
+
+.intg-src.db {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.intg-in {
+  display: flex;
+  gap: 8px;
+}
+
+.intg-in .inp {
+  font-family: var(--mono);
+  font-size: calc(15px * var(--k));
+}
+
+.intg-api {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  font-size: calc(15px * var(--k));
+}
+
+.intg-ok,
+.intg-bad {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: calc(14px * var(--k));
+  line-height: calc(20px * var(--k));
+}
+
+.intg-ok {
+  color: var(--ok);
+}
+
+.intg-bad {
+  color: var(--crit);
+}
+
+.intg-f {
+  padding: 16px 0;
+}
+
+.intg-f .pop-f {
+  max-width: calc(480px * var(--k));
+  margin-left: auto;
+}
+
+/* ---------- Телефон ---------- */
+
+@media (max-width: 900px) {
+  .lg-h h1 {
+    font-size: calc(24px * var(--k));
+    line-height: calc(32px * var(--k));
+  }
+
+  .lg-row {
+    padding: 0 14px 0 16px;
+  }
+
+  .lg .ftools .search {
+    margin-left: 0;
+  }
+
+  .mhead {
+    display: none;
+  }
+
+  .mrow {
+    height: auto;
+    min-height: calc(64px * var(--k));
+    grid-template-columns: minmax(0, 1fr) auto;
+    row-gap: 2px;
+    padding: 12px 14px 12px 16px;
+  }
+
+  .mrow .d {
+    display: none;
+  }
+
+  .mrow .m2 {
+    display: block;
+    grid-column: 1;
+    font-size: calc(13px * var(--k));
+    line-height: calc(18px * var(--k));
+    color: var(--tx3);
+  }
+
+  .intg-r {
+    padding: 14px 16px;
+  }
+
+  .intg-f .pop-f {
+    max-width: none;
+  }
+}
