@@ -10,7 +10,7 @@ from datetime import date
 from fastapi import APIRouter, HTTPException, Query
 from pydantic import BaseModel, Field
 
-from . import alerts, digest, journal
+from . import alerts, digest, fleet, journal
 from .config import get_settings
 from .store import Store
 
@@ -127,3 +127,33 @@ async def review_gap(item_id: str, req: ReviewRequest):
         raise HTTPException(404, "Обращение не найдено")
     result = journal.set_status(store(), [item_id], "reviewed" if req.reviewed else "new")
     return {"id": item_id, "reviewed_at": result["at"] if req.reviewed else None}
+
+
+# --- вопрос механика администратору напрямую ---
+class AdminMessageRequest(BaseModel):
+    vehicle_id: str | None = Field(default=None, max_length=40)
+    text: str = Field(min_length=1, max_length=1000)
+    author: str | None = Field(default=None, max_length=60)
+
+
+@router.post("/api/admin-messages")
+async def admin_message(req: AdminMessageRequest):
+    """Механик пишет администратору не по ответу агента: случай «От механика» в журнале, без ответа агента."""
+    text = req.text.strip()
+    if not text:
+        raise HTTPException(400, "Пустое сообщение: напишите, что случилось")
+    vehicle_id = (req.vehicle_id or "").strip() or None
+    vehicle = fleet.get_vehicle(vehicle_id) if vehicle_id else None
+    if vehicle_id and vehicle is None:
+        raise HTTPException(404, f"Машины {vehicle_id} нет в парке")
+    author = (req.author or "").strip() or None
+    saved = journal.add_admin_message(store(), vehicle_id, text, author)
+    url = get_settings().alert_webhook_url
+    if url and alerts.sends_now("report"):
+        head = f"Механик{' ' + author if author else ''} написал администратору."
+        if vehicle:
+            head += (f" Машина {vehicle.get('model') or vehicle_id}, госномер {vehicle_id}, "
+                     f"двигатель {vehicle.get('engine_model', '—')}.")
+        alerts.send(url, {"text": f"{head}\nСообщение: {text}", "type": "report", "vehicle_id": vehicle_id,
+                          "author": author, "question": text, "created_at": saved["created_at"]})
+    return saved

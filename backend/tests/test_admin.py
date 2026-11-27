@@ -175,3 +175,53 @@ async def test_digest_endpoint(client, store):
     assert r.status_code == 200 and data["mode"] == "digest" and data["time"] == "18:00" and data["cases"] == 1
     assert "турбину" in data["text"] and data["sent_at"] is None
     assert (await client.get("/api/audit/digest", params={"day": "2026-13-40"})).status_code == 400
+
+
+# --- вопрос администратору напрямую ---
+async def test_admin_message_is_a_case_from_mechanic(client, store, posted, monkeypatch):
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "http://alerts.test/hook")
+    monkeypatch.setenv("ALERT_MODE", "instant")
+    get_settings.cache_clear()
+    r = await client.post("/api/admin-messages", json={"vehicle_id": "A101TT77", "text": "  Нет щупа на посту 2  ",
+                                                        "author": "Петров"})
+    assert r.status_code == 200 and r.json()["id"].startswith("a_") and r.json()["created_at"]
+    r2 = await client.post("/api/admin-messages", json={"text": "Планшет не заряжается"})
+    assert r2.status_code == 200
+    await asyncio.gather(*alerts._tasks)
+    assert "Механик Петров написал администратору" in posted[0]["text"] and "Нет щупа на посту 2" in posted[0]["text"]
+    assert posted[0]["type"] == "report" and len(posted) == 2
+    rows = journal.page(store)["items"]
+    first = next(i for i in rows if i["id"] == r.json()["id"])
+    assert first["gap"]["type"] == "report" and first["gap"]["label"] == "От механика" and first["status"] == "new"
+    assert first["source"] == "admin" and first["author"] == "Петров" and first["question"] == "Нет щупа на посту 2"
+    assert first["answer"] == "" and first["vehicle_title"]
+    assert next(i for i in rows if i["id"] == r2.json()["id"])["vehicle_id"] is None
+    assert journal.page(store, {"mechanic": "Петров"})["total"] == 1
+    assert journal.page(store, {"type": "report"})["total"] == 2
+    card = (await client.get(f"/api/audit/{r.json()['id']}")).json()
+    assert card["question"] == "Нет щупа на посту 2" and card["reports"] == []
+    await client.post("/api/audit/status", json={"ids": [r.json()["id"]], "status": "reviewed"})
+    assert (await client.get("/api/audit/gaps")).json() == {"open": 1}
+    # Проверка входа
+    assert (await client.post("/api/admin-messages", json={"text": "   "})).status_code == 400
+    assert (await client.post("/api/admin-messages", json={"text": ""})).status_code == 422
+    assert (await client.post("/api/admin-messages", json={"text": "х" * 1001})).status_code == 422
+    assert (await client.post("/api/admin-messages", json={"text": "Вопрос", "vehicle_id": "НЕТ"})).status_code == 404
+
+
+async def test_admin_message_waits_for_digest_by_default(client, posted, monkeypatch):
+    monkeypatch.setenv("ALERT_WEBHOOK_URL", "http://alerts.test/hook")
+    get_settings.cache_clear()
+    assert (await client.post("/api/admin-messages", json={"text": "Вопрос"})).status_code == 200
+    await asyncio.gather(*alerts._tasks)
+    assert posted == []
+
+
+async def test_report_row_shows_message_author(store):
+    message = ask(store, "A101TT77", "Какой зазор клапанов?", {"kind": "answer", "text": "0,25 мм",
+                                                                "answer": {"not_found": False, "checks": [{}]}}, "Иванов")
+    store.add_report(int(message[2:]), "A101TT77", "Ответ неверный", "", "Петров")
+    row = journal.page(store)["items"][0]
+    # Вопрос задал Иванов, о проблеме сообщил Петров: строка случая показывает Петрова
+    assert row["author"] == "Иванов" and row["report"]["author"] == "Петров"
+    assert journal.page(store, {"mechanic": "Петров"})["total"] == 1
