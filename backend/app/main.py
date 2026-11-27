@@ -4,7 +4,6 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-import re
 import time
 from contextlib import asynccontextmanager
 
@@ -13,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from . import alerts, clients, fleet, rules, stt, turns, uploads
+from . import admin_api, alerts, clients, fleet, rules, stt, turns, uploads
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -334,34 +333,8 @@ async def manual_page_image(manual_id: str, page: int, q: str = Query(default=""
     return Response(content=png, media_type="image/png", headers={"Cache-Control": "private, max-age=3600"})
 
 
-# --- журнал обращений ---
-class ReviewRequest(BaseModel):
-    reviewed: bool = True
-
-
-@app.get("/api/audit")
-async def audit(limit: int = Query(default=100, ge=1, le=500)):
-    """Кто что спросил, что ответил агент, на какие источники сослался. Случаи без ответа помечены (gap)."""
-    items = store().audit(limit)
-    for item in items:
-        vehicle = fleet.get_vehicle(item["vehicle_id"])
-        item["vehicle_title"] = fleet.title_of(vehicle) if vehicle else item["vehicle_id"]
-    return {"items": items, "gaps_open": store().open_gaps()}
-
-
-@app.get("/api/audit/gaps")
-async def audit_gaps():
-    """Сколько случаев без ответа в руководстве администратор ещё не разобрал: число у пункта «Журнал»."""
-    return {"open": store().open_gaps()}
-
-
-@app.post("/api/audit/{item_id}/review")
-async def review_gap(item_id: str, req: ReviewRequest):
-    """Администратор отметил случай разобранным или вернул его в работу."""
-    match = re.fullmatch(r"m_(\d+)", item_id)
-    if not match or not store().is_assistant_message(int(match.group(1))):
-        raise HTTPException(404, "Обращение не найдено")
-    return {"id": item_id, "reviewed_at": store().set_reviewed(int(match.group(1)), req.reviewed)}
+# --- журнал обращений, разбор случаев, сводки для администратора и главного механика ---
+app.include_router(admin_api.router)
 
 
 # --- расчёт стоимости ---

@@ -11,7 +11,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from . import alerts
+from . import alerts, journal
 
 SCHEMA = """
 CREATE TABLE IF NOT EXISTS messages (
@@ -81,6 +81,7 @@ class Store:
         with self._lock:
             self._db.executescript(SCHEMA)
             self._db.commit()
+        journal.init(self)
 
     def _exec(self, sql: str, args: tuple = ()) -> sqlite3.Cursor:
         with self._lock:
@@ -211,27 +212,20 @@ class Store:
         return out
 
     def _reviewed(self) -> dict[int, str]:
-        return {r["message_id"]: r["reviewed_at"] for r in self._all("SELECT * FROM reviews")}
+        # Статусы разбора ведёт журнал (app/journal.py), старая таблица reviews перенесена туда
+        return journal.reviewed_map(self)
 
     def set_reviewed(self, message_id: int, reviewed: bool) -> str | None:
         """Администратор разобрал случай без ответа в руководстве (или вернул его в работу)."""
-        if not reviewed:
-            self._exec("DELETE FROM reviews WHERE message_id=?", (message_id,))
-            return None
-        stamp = now()
-        self._exec("INSERT OR REPLACE INTO reviews (message_id, reviewed_at) VALUES (?,?)", (message_id, stamp))
-        return stamp
+        result = journal.set_status(self, [f"m_{message_id}"], "reviewed" if reviewed else "new")
+        return result["at"] if reviewed else None
 
     def is_assistant_message(self, message_id: int) -> bool:
         return bool(self._all("SELECT 1 FROM messages WHERE id=? AND role='assistant'", (message_id,)))
 
     def open_gaps(self, limit: int = 500) -> int:
-        """Сколько случаев без ответа ещё не разобрано (среди последних ответов агента)."""
-        reviewed = self._reviewed()
-        reports = self._reports()
-        rows = self._all("SELECT id, payload FROM messages WHERE role='assistant' ORDER BY id DESC LIMIT ?", (limit,))
-        return sum(1 for r in rows
-                   if r["id"] not in reviewed and alerts.gap_of(json.loads(r["payload"]), reports.get(r["id"])))
+        """Сколько случаев «новый» и «в работе» во всём журнале (повторы считаются одним случаем)."""
+        return journal.open_count(self)
 
     # --- разборы проверок (память по машине, B1) ---
     def save_analysis(self, vehicle_id: str, session_id: str, diagnosis: dict, assessment: dict) -> None:
