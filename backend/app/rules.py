@@ -183,6 +183,14 @@ def assess(diag: dict, vehicle: dict, previous: list[dict], confidence_min: floa
     if status == "normal":
         if flags["quality_warning"]:
             result["warnings"].append("Запись с помехами: результат «норма» предварительный, при сомнениях повторите запись.")
+        # Норма после недавнего отклонения: механик должен знать, что отклонение было (отчёт проверки 28.11)
+        recent = [s for s in valid_sessions(previous)[-2:] if s.get("status") == "anomaly"]
+        if recent:
+            last = recent[-1]
+            result["warnings"].append(
+                f"Недавно было отклонение: проверка {last['session_id']}, {last.get('anomaly_title') or last.get('anomaly_type')}, "
+                f"оценка {fmt(last.get('anomaly_score'))}. Убедитесь, что по нему приняты меры."
+            )
         result["ticket_block_reason"] = "Отклонений не найдено, заявка не нужна."  # П8
         return result
 
@@ -213,12 +221,16 @@ def assess(diag: dict, vehicle: dict, previous: list[dict], confidence_min: floa
     base = fault["base"]
     basis = [f"Базовая критичность типа {code} «{title}»: {BASE_LABELS[base]} ({fault['why']})"]
     shift = 0
+    # Поправка называется так, как она действует: при уже высоком базовом приоритете оценка его подтверждает
+    top, bottom = base == LEVELS[-1], base == LEVELS[0]
     if score is not None and score >= SCORE_HIGH:
         shift = 1
-        basis.append(f"Оценка отклонения {fmt(score)} высокая (от {fmt(SCORE_HIGH)}): приоритет на ступень выше")
+        effect = "подтверждает высокий приоритет" if top else "приоритет на ступень выше"
+        basis.append(f"Оценка отклонения {fmt(score)} высокая (от {fmt(SCORE_HIGH)}): {effect}")
     elif score is not None and score < SCORE_LOW:
         shift = -1
-        basis.append(f"Оценка отклонения {fmt(score)} близка к порогу (ниже {fmt(SCORE_LOW)}): приоритет на ступень ниже")
+        effect = "приоритет остаётся низким" if bottom else "приоритет на ступень ниже"
+        basis.append(f"Оценка отклонения {fmt(score)} близка к порогу (ниже {fmt(SCORE_LOW)}): {effect}")
     else:
         basis.append(f"Оценка отклонения {fmt(score)}: без поправки")
 

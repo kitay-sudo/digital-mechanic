@@ -161,3 +161,15 @@ def test_http_access(monkeypatch):
         assert "digital-mechanic" in ok.text
         bearer = http.post("/mcp", json=init, headers={**headers, "Authorization": "Bearer second"})
         assert bearer.status_code == 200, bearer.text
+
+
+async def test_rejected_call_does_not_spend_quota(calls, monkeypatch):
+    def handler(request: httpx.Request) -> httpx.Response:
+        return httpx.Response(409, json={"detail": "Заявка уже отправлена: TKT-0003"})
+
+    monkeypatch.setattr(connector, "_transport", lambda: httpx.MockTransport(handler))
+    async with Client(connector.server) as client:
+        result = await client.call_tool("confirm_ticket", {"draft_id": "d_3"})
+        status = payload(await client.call_tool("connector_status", {}))
+    assert result.is_error and "уже отправлена" in result.content[0].text and "409" in result.content[0].text
+    assert status["quota"]["used"] == 0

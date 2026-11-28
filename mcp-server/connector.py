@@ -73,6 +73,10 @@ class Quota:
                             "Он обновится в 00:00 по Москве. Чтение парка и страниц руководств работает без лимита.")
         self.used += 1
 
+    def refund(self) -> None:
+        """Запрос отклонён до работы агента (нет черновика, заявка уже отправлена): с лимита не списываем."""
+        self.used = max(0, self.used - 1)
+
     def status(self) -> dict:
         self._roll()
         limit = daily_limit()
@@ -80,6 +84,20 @@ class Quota:
 
 
 quota = Quota()
+
+
+class Rejected(ToolError):
+    """Сервер агента отклонил запрос до хода агента (HTTP 400, 404, 409): модель не вызывалась."""
+
+
+async def agent_call(path: str, body: dict) -> Any:
+    """Запрос к агенту под дневным лимитом. Отказ без хода агента лимит не тратит."""
+    quota.take()
+    try:
+        return await backend("POST", path, body)
+    except Rejected:
+        quota.refund()
+        raise
 
 
 def _transport() -> httpx.AsyncBaseTransport | None:
@@ -103,7 +121,8 @@ async def backend(method: str, path: str, body: dict | None = None) -> Any:
             detail = response.json().get("detail")
         except ValueError:
             detail = None
-        raise ToolError(f"{detail or 'Ошибка сервера агента'} (HTTP {response.status_code})")
+        error = Rejected if response.status_code in (400, 404, 409) else ToolError
+        raise error(f"{detail or 'Ошибка сервера агента'} (HTTP {response.status_code})")
     return response.json()
 
 
@@ -234,8 +253,7 @@ async def diagnose(vehicle_id: str, session_id: str | None = None,
     session_id — проверка; не указана — последняя. level: expert — коротко для опытного, novice — подробно для
     новичка. Ход пишется в переписку по машине и в журнал администратора. Отвечает 10–70 секунд.
     """
-    quota.take()
-    r = await backend("POST", "/api/v1/agent/diagnose",
+    r = await agent_call("/api/v1/agent/diagnose",
                       {"vehicle_id": vehicle_id.strip(), "session_id": session_id, "mechanic": MECHANIC, "level": level})
     return agent_result(r)
 
@@ -249,8 +267,7 @@ async def ask_agent(vehicle_id: str, question: str, session_id: str | None = Non
     Команда «Создай заявку на дефектовку» вернёт черновик заявки (kind=ticket_draft); отправка — confirm_ticket.
     Агент помнит переписку по машине: уточняющий вопрос можно задать следующим вызовом.
     """
-    quota.take()
-    r = await backend("POST", "/api/v1/agent/ask",
+    r = await agent_call("/api/v1/agent/ask",
                       {"vehicle_id": vehicle_id.strip(), "session_id": session_id, "text": question,
                        "mechanic": MECHANIC, "level": level})
     return agent_result(r)
@@ -266,8 +283,7 @@ async def confirm_ticket(draft_id: str, warning_ack: bool = False) -> dict:
     warning_ack=true нужен, если запись с помехами и в черновике requires_warning_ack: механик понимает, что вывод
     предварительный.
     """
-    quota.take()
-    r = await backend("POST", "/api/v1/agent/confirm",
+    r = await agent_call("/api/v1/agent/confirm",
                       {"draft_id": draft_id.strip(), "warning_ack": warning_ack, "mechanic": MECHANIC})
     return agent_result(r)
 

@@ -148,6 +148,12 @@ async def run_turn(
                     "Ответ без ссылок: каждый факт из руководства должен стоять в checks или repair со страницей "
                     "и дословной цитатой. Если подтвердить нечем, поставь not_found: true и не называй фактов"
                 )
+            if _skipped_search(ctx):
+                problems.append(
+                    "Это разбор результата диагностики с отклонением, а поиска по руководствам в этом ходе не было. "
+                    "Найди процедуры проверки узла неисправности (search_manuals) и дай шаги со ссылками на страницы. "
+                    "Механик видит только этот ответ: ссылка на прошлые ответы в переписке шагов не заменяет"
+                )
             failed = ctx.assessment and ctx.assessment["outcome"] == "check_failed"
             if problems and not retried and not failed:
                 first_problems = list(problems)
@@ -244,6 +250,14 @@ def _unsourced(ctx: TurnContext, answer: dict) -> bool:
     return not (answer["checks"] or answer["repair"] or answer["conflicts"])
 
 
+def _skipped_search(ctx: TurnContext) -> bool:
+    """Разбор отклонения в этом ходе без единого поиска по руководствам: так бывает, когда результат уже
+    обсуждали в переписке и модель отсылает к прошлому ответу. Механик видит только новый ответ, шаги нужны в нём."""
+    a = ctx.assessment
+    return bool(ctx.diagnosed_this_turn and a and a["outcome"] == "anomaly"
+                and not (a.get("flags") or {}).get("engine_mismatch") and not ctx.searched and not ctx.kb_empty)
+
+
 def _has_instruction(ctx: TurnContext, answer: dict) -> bool:
     """П9: среди ссылок есть страница, которая прямо относится к узлу неисправности."""
     code = (ctx.diagnosis or {}).get("anomaly_type")
@@ -301,7 +315,7 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
                                "Повторите запись на холостом ходу и запросите результат снова.")
             return payload
         if outcome == "normal":
-            payload["text"] = answer["summary"] or "Значимых отклонений не найдено, эксплуатацию можно продолжать."
+            payload["text"] = answer["summary"] or "Значимых отклонений не найдено. Решение о выпуске машины принимает механик."
             payload["answer"] = {**EMPTY_ANSWER, "summary": payload["text"], "observations": answer["observations"],
                                  "limitations": answer["limitations"]}
             return payload
@@ -326,7 +340,9 @@ def _build_message(ctx: TurnContext, answer: dict, problems: list[str], confirme
             return payload
         payload["text"] = answer["summary"] or f"Проверка показала отклонение: {ctx.diagnosis.get('anomaly_title')}."
         reason = None
-        if not _has_instruction(ctx, answer):
+        # «Инструкции нет» — только если агент искал в руководствах. Без поиска пустой ответ значит, что агент
+        # не искал, а не что инструкции нет: заявку это не закрывает (отчёт проверки 28.11, повторный разбор)
+        if ctx.searched and not _has_instruction(ctx, answer):
             # П10: применимой инструкции нет. Заявку не предлагаем, даём текст рекомендации на дефектовку.
             reason = (f"В руководстве на двигатель {engine} нет применимой инструкции по этой неисправности, "
                       "заявка в ТОиР не отправлена.")

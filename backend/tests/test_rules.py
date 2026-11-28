@@ -158,3 +158,18 @@ def test_ticket_line_carries_dispute_to_toir():  # отчёт проверки 2
              "spare_parts": []}
     ops = ticket_payload(draft)["operations"]
     assert ops[0].endswith(DISPUTED_NOTE) and ops[1] == "Заменить прокладку"
+
+
+def test_normal_after_recent_anomaly_warns():  # отчёт проверки 28.11: норма, а две проверки назад было отклонение
+    previous = [diag(session_id="S-5", anomaly_type="F08", anomaly_title="Дизельная топливоподача", anomaly_score=0.76),
+                diag(session_id="S-6", status="normal", anomaly_type=None, anomaly_score=0.1)]
+    a = rules.assess(diag(session_id="S-7", status="normal", anomaly_type=None, anomaly_score=0.08), DIESEL, previous, 0.5)
+    assert a["outcome"] == "normal" and not a["ticket_allowed"]
+    assert any("S-5" in w and "0,76" in w for w in a["warnings"])
+
+
+def test_high_base_priority_is_confirmed_not_raised():  # отчёт проверки 28.11: «на ступень выше» при уже высоком
+    a = rules.assess(diag(anomaly_type="F02", anomaly_score=0.92), DIESEL, [], 0.5)
+    if rules.FAULTS["F02"]["base"] == "high":
+        assert any("подтверждает высокий приоритет" in b for b in a["basis"])
+        assert not any("на ступень выше" in b for b in a["basis"])
