@@ -5,8 +5,7 @@ import { usePresence } from '@/lib/presence';
 import { setSettings, useSettings } from '@/lib/settings';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
-import { Blueprint } from './Blueprint';
-import { PistonBlueprint, ValveBlueprint } from './Blueprints';
+import { CylinderBlueprint, InjectorBlueprint, RodBlueprint } from './Blueprints';
 
 /* ---------- Повторный показ из настроек ---------- */
 
@@ -284,14 +283,14 @@ export function Onboarding() {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
-      {/* Бледный чертёж на фоне: у слайдов по очереди двигатель, поршень с шатуном и клапанный механизм */}
+      {/* Чертёж во всю высоту слева от текста: у слайдов по очереди разрез цилиндра, поршень с шатуном и форсунка */}
       <div className="tour-art" aria-hidden="true" key={`art-${index % 3}`}>
         {index % 3 === 0 ? (
-          <Blueprint className="tour-bp" />
+          <CylinderBlueprint className="tour-bp" />
         ) : index % 3 === 1 ? (
-          <PistonBlueprint className="tour-bp" />
+          <RodBlueprint className="tour-bp" />
         ) : (
-          <ValveBlueprint className="tour-bp" />
+          <InjectorBlueprint className="tour-bp" />
         )}
       </div>
       <div className="tour-top">

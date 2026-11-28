@@ -3894,19 +3894,16 @@ button.sp-link {
   animation: fade-in var(--mo) ease-out;
 }
 
-/* Чертёж крупно в свободном поле слева от текста: обрезан краем экрана, под текст не заходит.
-   Правый край чертежа — за 48 px до колонки текста (её отступ слева: max(24px, (100vw - 1120px) / 2)) */
+/* Вертикальный чертёж во всю высоту окна между верхней и нижней панелью, целиком в поле слева от текста.
+   Правый край — за 40 px до колонки текста (её отступ слева: max(24px, (100vw - 1120px) / 2)) */
 .tour-art > .tour-bp {
   position: absolute;
-  top: 50%;
-  right: calc(100vw - max(24px, (100vw - 1120px) / 2) + 48px);
-  transform: translateY(-50%);
-  /* Шире поля в 1,75 раза: в кадре сам узел, левый край чертежа обрезан экраном */
-  width: calc((max(24px, (100vw - 1120px) / 2) - 48px) * 1.75);
-  height: auto;
-  aspect-ratio: 600 / 410;
+  top: 76px;
+  height: calc(100% - 180px);
+  width: auto;
+  right: calc(100vw - max(24px, (100vw - 1120px) / 2) + 40px);
   color: var(--tx);
-  opacity: 0.13;
+  opacity: 0.14;
 }
 
 [data-theme='light'] .tour-art > .tour-bp {
