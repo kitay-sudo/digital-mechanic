@@ -10,7 +10,8 @@ MATERIALS_URL — одна или несколько ссылок через п�
 числу страниц. vehicles.json и fault_types.json кладутся туда, где их ждут сервер и заглушки.
 
 Запуск из папки backend:  uv run python -m app.materials
-В Docker:  docker compose run --rm --no-deps backend uv run --no-dev python -m app.materials
+В Docker это делает сам сервер при старте с флагом --if-missing: скачивает и индексирует только
+то, чего ещё нет на диске, и не мешает запуску, если ссылки нет.
 После загрузки собирается индекс базы знаний (флаг --no-index — только скачать и разложить).
 """
 from __future__ import annotations
@@ -149,8 +150,34 @@ def place(work: Path) -> list[str]:
     return missing
 
 
+def absent() -> list[str]:
+    """Чего нет на диске: руководства заказчика, данные заглушек, индекс базы знаний."""
+    settings = get_settings()
+    found = [m.file for m in all_manuals() if m.source == "base" and not (settings.pdf_dir / m.file).exists()]
+    found += [p.name for p in (settings.fleet_path, settings.fault_types_path) if not p.exists()]
+    if not settings.index_path.exists():
+        found.append("индекс базы знаний")
+    return found
+
+
 def main(argv: list[str]) -> int:
     sources = [s for s in re.split(r"[\s,]+", os.environ.get("MATERIALS_URL", "")) if s]
+    if "--if-missing" in argv:
+        # Режим запуска сервера: ошибка загрузки не должна мешать старту, продукт сам покажет,
+        # каких руководств нет
+        try:
+            lacking = absent()
+            if not lacking:
+                print("Материалы: уже на месте")
+                return 0
+            if not sources:
+                print("Внимание: MATERIALS_URL не задан, нет: " + ", ".join(lacking))
+                return 0
+            print("Материалы: загрузка, нет: " + ", ".join(lacking))
+            main([a for a in argv if a != "--if-missing"])
+        except Exception as exc:  # noqa: BLE001
+            print(f"Внимание: материалы не загружены: {exc}")
+        return 0
     if not sources:
         print("Задайте MATERIALS_URL в .env: ссылку на материалы задачи (см. README).")
         return 2

@@ -1,8 +1,6 @@
-# Запуск всего продукта одной командой:  docker compose up --build
-# Материалы заказчика (PDF руководств, данные заглушек) в Git не входят. Перед первым запуском
-# задайте MATERIALS_URL в .env и скачайте их, индекс соберётся там же (см. README):
-#   docker compose build
-#   docker compose run --rm --no-deps backend uv run --no-dev python -m app.materials
+# Запуск всего продукта одной командой:  docker compose up -d --build
+# Материалы заказчика (PDF руководств, данные заглушек) в Git не входят. Сервер при первом старте
+# скачивает их по MATERIALS_URL из .env и собирает индекс; при следующих стартах только проверяет.
 services:
   mock-ml:
     build: ./mocks
@@ -28,6 +26,8 @@ services:
     env_file:
       - path: .env
         required: false
+    # Сначала материалы задачи (только то, чего нет на диске), затем сервер. Сервер стартует и без них
+    command: ["sh", "-c", "uv run --no-dev python -m app.materials --if-missing; exec uv run --no-dev uvicorn app.main:app --host 0.0.0.0 --port 8000"]
     environment:
       # Адреса внешних сервисов (F6 ТЗ). Чтобы подключить рабочие сервисы, задайте их в .env.
       MOCK_ML_URL: ${MOCK_ML_URL:-http://mock-ml:8001}

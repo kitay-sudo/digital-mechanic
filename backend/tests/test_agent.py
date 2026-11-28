@@ -265,47 +265,6 @@ def test_conflict_of_another_engine_is_not_shown(index):
     assert conflicts.from_registry(index, ["zmz5234_rk"], "замена масла, как сливать", []) == []
 
 
-# --- слой локального Claude Code: протокол вызова инструментов через JSON ---
-async def test_claude_code_layer_runs_tools_and_answer(store, index, services, monkeypatch):
-    from app.agent import llm_claude_code
-    from app.agent.llm_claude_code import ClaudeCodeLLM
-
-    replies = [
-        {"structured_output": {"tool_calls": [{"name": "search_manuals", "input": {"query": "давление масла"}}],
-                               "answer": None},
-         "usage": {"input_tokens": 100, "output_tokens": 20}, "modelUsage": {"claude-test": {}}},
-        {"structured_output": {"tool_calls": [], "answer": {
-            "summary": "Давление масла проверяют манометром.", "observations": [], "hypotheses": [], "repair": [],
-            "limitations": [], "conflicts": [], "not_found": False,
-            "checks": [{"text": "Проверить давление масла контрольным манометром.",
-                        "refs": [{"manual_id": "yamz236_rk", "pdf_page": 10,
-                                  "quote": "Проверить давление масла контрольным манометром."}]}]}},
-         "usage": {"input_tokens": 300, "output_tokens": 80}, "modelUsage": {"claude-test": {}}},
-    ]
-    seen = []
-
-    def fake_run(self, system, prompt, schema):
-        seen.append((system, prompt, schema))
-        return replies[len(seen) - 1]
-
-    monkeypatch.setattr(llm_claude_code.ClaudeCodeLLM, "_run", fake_run)
-    events = []
-
-    async def emit(event):
-        events.append(event)
-
-    await run_turn(vehicle=fleet.get_vehicle("A101TT77"), session_id="S-9003", text="Как проверить давление масла?",
-                   store=store, index=index, settings=get_settings(), llm=ClaudeCodeLLM("claude-test", "medium"),
-                   emit=emit)
-    message = [e["message"] for e in events if e["type"] == "message"][-1]
-    assert message["kind"] == "answer" and message["answer"]["checks"][0]["refs"][0]["pdf_page"] == 10
-    assert message["usage"]["llm_calls"] == 2 and message["usage"]["input_tokens"] == 400
-    # Второй запрос несёт результат инструмента, схема допускает и вызовы, и итоговый ответ.
-    assert "[Результат инструмента search_manuals]" in seen[1][1]
-    assert set(seen[0][2]["properties"]) == {"tool_calls", "answer"}
-    assert "search_manuals" in seen[0][0]
-
-
 # --- слой в формате OpenAI: локальная модель ---
 OIL_ANSWER = {
     "summary": "Давление масла проверяют манометром.", "observations": [], "hypotheses": [], "repair": [],

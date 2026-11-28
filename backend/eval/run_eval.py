@@ -185,6 +185,8 @@ def _save(llm: dict, rows: list, failed: int, tokens_in: int, tokens_out: int, c
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("mode", choices=["data", "search", "ask"])
     parser.add_argument("--api", default="http://127.0.0.1:8000")

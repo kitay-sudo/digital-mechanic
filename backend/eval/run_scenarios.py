@@ -406,6 +406,8 @@ def report(r: Runner, llm: dict, usage: dict, started: str, seconds: float) -> s
 
 
 def main() -> int:
+    if hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
     import httpx
 
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
