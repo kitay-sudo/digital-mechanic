@@ -68,7 +68,8 @@ export function ManualPanel({
       <div className="handle">
         <i />
       </div>
-      {/* Шапка: короткое имя и обозначение документа, под ними полное название целиком, без обрезки.
+      {/* Шапка одной высоты с шапкой чата, чтобы линии колонок совпадали: короткое имя и обозначение,
+          под ними название документа; длинное обрезается многоточием, целиком во всплывающей подсказке.
           Номер страницы и их число стоят внизу, между кнопками листания */}
       <div className="hdr mhdr">
         <Icon name="book-2" size="l" className="only-d" />
@@ -77,7 +78,11 @@ export function ManualPanel({
             <span className="mh-short">{doc?.short ?? target.short ?? 'Руководство'}</span>
             {designation ? <span className="mh-des m">{designation}</span> : null}
           </div>
-          {title ? <div className="mh-title">{title}</div> : null}
+          {title ? (
+            <div className="mh-title" title={title}>
+              {title}
+            </div>
+          ) : null}
         </div>
         <button type="button" className="hb" onClick={onClose} aria-label="Закрыть руководство" title="Закрыть">
           <Icon name="x" />

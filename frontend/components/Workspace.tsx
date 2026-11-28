@@ -427,7 +427,8 @@ export function Workspace({ vehicleId, initialSession = null }: { vehicleId: str
     </span>
   ) : null;
   const sessionLine = (
-    <Parts items={[session ? `Проверка ${session.session_id}` : 'Проверок нет', session ? dateTime(session.checked_at) : null, costPart]} />
+    // Одной строкой: шапка чата той же высоты, что шапка руководства рядом
+    <Parts nowrap items={[session ? `Проверка ${session.session_id}` : 'Проверок нет', session ? dateTime(session.checked_at) : null, costPart]} />
   );
 
   return (

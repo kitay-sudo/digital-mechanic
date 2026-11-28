@@ -1884,24 +1884,31 @@ details.fold > .fin {
   color: var(--tx);
 }
 
-/* Шапка руководства: высота по содержимому, полное название документа переносится и не обрезается */
+/* Шапка руководства той же высоты, что шапка чата: нижние линии колонок на одном уровне */
 .hdr.mhdr {
-  height: auto;
-  min-height: 72px;
-  align-items: flex-start;
-  padding: 14px 16px;
+  padding: 0 16px;
 }
 
 .mhdr > .ti {
-  margin-top: 2px;
   color: var(--tx3);
 }
 
 .mh-top {
   display: flex;
-  flex-wrap: wrap;
   align-items: baseline;
   column-gap: 12px;
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.mh-short {
+  flex: none;
+}
+
+.mh-des {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .mh-short {
@@ -1921,7 +1928,9 @@ details.fold > .fin {
   font-size: calc(14px * var(--k));
   line-height: calc(20px * var(--k));
   color: var(--tx2);
-  overflow-wrap: anywhere;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 [data-theme='dark'] .viewer img {
@@ -2280,9 +2289,22 @@ details.fold > .fin {
     padding: 0 12px;
   }
 
+  /* На телефоне руководство открывается панелью снизу: шапка по содержимому, название целиком */
   .hdr.mhdr {
+    height: auto;
     min-height: 64px;
+    align-items: flex-start;
     padding: 10px 12px;
+  }
+
+  .mh-top {
+    flex-wrap: wrap;
+    white-space: normal;
+  }
+
+  .mh-title {
+    white-space: normal;
+    overflow-wrap: anywhere;
   }
 }
 
