@@ -4,6 +4,8 @@ AI-агент для механика автопарка. Получает ре�
 
 Хакатон «ИИкузница», трек «Цифровой аватар», задача ООО «НейроДВС». Требования и статус их выполнения: [docs/requirements.md](docs/requirements.md).
 
+**Проверить своим ИИ-агентом.** Стенд подключается к Claude, Claude Code, Cursor и любому клиенту MCP одной ссылкой `https://digital-mechanic.ru/mcp/<ключ>` (ключ — в ответах формы сдачи). Ассистент получает инструменты агента и готовый промпт проверки: сам прогоняет сценарии С1–С3, сверяет ссылки на страницы руководств и сводит отчёт. Как подключить и текст промпта: [docs/mcp.md](docs/mcp.md).
+
 ## Запуск за 5 минут (Docker)
 
 Нужны Docker и ссылка на материалы задачи. Материалы заказчика в репозиторий не входят: PDF руководств — документы производителей двигателей, данные заглушек (ответы диагностики, карточки машин) — материалы НейроДВС. Так просили организаторы 27.11. При развёртывании они скачиваются по ссылке из переменной окружения, сама ссылка в коде не хранится.
@@ -270,6 +272,7 @@ curl -H "X-API-Key: ключ_из_INTEGRATION_API_KEYS" http://localhost:8000/ap
 |---|---|
 | `backend/` | Сервер и агент (Python, FastAPI) |
 | `frontend/` | Интерфейс (Next.js, TypeScript) |
+| `mcp-server/` | MCP-коннектор: инструменты агента для внешних ИИ-ассистентов ([docs/mcp.md](docs/mcp.md)) |
 | `mocks/` | Заглушки заказчика Mock ML и Mock ТОиР; их данные (`mocks/data`) скачиваются по `MATERIALS_URL`, в Git не входят |
 | `config/manuals.json` | Реестр руководств: двигатель → документы |
 | `config/conflicts.json` | Реестр подтверждённых расхождений между документами |
@@ -279,7 +282,7 @@ curl -H "X-API-Key: ключ_из_INTEGRATION_API_KEYS" http://localhost:8000/ap
 
 ## Что использовано
 
-Открытые компоненты: FastAPI, Uvicorn, httpx, Pydantic, PyMuPDF (AGPL-3.0), snowballstemmer, Anthropic Python SDK, Tesseract OCR с русской моделью, SQLite FTS5, Next.js, React, шрифты IBM Plex (`@fontsource`), иконки Tabler. Модель: Claude (Anthropic) по API. Заглушки Mock ML и Mock ТОиР и синтетические данные парка предоставлены заказчиком.
+Открытые компоненты: FastAPI, Uvicorn, httpx, Pydantic, PyMuPDF (AGPL-3.0), snowballstemmer, Anthropic Python SDK, MCP Python SDK, Tesseract OCR с русской моделью, SQLite FTS5, Next.js, React, шрифты IBM Plex (`@fontsource`), иконки Tabler. Модель: Claude (Anthropic) по API. Заглушки Mock ML и Mock ТОиР и синтетические данные парка предоставлены заказчиком.
 
 Сделано до спринта (проектные материалы, код в них не входит): [docs/design.md](docs/design.md), [docs/pitch.md](docs/pitch.md) и статичный макет интерфейса [docs/mockups/digital-mechanic.html](docs/mockups/digital-mechanic.html). Весь код сервера, агента и интерфейса написан в спринте.
 

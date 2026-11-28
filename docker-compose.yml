@@ -41,6 +41,19 @@ services:
       - "${BACKEND_PORT:-8000}:8000"
     restart: unless-stopped
 
+  # MCP-коннектор: инструменты агента для внешних ИИ-ассистентов (docs/mcp.md). Ключи — в .env (MCP_*)
+  mcp:
+    build: ./mcp-server
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      MCP_BACKEND_URL: http://backend:8000
+    depends_on: [backend]
+    ports:
+      - "${MCP_PORT:-8200}:8200"
+    restart: unless-stopped
+
   frontend:
     build: ./frontend
     environment:
