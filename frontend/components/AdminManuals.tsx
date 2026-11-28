@@ -385,8 +385,8 @@ function ManualSheet({
               <IndexState m={manual} />
             </div>
             <div className="sp-s">
-              {manual.indexed_pages} из {manual.pages} стр.
-              {manual.ocr_pages ? `, распознано сканов ${manual.ocr_pages}` : ''}
+              {running ? 'Идёт индексация, можно закрыть панель' : `${manual.indexed_pages} из ${manual.pages} стр.`}
+              {!running && manual.ocr_pages ? `, распознано сканов ${manual.ocr_pages}` : ''}
               {manual.job?.state === 'error' && manual.job.error ? `. ${manual.job.error}` : ''}
             </div>
           </div>
