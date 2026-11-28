@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from . import admin_api, alerts, api_v1, auth, clients, digest, fleet, integrations, rules, stt, turns, uploads
+from . import activity, admin_api, alerts, api_v1, auth, clients, digest, fleet, integrations, rules, stt, turns, uploads
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -163,8 +163,10 @@ def stream_turn(vehicle: dict, **kwargs) -> StreamingResponse:
 
 
 @app.post("/api/chat")
-async def chat(req: ChatRequest):
+async def chat(req: ChatRequest, request: Request):
     vehicle = vehicle_or_404(req.vehicle_id)
+    activity.record("question", request.headers, who=req.profile.name if req.profile else None, vehicle=req.vehicle_id,
+                    text=(req.text.strip() + (f" [фото: {len(req.images)}]" if req.images else "")).strip())
     session_id = req.session_id or (vehicle["sessions"][-1]["session_id"] if vehicle["sessions"] else "")
     if fleet.get_session(vehicle, session_id) is None:
         raise HTTPException(404, f"У машины {req.vehicle_id} нет проверки {session_id}")

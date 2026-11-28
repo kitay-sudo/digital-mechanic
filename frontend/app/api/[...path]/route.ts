@@ -18,7 +18,8 @@ async function proxy(req: NextRequest, ctx: { params: Promise<{ path: string[] }
   const accept = req.headers.get('accept');
   if (accept) headers.set('accept', accept);
   // Вход: кука сессии механика или администратора; внешние системы — ключ X-API-Key (/api/docs)
-  for (const h of ['cookie', 'x-api-key']) {
+  // Адрес и браузер посетителя: для журнала активности стенда
+  for (const h of ['cookie', 'x-api-key', 'x-forwarded-for', 'x-real-ip', 'user-agent']) {
     const v = req.headers.get(h);
     if (v) headers.set(h, v);
   }

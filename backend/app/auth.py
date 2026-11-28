@@ -25,8 +25,7 @@ from fastapi import APIRouter, HTTPException, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
-from . import mechanics
-from . import demo
+from . import activity, demo, mechanics
 from .db import get_db
 
 log = logging.getLogger("mechanic")
@@ -240,10 +239,14 @@ async def login_mechanic(req: MechanicLogin, request: Request):
     try:
         m = mechanics.repo().login(req.mechanic_id, req.pin.strip())
     except mechanics.MechanicError as exc:
+        known = mechanics.repo().get(req.mechanic_id)
+        activity.record("mechanic_login_failed", request.headers,
+                        who=known["full_name"] if known else f"механик №{req.mechanic_id}", text=str(exc))
         return JSONResponse({"detail": str(exc), **exc.extra}, status_code=exc.status)
     response = JSONResponse({"role": "mechanic", "mechanic": {k: m[k] for k in ("id", "full_name", "level", "font_size")}})
     set_session(response, request, {"role": "mechanic", "mid": m["id"], "v": m["version"]}, MECHANIC_HOURS)
     log.info("Вход механика: %s", m["full_name"])
+    activity.record("mechanic_login", request.headers, who=m["full_name"])
     return response
 
 
@@ -272,11 +275,13 @@ async def login_admin(req: AdminLogin, request: Request):
             _admin_fails[key] = (0, moment + ADMIN_LOCK_SECONDS)
             raise HTTPException(429, "Неверный логин или пароль 5 раз подряд. Вход закрыт на минуту.")
         _admin_fails[key] = (fails, 0.0)
+        activity.record("admin_login_failed", request.headers, who=f"логин {req.login.strip()[:40]}")
         raise HTTPException(401, "Неверный логин или пароль.")
     _admin_fails.pop(key, None)
     response = JSONResponse({"role": "admin"})
     set_session(response, request, {"role": "admin"}, ADMIN_HOURS)
     log.info("Вход администратора")
+    activity.record("admin_login", request.headers, who=f"логин {req.login.strip()[:40]}")
     return response
 
 

@@ -26,7 +26,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from . import auth, clients, demo, fleet, integrations, mechanics, turns
+from . import activity, auth, clients, demo, fleet, integrations, mechanics, turns
 from .version import VERSION
 from .agent.loop import run_turn
 from .config import get_settings
@@ -670,21 +670,23 @@ AGENT_ERRORS = {404: {"description": "Нет машины или проверк�
 
 @v1.post("/agent/diagnose", tags=["Агент"], summary="Разбор результата проверки", response_model=AgentResult,
          responses=AGENT_ERRORS)
-async def agent_diagnose(body: AgentDiagnoseIn):
+async def agent_diagnose(body: AgentDiagnoseIn, request: Request):
     """Агент получает результат проверки, оценивает его правилами и объясняет: исход, приоритет, что проверить
     по руководству (со страницами). То же, что кнопка «Получить результат диагностики» в чате.
     Ответ приходит, когда агент закончил: обычно 10–60 секунд. Ход пишется в переписку по машине и в журнал."""
     vehicle, sid = _agent_vehicle(body.vehicle_id, body.session_id)
+    activity.record("api_diagnose", request.headers, who=body.mechanic, vehicle=body.vehicle_id, text=f"проверка {sid}")
     return await run_agent(vehicle, session_id=sid, text="Получи результат диагностики", photos=[],
                            profile=_profile(body.mechanic, body.level))
 
 
 @v1.post("/agent/ask", tags=["Агент"], summary="Вопрос агенту", response_model=AgentResult, responses=AGENT_ERRORS)
-async def agent_ask(body: AgentAskIn):
+async def agent_ask(body: AgentAskIn, request: Request):
     """Вопрос механика по машине. Агент отвечает строго по руководствам двигателя этой машины со ссылкой на страницу.
     Команда «Создай заявку на дефектовку» вернёт черновик (kind=ticket_draft): отправка в ТОиР — только после
     подтверждения механиком (POST /api/v1/agent/confirm)."""
     vehicle, sid = _agent_vehicle(body.vehicle_id, body.session_id)
+    activity.record("api_question", request.headers, who=body.mechanic, vehicle=body.vehicle_id, text=body.text.strip())
     return await run_agent(vehicle, session_id=sid, text=body.text.strip(), photos=[],
                            profile=_profile(body.mechanic, body.level))
 
