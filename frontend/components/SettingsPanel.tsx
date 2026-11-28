@@ -8,6 +8,7 @@ import type { Config } from '@/lib/types';
 import { Icon } from './Icon';
 import { openTour } from './Onboarding';
 import { appVersion, changeAppServer, usePwa } from '@/lib/pwa';
+import pkg from '../package.json';
 
 function Choice<T extends string>({
   label,
@@ -210,6 +211,11 @@ export function SettingsPanel({ config, leaving = false, onClose }: { config: Co
               <span className="m">{config.llm.model}</span>
             </div>
           ) : null}
+          <div className="sp-model" title="Версия продукта">
+            <Icon name="tag" />
+            <span>Версия</span>
+            <span className="m">{pkg.version}</span>
+          </div>
         </div>
       </aside>
     </>

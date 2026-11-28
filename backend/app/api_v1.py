@@ -27,6 +27,7 @@ from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 from . import auth, clients, demo, fleet, integrations, mechanics, turns
+from .version import VERSION
 from .agent.loop import run_turn
 from .config import get_settings
 from .fleet_db import RESULT_FIELDS
@@ -809,7 +810,7 @@ def install(app: FastAPI) -> None:
 
     def openapi() -> dict[str, Any]:
         if app.openapi_schema is None:
-            schema = get_openapi(title="Цифровой механик: API для внешних систем", version="1.0",
+            schema = get_openapi(title="Цифровой механик: API для внешних систем", version=VERSION,
                                  description=DOC, routes=v1.routes, tags=TAGS)
             for path in schema.get("paths", {}).values():
                 for operation in path.values():

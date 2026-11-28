@@ -22,6 +22,7 @@ from .kb import render
 from .kb.index import get_index
 from .manuals import manual_by_id
 from .store import Store
+from .version import VERSION
 
 log = logging.getLogger("mechanic")
 state: dict = {}
@@ -67,7 +68,7 @@ def vehicle_or_404(vehicle_id: str) -> dict:
 # --- справочные запросы ---
 @app.get("/api/health")
 async def health():
-    return {"status": "ok", **(await clients.health()), "kb": state["index"].stats(),
+    return {"status": "ok", "version": VERSION, **(await clients.health()), "kb": state["index"].stats(),
             "llm": {"provider": state["llm"].name, "model": state["llm"].model}}
 
 
