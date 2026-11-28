@@ -395,7 +395,7 @@ uv run python -m eval.run_scenarios
 | Быстрая проверка стенда (`eval.smoke` с ключом) | 29 из 29 |
 | Внешняя проверка через MCP: цитаты совпали со страницами | 67 из 67 |
 
-Порядок прогона и найденные слабые места: [docs/test-plan.md](docs/test-plan.md). Сравнение моделей по качеству и цене: [docs/model-comparison.md](docs/model-comparison.md).
+Порядок прогона, порог приёмки модели и известные слабые места: [docs/quality.md](docs/quality.md). Сравнение моделей по качеству и цене: [docs/model-comparison.md](docs/model-comparison.md).
 
 ## 8. Техническая документация
 
@@ -403,13 +403,13 @@ uv run python -m eval.run_scenarios
 |:---|:---|
 | [docs/user-guide.md](docs/user-guide.md) | руководство пользователя: механик, главный механик, администратор |
 | [docs/requirements.md](docs/requirements.md) | требования ТЗ, ответы организаторов и заказчика, статус каждого |
-| [docs/design.md](docs/design.md) | проект решения: пользователи, сценарии, архитектура, допущения |
+| [docs/design.md](docs/design.md) | проект решения: пользователь, принципы, дизайн, архитектура, агент, приоритет |
 | [docs/api.md](docs/api.md) | контракт API сервера для интерфейса: чат, журнал, вход, руководства |
 | [docs/integration.md](docs/integration.md) | API для внешних систем: ключи, коды ответов, примеры curl, переходник под 1С |
 | [docs/mcp.md](docs/mcp.md) | MCP-коннектор: подключение ИИ-ассистента и готовый промпт проверки |
 | [docs/local-model.md](docs/local-model.md) | локальная модель в контуре заказчика: требования к модели и серверу |
 | [docs/model-comparison.md](docs/model-comparison.md) | сравнение вариантов модели по качеству и стоимости |
-| [docs/test-plan.md](docs/test-plan.md) | порядок прогона на настоящей модели и результаты |
+| [docs/quality.md](docs/quality.md) | проверка качества: инструменты, результаты, порог приёмки, слабые места |
 | [docs/cost-calculation.xlsx](docs/cost-calculation.xlsx) | расчёт стоимости по шаблону организаторов |
 | [mocks/README.md](mocks/README.md) | заглушки заказчика Mock ML и Mock ТОиР |
 
@@ -590,4 +590,4 @@ pnpm dev
 | IBM Plex, Tabler Icons | шрифты и значки | OFL-1.1, MIT |
 | Claude (Anthropic) по API | модель агента | коммерческий API |
 
-Заглушки Mock ML и Mock ТОиР и синтетические данные парка предоставлены заказчиком. До спринта сделаны только проектные материалы без кода: [docs/design.md](docs/design.md), [docs/pitch.md](docs/pitch.md) и статичный макет интерфейса [docs/mockups/digital-mechanic.html](docs/mockups/digital-mechanic.html). Весь код сервера, агента и интерфейса написан в спринте.
+Заглушки Mock ML и Mock ТОиР и синтетические данные парка предоставлены заказчиком. До спринта сделаны только проектные материалы без кода: замысел решения и статичный макет интерфейса [docs/mockups/digital-mechanic.html](docs/mockups/digital-mechanic.html), они видны в первом коммите истории. Весь код сервера, агента и интерфейса написан в спринте.
