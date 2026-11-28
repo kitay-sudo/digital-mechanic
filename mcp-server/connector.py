@@ -259,8 +259,10 @@ async def ask_agent(vehicle_id: str, question: str, session_id: str | None = Non
 @server.tool(title="Подтвердить заявку в ТОиР", annotations=AGENT)
 async def confirm_ticket(draft_id: str, warning_ack: bool = False) -> dict:
     """Механик подтверждает черновик заявки (draft_id вида d_12 из ответа kind=ticket_draft): агент отправляет
-    заявку в ТОиР и возвращает её номер (kind=ticket_created) или причину отказа (kind=notice).
+    заявку в ТОиР и возвращает её номер (kind=ticket_created) или причину, по которой ТОиР её не принял (kind=notice).
 
+    Запрос, который нельзя выполнить, возвращается ошибкой инструмента с причиной: черновик не найден (HTTP 404),
+    заявка по этому черновику уже отправлена — второй не будет (HTTP 409), нужно согласие с предупреждением (HTTP 400).
     warning_ack=true нужен, если запись с помехами и в черновике requires_warning_ack: механик понимает, что вывод
     предварительный.
     """

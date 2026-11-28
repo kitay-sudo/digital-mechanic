@@ -85,7 +85,25 @@ def test_every_fault_type_has_rules():
 
 def test_trend_detects_growth():  # B2
     sessions = [diag(anomaly_score=s) for s in (0.1, 0.3, 0.6)]
-    assert rules.trend(sessions)["direction"] == "rising"
+    t = rules.trend(sessions)
+    assert t["direction"] == "rising" and t["text"].endswith("0,10 → 0,30 → 0,60")
+
+
+def test_trend_normal_fluctuation_is_not_growth():  # отчёт проверки 28.11: 0,05 → 0,13 у двух нормальных проверок
+    sessions = [diag(status="normal", anomaly_type=None, anomaly_score=s) for s in (0.05, 0.13)]
+    t = rules.trend(sessions)
+    assert t["direction"] == "stable" and "в пределах нормы" in t["text"] and "растёт" not in t["text"]
+
+
+def test_trend_sharp_jump_is_named():  # отчёт проверки 28.11: 0,15; 0,04; 0,19 → 0,76 — скачок, не постепенный рост
+    sessions = [diag(status="normal", anomaly_type=None, anomaly_score=s) for s in (0.15, 0.04, 0.19)]
+    t = rules.trend(sessions + [diag(anomaly_score=0.76)])
+    assert t["direction"] == "rising" and "резко выросла" in t["text"] and "0,19 → 0,76" in t["text"]
+
+
+def test_trend_gradual_growth_stays_gradual():
+    t = rules.trend([diag(anomaly_score=s) for s in (0.33, 0.66, 0.93)])
+    assert "растёт 3 проверки подряд" in t["text"]
 
 
 def test_injected_instructions_are_cut_from_description():  # П17: три вида подложенных команд, как в данных заказчика
@@ -128,3 +146,15 @@ def test_priority_follows_customer_criteria():  # кик-офф: безопас�
     belt = rules.assess(diag(anomaly_type="F04", anomaly_title="Ремённый привод агрегатов"), DIESEL, [], 0.5)
     assert gearbox["priority"] == "high" and brakes["priority"] == "high" and belt["priority"] == "low"
     assert "безопасность" in brakes["basis"][0]  # основание объясняет выбор механику
+
+
+def test_ticket_line_carries_dispute_to_toir():  # отчёт проверки 28.11: предупреждение черновика не доходило до ТОиР
+    from app.agent.tools import DISPUTED_NOTE, ticket_payload
+
+    draft = {"vehicle_id": "A101TT77", "session_id": "S-1", "anomaly_type": "F01", "conclusion": "Клапанный механизм",
+             "urgency": "high", "references": [],
+             "operations": [{"text": "Проверить зазоры на холодном двигателе", "disputed": True},
+                            {"text": "Заменить прокладку"}],
+             "spare_parts": []}
+    ops = ticket_payload(draft)["operations"]
+    assert ops[0].endswith(DISPUTED_NOTE) and ops[1] == "Заменить прокладку"

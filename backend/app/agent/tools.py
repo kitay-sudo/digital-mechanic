@@ -511,6 +511,15 @@ async def prepare_ticket(ctx: TurnContext, args: dict, step_id: str) -> tuple[st
     }), False
 
 
+DISPUTED_NOTE = " (в руководствах расхождение по условию этой работы: выполнять по более осторожной формулировке)"
+
+
+def _ticket_line(item: dict) -> str:
+    """Текст работы для ТОиР. Предупреждения черновика в контракт ТОиР не входят, поэтому пометка о спорном
+    условии идёт в саму строку работы: исполнитель в цехе видит её без черновика."""
+    return item["text"] + (DISPUTED_NOTE if item.get("disputed") else "")
+
+
 def ticket_payload(draft: dict) -> dict:
     """JSON заявки строго по контракту Mock ТОиР (раздел 5 ТЗ)."""
     return {
@@ -519,8 +528,8 @@ def ticket_payload(draft: dict) -> dict:
         "anomaly_type": draft["anomaly_type"],
         "conclusion": draft["conclusion"],
         "urgency": draft["urgency"],
-        "operations": [item["text"] for item in draft["operations"]],
-        "spare_parts": [item["text"] for item in draft["spare_parts"]],
+        "operations": [_ticket_line(item) for item in draft["operations"]],
+        "spare_parts": [_ticket_line(item) for item in draft["spare_parts"]],
         "references": [{"manual": ref["manual"], "pdf_page": ref["pdf_page"]} for ref in draft["references"]],
     }
 

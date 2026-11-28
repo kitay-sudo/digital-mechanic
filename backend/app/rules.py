@@ -70,6 +70,7 @@ SCORE_HIGH = 0.85  # с этой оценки приоритет поднима�
 SCORE_LOW = 0.62   # ниже этой оценки приоритет опускается на ступень
 CONFIDENCE_CAP = 0.60  # ниже этой уверенности приоритет не выше среднего
 TREND_STEP = 0.03
+TREND_JUMP = 0.3  # рост на последней проверке не меньше этого при малом росте до неё — скачок, а не постепенный рост
 
 
 def fmt(value: float | None) -> str:
@@ -114,8 +115,13 @@ def repeat_after_repair(diagnosis: dict, tickets: list[dict], session_id: str) -
 
 
 def trend(sessions: list[dict]) -> dict:
-    """Тенденция оценки отклонения по последним проверкам (задача B2)."""
-    scores = [s["anomaly_score"] for s in valid_sessions(sessions)][-5:]
+    """Тенденция оценки отклонения по последним проверкам (задача B2).
+
+    Ряд пишется значениями, чтобы механик и агент видели форму роста: постепенный рост или скачок
+    на последней проверке. Колебания, в которых нет ни одной проверки с отклонением, — не тенденция, а норма.
+    """
+    valid = valid_sessions(sessions)[-5:]
+    scores = [s["anomaly_score"] for s in valid]
     if len(scores) < 2:
         return {"direction": "none", "text": "Для тенденции мало проверок с пригодной записью"}
     run_up = run_down = 1
@@ -126,12 +132,20 @@ def trend(sessions: list[dict]) -> dict:
             run_down += 1
         else:
             break
+
+    def path(n: int) -> str:
+        return " → ".join(fmt(x) for x in scores[-n:])
+
+    run = max(run_up, run_down)
+    if run >= 2 and not any(s.get("status") == "anomaly" for s in valid[-run:]):
+        return {"direction": "stable", "text": f"Оценка отклонения в пределах нормы, без выраженной тенденции: {path(run)}"}
     if run_up >= 2:
-        return {"direction": "rising",
-                "text": f"Оценка отклонения растёт {run_up} проверки подряд: с {fmt(scores[-run_up])} до {fmt(scores[-1])}"}
+        jump = scores[-1] - scores[-2] >= TREND_JUMP and scores[-2] - scores[-run_up] < TREND_JUMP
+        if jump:
+            return {"direction": "rising", "text": f"Оценка отклонения резко выросла на последней проверке: {path(run_up)}"}
+        return {"direction": "rising", "text": f"Оценка отклонения растёт {run_up} проверки подряд: {path(run_up)}"}
     if run_down >= 2:
-        return {"direction": "falling",
-                "text": f"Оценка отклонения снижается: с {fmt(scores[-run_down])} до {fmt(scores[-1])}"}
+        return {"direction": "falling", "text": f"Оценка отклонения снижается: {path(run_down)}"}
     return {"direction": "stable", "text": f"Оценка отклонения без выраженной тенденции, последняя {fmt(scores[-1])}"}
 
 
