@@ -150,14 +150,30 @@ def place(work: Path) -> list[str]:
     return missing
 
 
+INDEX = "индекс базы знаний"
+
+
 def absent() -> list[str]:
     """Чего нет на диске: руководства заказчика, данные заглушек, индекс базы знаний."""
     settings = get_settings()
     found = [m.file for m in all_manuals() if m.source == "base" and not (settings.pdf_dir / m.file).exists()]
     found += [p.name for p in (settings.fleet_path, settings.fault_types_path) if not p.exists()]
-    if not settings.index_path.exists():
-        found.append("индекс базы знаний")
+    if not settings.index_path.exists() or unindexed():
+        found.append(INDEX)
     return found
+
+
+def unindexed() -> list[str]:
+    """Руководства, которые лежат на диске, но не попали в индекс: например, PDF положили вручную
+    после первого запуска без материалов, когда индекс собрался пустым."""
+    settings = get_settings()
+    on_disk = [m for m in all_manuals() if (settings.pdf_dir / m.file).exists()]
+    if not settings.index_path.exists():
+        return [m.file for m in on_disk]
+    from .kb.index import get_index
+
+    index = get_index()
+    return [m.file for m in on_disk if not index.page_count(m.id)]
 
 
 def main(argv: list[str]) -> int:
@@ -170,8 +186,15 @@ def main(argv: list[str]) -> int:
             if not lacking:
                 print("Материалы: уже на месте")
                 return 0
-            if not sources:
-                print("Внимание: MATERIALS_URL не задан, нет: " + ", ".join(lacking))
+            files = [x for x in lacking if x != INDEX]
+            if not files or not sources:
+                if files:
+                    print("Внимание: MATERIALS_URL не задан, нет: " + ", ".join(files))
+                if unindexed():
+                    print("Материалы на месте, индекс базы знаний собирается заново")
+                    from .kb import ingest
+
+                    ingest.main()
                 return 0
             print("Материалы: загрузка, нет: " + ", ".join(lacking))
             main([a for a in argv if a != "--if-missing"])
