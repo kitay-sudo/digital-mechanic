@@ -6,10 +6,16 @@
 """
 from __future__ import annotations
 
+import os
 from urllib.parse import urlsplit, urlunsplit
 
-from .config import OVERRIDABLE, OVERRIDE_PREFIX, get_settings
+from collections.abc import Callable
+
+from .config import MODEL_KEYS, MODEL_MODES, OVERRIDABLE, OVERRIDE_PREFIX, YANDEX_DEFAULT_MODEL, get_settings
 from .db import get_db
+
+# Кто пересоздаёт клиент модели после смены выбора (main.py): новая модель отвечает со следующего вопроса
+on_model_change: list[Callable[[], None]] = []
 
 URL_FIELDS = ("ml_url", "toir_url", "alert_webhook_url")
 SECRET_FIELDS = ("ml_token", "toir_token")
@@ -19,7 +25,15 @@ LABELS = {
     "alert_webhook_url": "Веб-хук администратора",
     "ml_token": "Токен ML-сервиса",
     "toir_token": "Токен ТОиР",
+    "llm_mode": "Модель",
+    "llm_local_url": "Адрес локальной модели",
+    "llm_local_model": "Имя локальной модели",
+    "llm_local_key": "Ключ локальной модели",
+    "yandex_folder": "Каталог Yandex Cloud",
+    "yandex_key": "API-ключ Yandex AI Studio",
+    "yandex_model": "Модель Yandex AI Studio",
 }
+MODEL_SECRETS = ("llm_local_key", "yandex_key")
 MASK = "•••"
 
 
@@ -67,7 +81,30 @@ def current() -> dict:
                              "secret": key in SECRET_FIELDS or key == "alert_webhook_url",
                              "source": "db" if key in stored else "env"})
     out["ticket_sink"] = settings.ticket_sink
+    out["model"] = model_info(stored)
     return out
+
+
+def model_info(stored: dict[str, str] | None = None) -> dict:
+    """Выбор модели для экрана «Подключения»: вариант, его поля (ключи скрыты) и что отвечает сейчас."""
+    settings = get_settings()
+    stored = get_db().values(OVERRIDE_PREFIX) if stored is None else stored
+    env_cloud = os.environ.get("LLM_PROVIDER", "").strip().lower() in ("", "anthropic") and bool(os.environ.get("ANTHROPIC_API_KEY"))
+    return {
+        "mode": settings.llm_mode,
+        "provider": settings.llm_provider,
+        "model": settings.llm_model,
+        # Облако из настроек сервера: Claude по встроенному ключу (через ProxyAPI, если задан его адрес)
+        "cloud": {"provider": "Claude" if env_cloud else os.environ.get("LLM_PROVIDER", "") or "заглушка",
+                  "via_proxyapi": "proxyapi" in os.environ.get("ANTHROPIC_BASE_URL", "").lower(),
+                  "model": os.environ.get("LLM_MODEL", ""), "key_builtin": env_cloud},
+        "local": {"url": stored.get("llm_local_url", ""),
+                  "model": stored.get("llm_local_model", ""),
+                  "key": mask_secret(stored.get("llm_local_key", ""))},
+        "yandex": {"folder": stored.get("yandex_folder", ""),
+                   "key": mask_secret(stored.get("yandex_key", "")),
+                   "model": stored.get("yandex_model", "") or YANDEX_DEFAULT_MODEL},
+    }
 
 
 class SettingsError(ValueError):
@@ -101,10 +138,50 @@ def update(patch: dict[str, str | None]) -> list[str]:
         if value and key in SECRET_FIELDS and len(value) > 500:
             raise SettingsError(key, f"{LABELS[key]}: слишком длинный")
         clean[key] = value or None
-    for key, value in clean.items():
+    model = _model_clean(patch, db.values(OVERRIDE_PREFIX))
+    for key, value in {**clean, **model}.items():
         db.set_value(OVERRIDE_PREFIX + key, value)
         changed.append(key)
     if changed:
         # Клиенты, правила и оповещения читают адреса из get_settings: новое значение действует сразу
         get_settings.cache_clear()
+    if model:
+        for hook in on_model_change:
+            hook()
     return changed
+
+
+def _model_clean(patch: dict[str, str | None], stored: dict[str, str]) -> dict[str, str | None]:
+    """Поля выбора модели из запроса. Проверяет, что у выбранного варианта есть всё нужное."""
+    out: dict[str, str | None] = {}
+    for key in MODEL_KEYS:
+        if key not in patch or patch[key] is None:
+            continue
+        value = str(patch[key]).strip()
+        if value and key in MODEL_SECRETS and is_masked(value):
+            continue
+        if len(value) > 500:
+            raise SettingsError(key, f"{LABELS[key]}: слишком длинное значение")
+        if key == "llm_mode" and value and value not in MODEL_MODES:
+            raise SettingsError(key, "Модель: выберите облако, Yandex AI Studio или локальную модель")
+        if key == "llm_local_url" and value:
+            parts = urlsplit(value)
+            if parts.scheme not in ("http", "https") or not parts.netloc:
+                raise SettingsError(key, f"{LABELS[key]}: нужен адрес вида http://сервер:порт/v1")
+            value = value.rstrip("/")
+        out[key] = value or None
+    merged = dict(stored)
+    merged.update({k: v for k, v in out.items()})
+    mode = merged.get("llm_mode") or "cloud"
+    if "llm_mode" in out or any(k in out for k in MODEL_KEYS):
+        if mode == "local":
+            if not merged.get("llm_local_url"):
+                raise SettingsError("llm_local_url", "Для локальной модели нужен адрес сервера, например http://сервер:11434/v1")
+            if not merged.get("llm_local_model"):
+                raise SettingsError("llm_local_model", "Для локальной модели нужно имя модели на сервере, например qwen2.5:7b")
+        if mode == "yandex":
+            if not merged.get("yandex_folder"):
+                raise SettingsError("yandex_folder", "Для Yandex AI Studio нужен идентификатор каталога")
+            if not merged.get("yandex_key"):
+                raise SettingsError("yandex_key", "Для Yandex AI Studio нужен API-ключ")
+    return out

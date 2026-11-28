@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 
 /**
- * Несколько значений в одну строку, разделённых отступом — без точек-разделителей.
+ * Несколько значений в одну строку, между ними тонкая вертикальная черта (не точки).
  * Пустые значения пропускаются. nowrap — для строк, которые обрезаются по ширине.
  */
 export function Parts({ items, className, nowrap = false }: { items: ReactNode[]; className?: string; nowrap?: boolean }) {

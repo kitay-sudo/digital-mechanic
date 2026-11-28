@@ -183,6 +183,37 @@ def test_integrations_override_env_and_mask_secrets(api, monkeypatch):
     assert bad.status_code == 422 and "ТОиР" in bad.json()["detail"]
 
 
+def test_model_switch_local_yandex_and_back(api):
+    """Администратор меняет модель на экране «Подключения»: действует сразу, ключи скрыты, без полей не сохраняется."""
+    from app.main import state
+
+    start = api.get("/api/v1/settings/integrations", headers=H).json()["model"]
+    assert start["mode"] == "cloud"
+    # Локальной модели без имени не бывает
+    bad = api.put("/api/v1/settings/integrations", headers=H, json={"llm_mode": "local", "llm_local_url": "http://gpu.local:11434/v1"})
+    assert bad.status_code == 422 and "имя модели" in bad.json()["detail"]
+    assert get_settings().llm_mode == "cloud"
+    r = api.put("/api/v1/settings/integrations", headers=H, json={
+        "llm_mode": "local", "llm_local_url": "http://gpu.local:11434/v1/", "llm_local_model": "qwen2.5:7b"})
+    assert r.status_code == 200, r.text
+    s = get_settings()
+    assert (s.llm_mode, s.llm_provider, s.llm_base_url, s.llm_model) == ("local", "openai", "http://gpu.local:11434/v1", "qwen2.5:7b")
+    assert s.price_input == 0 and s.price_output == 0  # локальная модель бесплатна по токенам
+    assert state["llm"].name == "openai" and state["llm"].model == "qwen2.5:7b"  # клиент пересоздан без перезапуска
+    # Yandex AI Studio: модель собирается из каталога, ключ в ответе скрыт
+    r = api.put("/api/v1/settings/integrations", headers=H, json={
+        "llm_mode": "yandex", "yandex_folder": "b1gfolder", "yandex_key": "AQVN-secret-key-9876"})
+    assert r.status_code == 200, r.text
+    model = r.json()["model"]
+    assert model["mode"] == "yandex" and "secret-key" not in str(r.json()) and model["yandex"]["key"].endswith("9876")
+    s = get_settings()
+    assert s.llm_model == "gpt://b1gfolder/yandexgpt/latest" and s.llm_project == "b1gfolder" and s.llm_provider == "openai"
+    # Назад в облако из настроек сервера
+    r = api.put("/api/v1/settings/integrations", headers=H, json={"llm_mode": "cloud"})
+    assert r.status_code == 200 and get_settings().llm_mode == "cloud"
+    assert state["llm"].name == start["provider"] or state["llm"].is_mock
+
+
 # --- приёмник заявок: переходник подключается переменной TICKET_SINK ---
 class FakeSink:
     name = "fake"

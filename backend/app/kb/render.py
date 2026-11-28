@@ -42,12 +42,14 @@ def page_png(manual_id: str, page: int, quote: str = "") -> bytes | None:
             return None
         pdf_page = doc[page - 1]
         if quote:
-            rects = []
+            # Четырёхугольники, а не прямоугольники: на повёрнутом тексте (таблицы в альбомной ориентации)
+            # выделение идёт вдоль строки, а не огромными овалами поперёк страницы
+            quads = []
             for segment in _segments(quote):
-                rects.extend(pdf_page.search_for(segment, quads=False))
-            for rect in rects:
+                quads.extend(pdf_page.search_for(segment, quads=True))
+            for quad in quads:
                 try:
-                    annot = pdf_page.add_highlight_annot(rect)
+                    annot = pdf_page.add_highlight_annot(quad)
                     annot.set_colors(stroke=(1.0, 0.82, 0.2))
                     annot.update()
                 except Exception:

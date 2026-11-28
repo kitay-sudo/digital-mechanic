@@ -12,7 +12,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
 from pydantic import BaseModel, Field, model_validator
 
-from . import admin_api, alerts, api_v1, auth, clients, digest, fleet, rules, stt, turns, uploads
+from . import admin_api, alerts, api_v1, auth, clients, digest, fleet, integrations, rules, stt, turns, uploads
 from .agent import prompt
 from .agent.llm import build_llm
 from .agent.loop import run_turn
@@ -33,6 +33,8 @@ async def lifespan(app: FastAPI):
     state["store"] = Store(settings.db_path)
     state["index"] = get_index()
     state["llm"] = build_llm()
+    # Администратор сменил модель на экране «Подключения»: со следующего вопроса отвечает новая
+    integrations.on_model_change[:] = [lambda: state.__setitem__("llm", build_llm())]
     stats = state["index"].stats()
     if not stats["chunks"]:
         log.warning("База знаний пуста (%s). Задайте MATERIALS_URL и выполните: python -m app.materials", settings.pdf_dir)

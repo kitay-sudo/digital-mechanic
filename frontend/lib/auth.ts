@@ -60,8 +60,64 @@ export interface IntegrationItem {
   source: 'db' | 'env';
 }
 
+export type ModelMode = 'cloud' | 'yandex' | 'local';
+
+/** Какая модель отвечает механикам: выбор администратора на экране «Подключения» */
+export interface ModelChoice {
+  mode: ModelMode;
+  provider: string;
+  /** Модель, которая отвечает сейчас */
+  model: string;
+  cloud: { provider: string; via_proxyapi: boolean; model: string; key_builtin: boolean };
+  local: { url: string; model: string; key: string | null };
+  yandex: { folder: string; key: string | null; model: string };
+}
+
+/** Руководство в базе знаний (экран «Руководства» администратора) */
+export interface ManualJob {
+  state: 'running' | 'done' | 'error';
+  done: number;
+  total: number;
+  error: string | null;
+}
+
+export interface LibraryManual {
+  manual_id: string;
+  short: string;
+  title: string;
+  designation: string;
+  year: number | null;
+  engines: string[];
+  pages: number;
+  /** base — из материалов заказчика, upload — загружено администратором */
+  source: 'base' | 'upload';
+  /** Есть ли PDF на сервере */
+  file: boolean;
+  indexed_pages: number;
+  ocr_pages: number;
+  chunks: number;
+  job: ManualJob | null;
+}
+
+export interface Library {
+  manuals: LibraryManual[];
+  engines: string[];
+  /** Распознаются ли сканы (Tesseract на сервере) */
+  ocr: boolean;
+  added?: string;
+}
+
+export interface ManualMeta {
+  title: string;
+  short: string;
+  designation: string;
+  year?: number;
+  engines: string[];
+}
+
 export interface Integrations {
   items: IntegrationItem[];
+  model?: ModelChoice;
   ticket_sink: string;
   api: { enabled: boolean; keys: number; docs_url: string };
   health?: { ml: boolean; toir: boolean };
@@ -123,7 +179,16 @@ export const authApi = {
   updateMechanic: (id: number, body: MechanicInput) => call<Mechanic>(`/api/admin/mechanics/${id}`, json('PUT', body)),
   deleteMechanic: (id: number) => call<{ deleted: boolean }>(`/api/admin/mechanics/${id}`, { method: 'DELETE' }),
   integrations: () => call<Integrations>('/api/admin/integrations'),
-  saveIntegrations: (body: Partial<Record<IntegrationItem['key'], string>>) =>
+  manuals: () => call<Library>('/api/admin/manuals'),
+  /** PDF уходит телом запроса, названия и двигатели — параметрами. Индексация начинается сама */
+  uploadManual: (file: File, meta: ManualMeta) => {
+    const q = new URLSearchParams({ title: meta.title, short: meta.short, designation: meta.designation, engines: meta.engines.join(',') });
+    if (meta.year) q.set('year', String(meta.year));
+    return call<Library>(`/api/admin/manuals/upload?${q}`, { method: 'PUT', headers: { 'Content-Type': 'application/pdf' }, body: file });
+  },
+  indexManual: (id: string) => call<Library>(`/api/admin/manuals/${encodeURIComponent(id)}/index`, { method: 'POST' }),
+  deleteManual: (id: string) => call<Library>(`/api/admin/manuals/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  saveIntegrations: (body: Partial<Record<string, string>>) =>
     call<Integrations>('/api/admin/integrations', json('PUT', body)),
 };
 

@@ -116,6 +116,21 @@ class Index:
         with self._lock:
             self._db.commit()
 
+    def remove_manual(self, manual_id: str) -> None:
+        """Убрать одно руководство из индекса: страницы, фрагменты и их поисковые записи."""
+        with self._lock:
+            self._db.execute("DELETE FROM chunks_fts WHERE rowid IN (SELECT id FROM chunks WHERE manual_id=?)", (manual_id,))
+            self._db.execute("DELETE FROM chunks WHERE manual_id=?", (manual_id,))
+            self._db.execute("DELETE FROM pages WHERE manual_id=?", (manual_id,))
+            self._db.commit()
+
+    def manual_stats(self) -> dict[str, dict]:
+        """Сколько страниц, распознанных страниц и фрагментов у каждого руководства в индексе."""
+        with self._lock:
+            pages = self._db.execute("SELECT manual_id, COUNT(*), SUM(ocr) FROM pages GROUP BY manual_id").fetchall()
+            chunks = dict(self._db.execute("SELECT manual_id, COUNT(*) FROM chunks GROUP BY manual_id").fetchall())
+        return {m: {"pages": n, "ocr_pages": int(ocr or 0), "chunks": chunks.get(m, 0)} for m, n, ocr in pages}
+
 
 @lru_cache
 def get_index() -> Index:

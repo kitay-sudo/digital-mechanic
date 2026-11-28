@@ -3884,6 +3884,47 @@ button.sp-link {
   animation: fade-in var(--mo) ease-out;
 }
 
+/* Обучение: бледный чертёж узла на фоне, у слайдов по очереди свой. Слой обрезает края: прокрутки нет */
+.tour-art {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  animation: fade-in var(--mo) ease-out;
+}
+
+/* Чертёж крупно в свободном поле слева от текста: обрезан краем экрана, под текст не заходит.
+   Правый край чертежа — за 48 px до колонки текста (её отступ слева: max(24px, (100vw - 1120px) / 2)) */
+.tour-art > .tour-bp {
+  position: absolute;
+  top: 50%;
+  right: calc(100vw - max(24px, (100vw - 1120px) / 2) + 48px);
+  transform: translateY(-50%);
+  /* Шире поля в 1,75 раза: в кадре сам узел, левый край чертежа обрезан экраном */
+  width: calc((max(24px, (100vw - 1120px) / 2) - 48px) * 1.75);
+  height: auto;
+  aspect-ratio: 600 / 410;
+  color: var(--tx);
+  opacity: 0.13;
+}
+
+[data-theme='light'] .tour-art > .tour-bp {
+  opacity: 0.16;
+}
+
+/* Поле слева узкое: чертёж не помещается сбоку и не должен лезть под текст */
+@media (max-width: 1500px) {
+  .tour-art {
+    display: none;
+  }
+}
+
+.tour > :not(.tour-art) {
+  position: relative;
+  z-index: 1;
+}
+
 .tour.leaving {
   animation: fade-out var(--mo) ease-out forwards;
 }
@@ -5367,9 +5408,25 @@ input.switch:disabled {
   display: inline-flex;
   flex-wrap: wrap;
   align-items: baseline;
-  column-gap: 14px;
+  column-gap: 17px;
   row-gap: 2px;
   min-width: 0;
+}
+
+/* Разделитель между значениями: тонкая вертикальная черта посередине отступа */
+.parts > span + span {
+  position: relative;
+}
+
+.parts > span + span::before {
+  content: '';
+  position: absolute;
+  left: -9px;
+  top: 50%;
+  width: 1px;
+  height: 0.95em;
+  background: var(--line2);
+  transform: translateY(-50%);
 }
 
 .parts.nowrap {

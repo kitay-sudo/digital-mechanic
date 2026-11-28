@@ -87,6 +87,13 @@ export function Header() {
           </Link>
         ) : null}
         {admin ? (
+          // Руководства в базе знаний: загрузить PDF, проиндексировать, удалить устаревшее
+          <Link href="/admin/manuals" className={pathname === '/admin/manuals' ? 'on' : ''}>
+            <Icon name="books" size="s" />
+            Руководства
+          </Link>
+        ) : null}
+        {admin ? (
           <Link href="/admin/integrations" className={pathname === '/admin/integrations' ? 'on' : ''}>
             <Icon name="plug-connected" size="s" />
             Подключения

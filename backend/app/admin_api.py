@@ -10,7 +10,7 @@ from datetime import date, datetime, timezone
 from fastapi import APIRouter, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 
-from . import alerts, auth, digest, fleet, journal, shift
+from . import alerts, auth, digest, fleet, journal, library, shift
 from .config import get_settings
 from .store import Store
 
@@ -185,3 +185,42 @@ async def pilot_metrics(start: str | None = Query(default=None, alias="from", ma
     """Метрики пилота: от вердикта до заявки, честные отказы, повтор после ремонта, время ответа и стоимость."""
     lo, hi = _period(start, end, default_today=True)
     return shift.metrics(store(), lo or datetime.fromtimestamp(0, timezone.utc), hi or datetime.now(timezone.utc))
+
+
+# --- руководства: загрузить PDF, проиндексировать, удалить ---
+@router.get("/api/admin/manuals")
+async def admin_manuals():
+    """Руководства в базе знаний: двигатели, страницы, что в индексе, идёт ли индексация."""
+    return library.overview()
+
+
+@router.put("/api/admin/manuals/upload")
+async def admin_upload_manual(request: Request, title: str = Query(min_length=3, max_length=200),
+                              short: str = Query(min_length=2, max_length=60), engines: str = Query(min_length=2, max_length=500),
+                              designation: str = Query(default="", max_length=200), year: int | None = Query(default=None, ge=1950, le=2100)):
+    """PDF телом запроса (Content-Type: application/pdf). После сохранения сразу начинается индексация."""
+    try:
+        manual = await library.add(request.stream(), title=title, short=short, designation=designation, year=year,
+                                   engines=[e.strip() for e in engines.split(",") if e.strip()])
+    except library.LibraryError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    library.start_index(manual.id)
+    return {**library.overview(), "added": manual.id}
+
+
+@router.post("/api/admin/manuals/{manual_id}/index")
+async def admin_index_manual(manual_id: str):
+    try:
+        library.start_index(manual_id)
+    except library.LibraryError as exc:
+        raise HTTPException(409 if "уже" in str(exc) else 404, str(exc)) from exc
+    return library.overview()
+
+
+@router.delete("/api/admin/manuals/{manual_id}")
+async def admin_delete_manual(manual_id: str):
+    try:
+        library.remove(manual_id)
+    except library.LibraryError as exc:
+        raise HTTPException(409 if "идёт" in str(exc) else 404, str(exc)) from exc
+    return library.overview()

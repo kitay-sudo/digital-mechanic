@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { LoginError, authApi, type IntegrationItem, type Integrations } from '@/lib/auth';
+import { LoginError, authApi, type IntegrationItem, type Integrations, type ModelChoice, type ModelMode } from '@/lib/auth';
 import { Icon } from './Icon';
 import { ErrorState, Loading } from './States';
 
@@ -27,11 +27,24 @@ const HINT: Record<Key, string> = {
     'Адрес входящего веб-хука вашего мессенджера (Mattermost, Slack, Rocket.Chat). Срочное приходит сразу: нет руководств, ошибка диагностики, сбой агента. Вопросы без ответа в руководстве и сообщения механиков — сводкой в 18:00. Пусто — только журнал.',
 };
 
+const MODES: { code: ModelMode; label: string }[] = [
+  { code: 'cloud', label: 'Облако, ключ встроен' },
+  { code: 'yandex', label: 'Yandex AI Studio' },
+  { code: 'local', label: 'Локальная модель' },
+];
+
+const MODE_HINT: Record<ModelMode, string> = {
+  cloud: '',
+  yandex: 'Российское облако: данные обрабатываются в России. Нужны идентификатор каталога и API-ключ сервисного аккаунта.',
+  local:
+    'Модель на сервере заказчика (Ollama, vLLM): данные не выходят из контура. Плата за токены не начисляется, затраты только на сервер.',
+};
+
 /** Экран администратора: адреса и токены внешних сервисов. Значения отсюда важнее .env и действуют сразу */
 export function AdminIntegrations() {
   const [data, setData] = useState<Integrations | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [draft, setDraft] = useState<Partial<Record<Key, string>>>({});
+  const [draft, setDraft] = useState<Partial<Record<string, string>>>({});
   const [saveError, setSaveError] = useState<string | null>(null);
   const [savedAt, setSavedAt] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -49,7 +62,7 @@ export function AdminIntegrations() {
 
   useEffect(load, [load]);
 
-  const save = (patch: Partial<Record<Key, string>>) => {
+  const save = (patch: Partial<Record<string, string>>) => {
     setBusy(true);
     setSaveError(null);
     authApi
@@ -89,6 +102,7 @@ export function AdminIntegrations() {
           </button>
         </div>
         <div className="box intg-b">
+          {data.model ? <ModelBlock m={data.model} draft={draft} setDraft={setDraft} /> : null}
           {[...data.items].sort((a, b) => ORDER.indexOf(a.key) - ORDER.indexOf(b.key)).map((it) => (
             <div className="intg-r" key={it.key}>
               <div className="intg-l">
@@ -170,6 +184,88 @@ export function AdminIntegrations() {
           </div>
         </div>
       </form>
+    </div>
+  );
+}
+
+/** Какая модель отвечает механикам: облако со встроенным ключом, Yandex AI Studio или модель в контуре заказчика */
+function ModelBlock({
+  m,
+  draft,
+  setDraft,
+}: {
+  m: ModelChoice;
+  draft: Partial<Record<string, string>>;
+  setDraft: (f: (d: Partial<Record<string, string>>) => Partial<Record<string, string>>) => void;
+}) {
+  const mode = (draft.llm_mode ?? m.mode) as ModelMode;
+  const set = (key: string, value: string) => setDraft((d) => ({ ...d, [key]: value }));
+  const field = (key: string, label: string, value: string | null, placeholder: string, secret = false) => (
+    <label className="intg-fl" key={key}>
+      <span className="intg-fn">{label}</span>
+      <input
+        className="inp"
+        type={secret ? 'password' : 'text'}
+        value={draft[key] ?? (secret ? '' : (value ?? ''))}
+        onChange={(e) => set(key, e.target.value)}
+        placeholder={secret && value ? `Задан: ${value}` : placeholder}
+        autoComplete="off"
+        spellCheck={false}
+        aria-label={label}
+      />
+    </label>
+  );
+  const cloud = m.cloud.key_builtin
+    ? `${m.cloud.provider}${m.cloud.via_proxyapi ? ' через ProxyAPI' : ''}: ключ уже встроен в сервер, вводить ничего не нужно. Оплата в рублях за токены, расход виден в журнале и сводке смены.`
+    : 'Модель из файла настроек сервера.';
+  return (
+    <div className="intg-r">
+      <div className="intg-l">
+        <b className="intg-t">Модель</b>
+        <span className="intg-ok">
+          <Icon name="cpu" size="s" />
+          сейчас отвечает: <span className="m">{m.model || 'не задана'}</span>
+        </span>
+      </div>
+      <div className="intg-h">
+        Какая модель отвечает механикам. Меняется сразу, без перезапуска сервера: новая модель отвечает со следующего вопроса.
+      </div>
+      <div className="seg full intg-seg" role="radiogroup" aria-label="Модель">
+        {MODES.map((o) => (
+          <button
+            key={o.code}
+            type="button"
+            role="radio"
+            aria-checked={mode === o.code}
+            className={mode === o.code ? 'on' : ''}
+            onClick={() => set('llm_mode', o.code)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      {mode === 'cloud' ? (
+        <div className="intg-src">
+          <Icon name="key" size="s" />
+          <span>{cloud}</span>
+        </div>
+      ) : (
+        <div className="intg-h">{MODE_HINT[mode]}</div>
+      )}
+      {mode === 'yandex' ? (
+        <div className="intg-fields">
+          {field('yandex_folder', 'Каталог', m.yandex.folder, 'b1g...')}
+          {field('yandex_key', 'API-ключ', m.yandex.key, 'Не задан', true)}
+          {field('yandex_model', 'Модель', m.yandex.model, 'yandexgpt/latest')}
+        </div>
+      ) : null}
+      {mode === 'local' ? (
+        <div className="intg-fields">
+          {field('llm_local_url', 'Адрес сервера', m.local.url, 'http://сервер:11434/v1')}
+          {field('llm_local_model', 'Модель', m.local.model, 'qwen2.5:7b')}
+          {field('llm_local_key', 'Ключ, если нужен', m.local.key, 'Не нужен', true)}
+        </div>
+      ) : null}
     </div>
   );
 }

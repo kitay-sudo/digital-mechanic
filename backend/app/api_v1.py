@@ -514,6 +514,15 @@ class IntegrationsIn(BaseModel):
                                           description="Куда сообщать администратору о вопросах без ответа")
     ml_token: str | None = Field(default=None, max_length=500, description="Токен ML-сервиса: Authorization: Bearer")
     toir_token: str | None = Field(default=None, max_length=500, description="Токен ТОиР: Authorization: Bearer")
+    llm_mode: Literal["cloud", "yandex", "local", ""] | None = Field(
+        default=None, description="Модель: cloud — облако из настроек сервера (ключ встроен), yandex — Yandex AI Studio, "
+                                  "local — сервер с форматом OpenAI в контуре заказчика (Ollama, vLLM)")
+    llm_local_url: str | None = Field(default=None, max_length=500, description="Адрес локальной модели, например http://сервер:11434/v1")
+    llm_local_model: str | None = Field(default=None, max_length=200, description="Имя модели на локальном сервере")
+    llm_local_key: str | None = Field(default=None, max_length=500, description="Ключ локального сервера, если нужен")
+    yandex_folder: str | None = Field(default=None, max_length=100, description="Идентификатор каталога Yandex Cloud")
+    yandex_key: str | None = Field(default=None, max_length=500, description="API-ключ Yandex AI Studio")
+    yandex_model: str | None = Field(default=None, max_length=200, description="Модель, например yandexgpt/latest")
 
 
 def integrations_data() -> dict:

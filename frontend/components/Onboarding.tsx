@@ -5,6 +5,8 @@ import { usePresence } from '@/lib/presence';
 import { setSettings, useSettings } from '@/lib/settings';
 import { PriorityBadge, StatusBadge } from './Badges';
 import { Icon } from './Icon';
+import { Blueprint } from './Blueprint';
+import { PistonBlueprint, ValveBlueprint } from './Blueprints';
 
 /* ---------- Повторный показ из настроек ---------- */
 
@@ -282,6 +284,16 @@ export function Onboarding() {
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
     >
+      {/* Бледный чертёж на фоне: у слайдов по очереди двигатель, поршень с шатуном и клапанный механизм */}
+      <div className="tour-art" aria-hidden="true" key={`art-${index % 3}`}>
+        {index % 3 === 0 ? (
+          <Blueprint className="tour-bp" />
+        ) : index % 3 === 1 ? (
+          <PistonBlueprint className="tour-bp" />
+        ) : (
+          <ValveBlueprint className="tour-bp" />
+        )}
+      </div>
       <div className="tour-top">
         <span className="logo">
           <Icon name="engine" size="l" />

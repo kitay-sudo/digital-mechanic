@@ -190,7 +190,7 @@ function Row({
       <span className="la">
         {gap ? (
           <span className={`lkind lcase ${fromMechanic ? 'k-msg' : 'k-sys'}${gap.status === 'reviewed' ? ' done' : ''}`} title={gap.title}>
-            <Icon name={fromMechanic ? 'message-circle' : 'robot'} size="s" />
+            <Icon name={fromMechanic ? 'message-circle' : 'engine'} size="s" />
             <span>{caseLabel}</span>
             {it.status ? <CaseState status={it.status} /> : null}
           </span>

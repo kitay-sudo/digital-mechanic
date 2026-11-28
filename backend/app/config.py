@@ -85,6 +85,8 @@ class Settings:
     ml_token: str = ""
     toir_token: str = ""
     ticket_sink: str = "toir"
+    # Какую модель выбрал администратор: cloud — как в .env, yandex — Yandex AI Studio, local — сервер в контуре
+    llm_mode: str = "cloud"
 
     @property
     def pdf_dir(self) -> Path:
@@ -157,6 +159,41 @@ def get_settings() -> Settings:
 # Хранятся в базе и перекрывают .env. После их изменения кэш get_settings сбрасывается.
 OVERRIDABLE = ("ml_url", "toir_url", "alert_webhook_url", "ml_token", "toir_token")
 OVERRIDE_PREFIX = "integration."
+# Выбор модели на экране «Подключения»: вариант и его поля (ключи хранятся так же, в базе)
+MODEL_KEYS = ("llm_mode", "llm_local_url", "llm_local_model", "llm_local_key", "yandex_folder", "yandex_key", "yandex_model")
+MODEL_MODES = ("cloud", "yandex", "local")
+YANDEX_URL = "https://ai.api.cloud.yandex.net/v1"
+YANDEX_DEFAULT_MODEL = "yandexgpt/latest"
+
+
+def yandex_model_uri(folder: str, model: str) -> str:
+    model = (model or YANDEX_DEFAULT_MODEL).strip()
+    return model if model.startswith("gpt://") else f"gpt://{folder.strip()}/{model}"
+
+
+def model_patch(settings: Settings, values: dict[str, str]) -> dict:
+    """Поля модели по выбору администратора. Пустой выбор или нехватка полей — модель из .env."""
+    mode = (values.get("llm_mode") or "cloud").strip()
+    max_tokens = min(settings.llm_max_tokens, 6000)
+    if mode == "local" and values.get("llm_local_url") and values.get("llm_local_model"):
+        # Локальная модель бесплатна по токенам: стоимость считается по железу, а не по ценам облака
+        return {"llm_mode": "local", "llm_provider": "openai", "llm_base_url": values["llm_local_url"].rstrip("/"),
+                "llm_model": values["llm_local_model"].strip(), "llm_api_key": values.get("llm_local_key") or "",
+                "llm_project": "", "llm_max_tokens": max_tokens,
+                "price_input": 0.0, "price_output": 0.0, "price_cache_read": 0.0, "price_cache_write": 0.0}
+    if mode == "yandex" and values.get("yandex_folder") and values.get("yandex_key"):
+        folder = values["yandex_folder"].strip()
+        out = {"llm_mode": "yandex", "llm_provider": "openai", "llm_base_url": YANDEX_URL,
+               "llm_model": yandex_model_uri(folder, values.get("yandex_model") or ""),
+               "llm_api_key": values["yandex_key"], "llm_project": folder, "llm_max_tokens": max_tokens,
+               # Схему ответа сервис может не принять: «ответ в JSON» и схема в инструкции работают шире
+               "llm_structured": "json"}
+        price_in, price_out = os.environ.get("YANDEX_PRICE_INPUT_PER_MTOK"), os.environ.get("YANDEX_PRICE_OUTPUT_PER_MTOK")
+        if price_in and price_out:
+            out.update(price_input=float(price_in), price_output=float(price_out), price_cache_read=0.0,
+                       price_cache_write=float(price_in))
+        return out
+    return {}
 
 
 def _with_overrides(settings: Settings) -> Settings:
@@ -173,4 +210,5 @@ def _with_overrides(settings: Settings) -> Settings:
         return settings  # таблицы ещё нет: настройки только из .env
     values = {key[len(OVERRIDE_PREFIX):]: value for key, value in rows}
     patch = {k: (values[k].rstrip("/") if k.endswith("_url") else values[k]) for k in OVERRIDABLE if k in values}
+    patch.update(model_patch(settings, values))
     return replace(settings, **patch) if patch else settings

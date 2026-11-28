@@ -10,6 +10,7 @@ from __future__ import annotations
 import shutil
 import sys
 import time
+from collections.abc import Callable
 
 import pymupdf
 
@@ -51,11 +52,46 @@ def ocr_page(page: pymupdf.Page) -> str:
     return page.get_text(textpage=textpage)
 
 
+def has_ocr() -> bool:
+    return shutil.which("tesseract") is not None
+
+
+def index_manual(manual, index, ocr: bool, on_page: Callable[[int, int], None] | None = None) -> dict:
+    """Страницы одного руководства в индекс. Прежние записи этого руководства заменяются.
+    on_page(сделано, всего) — для полосы хода индексации в админке."""
+    path = get_settings().pdf_dir / manual.file
+    doc = pymupdf.open(path)
+    index.remove_manual(manual.id)
+    total = len(doc)
+    chunks_count = ocr_count = 0
+    for number, page in enumerate(doc, start=1):
+        text = page.get_text()
+        used_ocr = False
+        if len(text.strip()) < LOW_TEXT and ocr:
+            try:
+                recognized = ocr_page(page)
+                if len(recognized.strip()) > len(text.strip()):
+                    text, used_ocr = recognized, True
+                    ocr_count += 1
+            except Exception as exc:  # распознавание не должно ронять сборку индекса
+                print(f"  стр. {number}: распознавание не удалось ({exc})")
+        # Оглавление в поиск не попадает: это не процедура и не норматив (П9).
+        chunks = [] if is_toc(text) else chunk_page(text)
+        index.add_page(manual.id, number, text, used_ocr, chunks)
+        chunks_count += len(chunks)
+        if number % 20 == 0:
+            index.commit()
+        if on_page:
+            on_page(number, total)
+    index.commit()
+    return {"pages": total, "chunks": chunks_count, "ocr_pages": ocr_count}
+
+
 def main() -> int:
     settings = get_settings()
     index = get_index()
-    has_ocr = shutil.which("tesseract") is not None
-    if not has_ocr:
+    ocr = has_ocr()
+    if not ocr:
         print("Tesseract не найден: страницы без текстового слоя останутся без распознавания.")
     index.reset()
     total_pages = total_chunks = total_ocr = 0
@@ -65,29 +101,13 @@ def main() -> int:
             print(f"НЕТ ФАЙЛА: {path}. Руководство {manual.designation} пропущено.")
             continue
         started = time.time()
-        doc = pymupdf.open(path)
-        if len(doc) != manual.pages:
-            print(f"Внимание: в {manual.file} {len(doc)} страниц, в реестре {manual.pages}.")
-        ocr_count = 0
-        for number, page in enumerate(doc, start=1):
-            text = page.get_text()
-            used_ocr = False
-            if len(text.strip()) < LOW_TEXT and has_ocr:
-                try:
-                    recognized = ocr_page(page)
-                    if len(recognized.strip()) > len(text.strip()):
-                        text, used_ocr = recognized, True
-                        ocr_count += 1
-                except Exception as exc:  # распознавание не должно ронять сборку индекса
-                    print(f"  стр. {number}: распознавание не удалось ({exc})")
-            # Оглавление в поиск не попадает: это не процедура и не норматив (П9).
-            chunks = [] if is_toc(text) else chunk_page(text)
-            index.add_page(manual.id, number, text, used_ocr, chunks)
-            total_chunks += len(chunks)
-        index.commit()
-        total_pages += len(doc)
-        total_ocr += ocr_count
-        print(f"{manual.designation}: {len(doc)} стр., распознано {ocr_count}, {time.time() - started:.1f} с")
+        result = index_manual(manual, index, ocr)
+        if result["pages"] != manual.pages:
+            print(f"Внимание: в {manual.file} {result['pages']} страниц, в реестре {manual.pages}.")
+        total_pages += result["pages"]
+        total_chunks += result["chunks"]
+        total_ocr += result["ocr_pages"]
+        print(f"{manual.designation}: {result['pages']} стр., распознано {result['ocr_pages']}, {time.time() - started:.1f} с")
     print(f"Готово: {total_pages} страниц, {total_chunks} фрагментов, распознано страниц: {total_ocr}.")
     print(f"Индекс: {settings.index_path}")
     return 0
