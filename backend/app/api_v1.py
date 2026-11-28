@@ -26,7 +26,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
-from . import auth, clients, fleet, integrations, mechanics, turns
+from . import auth, clients, demo, fleet, integrations, mechanics, turns
 from .agent.loop import run_turn
 from .config import get_settings
 from .fleet_db import RESULT_FIELDS
@@ -527,7 +527,8 @@ class IntegrationsIn(BaseModel):
 
 def integrations_data() -> dict:
     keys = auth.api_keys()
-    return {**integrations.current(), "api": {"enabled": bool(keys), "keys": len(keys), "docs_url": "/api/docs"}}
+    return {**integrations.current(), "api": {"enabled": bool(keys), "keys": len(keys), "docs_url": "/api/docs"},
+            "demo": demo.enabled()}
 
 
 def save_integrations(body: IntegrationsIn) -> dict:
@@ -721,13 +722,21 @@ async def admin_create_mechanic(body: MechanicIn):
     return _mechanic_call(mechanics.repo().create, _mechanic_data(body))
 
 
+def _demo_mechanic_guard(mechanic_id: int, what: str) -> None:
+    """Демо-механики (их PIN видны на экране входа) на демо-стенде не меняются: иначе вход сломается у всех."""
+    if demo.enabled() and mechanic_id in mechanics.repo().demo_pins():
+        raise ApiError(403, demo.locked(what), demo_locked=True)
+
+
 @admin.put("/mechanics/{mechanic_id}")
 async def admin_update_mechanic(mechanic_id: int, body: MechanicPatch):
+    _demo_mechanic_guard(mechanic_id, "менять демо-механиков")
     return _mechanic_call(mechanics.repo().update, mechanic_id, _mechanic_data(body))
 
 
 @admin.delete("/mechanics/{mechanic_id}")
 async def admin_delete_mechanic(mechanic_id: int):
+    _demo_mechanic_guard(mechanic_id, "удалять демо-механиков")
     _mechanic_call(mechanics.repo().delete, mechanic_id)
     return {"deleted": True}
 
@@ -739,6 +748,8 @@ async def admin_integrations():
 
 @admin.put("/integrations")
 async def admin_save_integrations(body: IntegrationsIn):
+    if demo.enabled():
+        raise ApiError(403, demo.locked("менять подключения и модель"), demo_locked=True)
     return {**save_integrations(body), "health": await clients.health()}
 
 

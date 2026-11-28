@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { LoginError, authApi, type IntegrationItem, type Integrations, type ModelChoice, type ModelMode } from '@/lib/auth';
+import { authApi, errorText, isDemoLocked, type IntegrationItem, type Integrations, type ModelChoice, type ModelMode } from '@/lib/auth';
 import { Icon } from './Icon';
 import { ErrorState, Loading } from './States';
 
@@ -71,7 +71,11 @@ export function AdminIntegrations() {
         setDraft({});
         setSavedAt(new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }));
       })
-      .catch((e: unknown) => setSaveError(e instanceof LoginError ? e.message : 'Не получилось сохранить'))
+      .catch((e: unknown) => {
+        // Демо-стенд не сохранил: черновик сбрасываем, чтобы на экране было то, что работает
+        if (isDemoLocked(e)) setDraft({});
+        setSaveError(errorText(e, 'Не получилось сохранить'));
+      })
       .finally(() => setBusy(false));
   };
 

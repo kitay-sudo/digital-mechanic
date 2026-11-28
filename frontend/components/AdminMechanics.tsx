@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LoginError, authApi, type FontSize, type Level, type Mechanic, type MechanicInput } from '@/lib/auth';
+import { authApi, errorText, isDemoLocked, type FontSize, type Level, type Mechanic, type MechanicInput } from '@/lib/auth';
 import { useFitRows, usePaged } from '@/lib/paging';
 import { usePresence } from '@/lib/presence';
 import { useSettings } from '@/lib/settings';
@@ -196,7 +196,10 @@ function MechanicSheet({
     authApi
       .deleteMechanic(current.id)
       .then(() => onDeleted(current.id))
-      .catch((e: unknown) => setError(e instanceof LoginError ? e.message : 'Не получилось удалить'))
+      .catch((e: unknown) => {
+        if (isDemoLocked(e)) setAskDelete(false);
+        setError(errorText(e, 'Не получилось удалить'));
+      })
       .finally(() => setBusy(false));
   };
 
@@ -221,7 +224,7 @@ function MechanicSheet({
     setError(null);
     (current ? authApi.updateMechanic(current.id, body) : authApi.createMechanic(body))
       .then(onSaved)
-      .catch((e: unknown) => setError(e instanceof LoginError ? e.message : 'Не получилось сохранить'))
+      .catch((e: unknown) => setError(errorText(e, 'Не получилось сохранить')))
       .finally(() => setBusy(false));
   };
 

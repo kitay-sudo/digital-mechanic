@@ -365,6 +365,73 @@
   margin-top: 4px;
 }
 
+/* Демо-стенд: логин и пароль администратора для экспертов. Значение можно скопировать или подставить в форму */
+.al-demo {
+  display: flex;
+  flex-direction: column;
+  padding: 12px 12px 12px 16px;
+  border: 1px solid var(--line2);
+  border-left: 2px solid var(--acc);
+}
+
+.al-demo .sp-l {
+  margin-bottom: 4px;
+}
+
+.al-cred {
+  display: grid;
+  grid-template-columns: calc(72px * var(--k)) minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  min-height: calc(48px * var(--k));
+  font-size: calc(16px * var(--k));
+}
+
+.al-cred + .al-cred {
+  border-top: 1px solid var(--line);
+}
+
+.al-cred .al-k {
+  color: var(--tx3);
+  font-size: calc(15px * var(--k));
+}
+
+.al-cred .m {
+  color: var(--tx);
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+.al-fill {
+  width: 100%;
+  margin-top: 8px;
+}
+
+/* Панель запрета демо-стенда встаёт поверх открытой панели админки */
+.veil.dl-veil {
+  z-index: 69;
+}
+
+.pop.dl {
+  z-index: 70;
+}
+
+.dl-h {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dl-h .ti {
+  flex: none;
+  color: var(--warn);
+}
+
+.pop-f.one {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 /* ---------- Механики ---------- */
 
 .mhead,

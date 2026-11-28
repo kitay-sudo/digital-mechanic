@@ -332,7 +332,8 @@ def test_routes_closed_without_login(secured):
     assert secured.get("/api/fleet").status_code == 401
     assert secured.get("/api/audit").status_code == 401
     assert secured.get("/api/health").status_code == 200
-    assert secured.get("/api/auth/me").json() == {"required": True, "role": None, "mechanic": None, "hint": None}
+    assert secured.get("/api/auth/me").json() == {"required": True, "role": None, "mechanic": None, "hint": None,
+                                               "demo": False, "demo_admin": None}
     # Действующий ключ внешней системы открывает служебный доступ (скрипты проверки качества)
     assert secured.get("/api/fleet", headers=H).status_code == 200
 

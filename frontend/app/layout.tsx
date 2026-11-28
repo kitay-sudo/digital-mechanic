@@ -16,6 +16,7 @@ import '@tabler/icons-webfont/dist/tabler-icons.min.css';
 import './globals.css';
 import './auth.css';
 import './journal.css';
+import { DemoLock } from '@/components/DemoLock';
 import { Onboarding } from '@/components/Onboarding';
 import { PwaRegister } from '@/components/PwaRegister';
 import { Header } from '@/components/Header';
@@ -55,6 +56,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           </main>
         </div>
         <Onboarding />
+        <DemoLock />
         <PwaRegister />
       </body>
     </html>

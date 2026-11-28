@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LoginError, loginAdmin, useAuth } from '@/lib/auth';
 import { Icon } from './Icon';
 
@@ -14,6 +14,28 @@ export function LoginAdmin({ next = '/admin/mechanics' }: { next?: string | null
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [copied, setCopied] = useState<'login' | 'password' | null>(null);
+  const goRef = useRef<HTMLButtonElement>(null);
+  // Демо-стенд: логин и пароль видны экспертам, их можно скопировать или сразу подставить в форму
+  const access = me?.demo_admin ?? null;
+
+  const copy = (what: 'login' | 'password', value: string) => {
+    const done = () => {
+      setCopied(what);
+      window.setTimeout(() => setCopied((c) => (c === what ? null : c)), 1600);
+    };
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(value).then(done, () => fallbackCopy(value) && done());
+    } else if (fallbackCopy(value)) done();
+  };
+
+  const fill = () => {
+    if (!access) return;
+    setLogin(access.login);
+    setPassword(access.password);
+    setError(null);
+    goRef.current?.focus();
+  };
 
   // Отдельный экран входа: вошедший администратор сразу попадает в свои разделы
   useEffect(() => {
@@ -53,6 +75,29 @@ export function LoginAdmin({ next = '/admin/mechanics' }: { next?: string | null
         ) : (
           <div className="al-s">Журнал обращений, механики и подключения к внешним системам.</div>
         )}
+        {access ? (
+          <div className="al-demo">
+            <div className="sp-l">Доступ для экспертов</div>
+            <div className="al-cred">
+              <span className="al-k">Логин</span>
+              <span className="m">{access.login}</span>
+              <button type="button" className="hb" onClick={() => copy('login', access.login)} aria-label="Скопировать логин" title="Скопировать">
+                <Icon name={copied === 'login' ? 'check' : 'copy'} />
+              </button>
+            </div>
+            <div className="al-cred">
+              <span className="al-k">Пароль</span>
+              <span className="m">{access.password}</span>
+              <button type="button" className="hb" onClick={() => copy('password', access.password)} aria-label="Скопировать пароль" title="Скопировать">
+                <Icon name={copied === 'password' ? 'check' : 'copy'} />
+              </button>
+            </div>
+            <button type="button" className="btn al-fill" onClick={fill}>
+              <Icon name="arrow-down" />
+              Подставить в форму
+            </button>
+          </div>
+        ) : null}
         <label className="al-f">
           <span className="sp-l">Логин</span>
           <input
@@ -79,7 +124,7 @@ export function LoginAdmin({ next = '/admin/mechanics' }: { next?: string | null
         <div className="al-err" role="alert">
           {error}
         </div>
-        <button type="submit" className="btn pri al-go" disabled={busy}>
+        <button type="submit" className="btn pri al-go" disabled={busy} ref={goRef}>
           <Icon name={busy ? 'loader-2' : 'login-2'} className={busy ? 'spin' : ''} />
           Войти
         </button>
@@ -90,4 +135,23 @@ export function LoginAdmin({ next = '/admin/mechanics' }: { next?: string | null
       </form>
     </div>
   );
+}
+
+/** Копирование без Clipboard API (старый браузер или страница не по HTTPS) */
+function fallbackCopy(value: string): boolean {
+  const area = document.createElement('textarea');
+  area.value = value;
+  area.setAttribute('readonly', '');
+  area.style.position = 'fixed';
+  area.style.opacity = '0';
+  document.body.appendChild(area);
+  area.select();
+  let ok = false;
+  try {
+    ok = document.execCommand('copy');
+  } catch {
+    ok = false;
+  }
+  area.remove();
+  return ok;
 }

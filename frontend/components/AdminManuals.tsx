@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { LoginError, authApi, type Library, type LibraryManual } from '@/lib/auth';
+import { authApi, errorText, isDemoLocked, type Library, type LibraryManual } from '@/lib/auth';
 import { usePresence } from '@/lib/presence';
 import { Icon } from './Icon';
 import { ErrorState, Loading } from './States';
@@ -229,7 +229,7 @@ function UploadSheet({
     authApi
       .uploadManual(file, { title: title.trim(), short: short.trim(), designation: designation.trim(), year: y, engines: chosen })
       .then(onDone)
-      .catch((e: unknown) => setError(e instanceof LoginError ? e.message : 'Не получилось загрузить'))
+      .catch((e: unknown) => setError(errorText(e, 'Не получилось загрузить')))
       .finally(() => setBusy(false));
   };
 
@@ -343,7 +343,7 @@ function ManualSheet({
     authApi
       .indexManual(manual.manual_id)
       .then(onData)
-      .catch((e: unknown) => setError(e instanceof LoginError ? e.message : 'Не получилось запустить индексацию'))
+      .catch((e: unknown) => setError(errorText(e, 'Не получилось запустить индексацию')))
       .finally(() => setBusy(false));
   };
   const remove = () => {
@@ -352,7 +352,10 @@ function ManualSheet({
     authApi
       .deleteManual(manual.manual_id)
       .then(onDeleted)
-      .catch((e: unknown) => setError(e instanceof LoginError ? e.message : 'Не получилось удалить'))
+      .catch((e: unknown) => {
+        if (isDemoLocked(e)) setAskDelete(false);
+        setError(errorText(e, 'Не получилось удалить'));
+      })
       .finally(() => setBusy(false));
   };
 

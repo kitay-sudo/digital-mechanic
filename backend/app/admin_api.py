@@ -202,6 +202,8 @@ async def admin_upload_manual(request: Request, title: str = Query(min_length=3,
     try:
         manual = await library.add(request.stream(), title=title, short=short, designation=designation, year=year,
                                    engines=[e.strip() for e in engines.split(",") if e.strip()])
+    except library.DemoLocked as exc:
+        raise HTTPException(403, str(exc)) from exc
     except library.LibraryError as exc:
         raise HTTPException(422, str(exc)) from exc
     library.start_index(manual.id)
@@ -212,6 +214,8 @@ async def admin_upload_manual(request: Request, title: str = Query(min_length=3,
 async def admin_index_manual(manual_id: str):
     try:
         library.start_index(manual_id)
+    except library.DemoLocked as exc:
+        raise HTTPException(403, str(exc)) from exc
     except library.LibraryError as exc:
         raise HTTPException(409 if "уже" in str(exc) else 404, str(exc)) from exc
     return library.overview()
@@ -221,6 +225,8 @@ async def admin_index_manual(manual_id: str):
 async def admin_delete_manual(manual_id: str):
     try:
         library.remove(manual_id)
+    except library.DemoLocked as exc:
+        raise HTTPException(403, str(exc)) from exc
     except library.LibraryError as exc:
         raise HTTPException(409 if "идёт" in str(exc) else 404, str(exc)) from exc
     return library.overview()

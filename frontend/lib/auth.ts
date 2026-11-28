@@ -23,6 +23,10 @@ export interface Me {
   mechanic: MechanicSelf | null;
   /** Подсказка для показа стенда, например «Демо: Иванов, PIN 1111» */
   hint: string | null;
+  /** Демо-стенд: часть действий администратора запрещена, чтобы стенд работал у всех экспертов */
+  demo?: boolean;
+  /** Демо-стенд: логин и пароль администратора для экспертов, показаны на экране входа */
+  demo_admin?: { login: string; password: string } | null;
 }
 
 export interface MechanicName {
@@ -120,6 +124,7 @@ export interface Integrations {
   model?: ModelChoice;
   ticket_sink: string;
   api: { enabled: boolean; keys: number; docs_url: string };
+  demo?: boolean;
   health?: { ml: boolean; toir: boolean };
   changed?: string[];
 }
@@ -133,6 +138,20 @@ export class LoginError extends ApiError {
     this.attemptsLeft = attemptsLeft;
     this.retryAfter = retryAfter;
   }
+}
+
+/** Запрет демо-стенда: сервер отвечает 403 с текстом, который начинается так. Его показывает DemoLock */
+export const DEMO_LOCK_EVENT = 'dm-demo-locked';
+const DEMO_PREFIX = 'На демо-стенде';
+
+export function isDemoLocked(e: unknown): boolean {
+  return e instanceof LoginError && e.status === 403 && e.message.startsWith(DEMO_PREFIX);
+}
+
+/** Текст ошибки под формой. Запрет демо-стенда показывает своя панель, под формой его не повторяем */
+export function errorText(e: unknown, fallback: string): string | null {
+  if (isDemoLocked(e)) return null;
+  return e instanceof LoginError ? e.message : fallback;
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
@@ -150,6 +169,9 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   }
   if (!res.ok) {
     const text = typeof data.detail === 'string' ? data.detail : `Ошибка сервера (${res.status})`;
+    if (res.status === 403 && text.startsWith(DEMO_PREFIX) && typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent<string>(DEMO_LOCK_EVENT, { detail: text }));
+    }
     throw new LoginError(
       text,
       res.status,

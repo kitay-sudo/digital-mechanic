@@ -26,6 +26,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from . import mechanics
+from . import demo
 from .db import get_db
 
 log = logging.getLogger("mechanic")
@@ -206,6 +207,9 @@ def me_of(request: Request) -> dict:
         "role": session["role"] if session else None,
         "mechanic": {k: mechanic[k] for k in ("id", "full_name", "level", "font_size")} if mechanic else None,
         "hint": demo_hint(),
+        # Демо-стенд: логин и пароль администратора видны на экране входа (demo.py)
+        "demo": demo.enabled(),
+        "demo_admin": demo.admin_access(),
     }
 
 

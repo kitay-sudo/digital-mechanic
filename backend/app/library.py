@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 
 import pymupdf
 
-from . import fleet, manuals
+from . import demo, fleet, manuals
 from .config import get_settings
 from .db import get_db
 from .kb import ingest
@@ -29,6 +29,10 @@ _tasks: set[asyncio.Task] = set()
 
 class LibraryError(ValueError):
     """Действие с руководством не выполнено: текст для администратора."""
+
+
+class DemoLocked(LibraryError):
+    """Действие запрещено на демо-стенде (demo.py)."""
 
 
 def engines() -> list[str]:
@@ -64,6 +68,8 @@ async def add(body: AsyncIterator[bytes], *, title: str, short: str, designation
     """Сохраняет присланный PDF и запись реестра. Проверяет, что это PDF и у него есть страницы."""
     if not engines:
         raise LibraryError("Укажите хотя бы один двигатель: без этого агент не найдёт руководство для машины")
+    if demo.enabled() and sum(m.source == "upload" for m in manuals.all_manuals()) >= demo.MAX_UPLOADS:
+        raise DemoLocked(demo.locked(f"загружать больше {demo.MAX_UPLOADS} руководств"))
     if any(m.short.lower() == short.strip().lower() for m in manuals.all_manuals()):
         raise LibraryError(f"Руководство с коротким названием «{short.strip()}» уже есть")
     manual_id = "up_" + uuid.uuid4().hex[:10]
@@ -106,6 +112,8 @@ def start_index(manual_id: str) -> None:
     manual = manuals.manual_by_id(manual_id)
     if manual is None:
         raise LibraryError("Нет такого руководства")
+    if demo.enabled() and manual.source == "base":
+        raise DemoLocked(demo.locked("переиндексировать руководства заказчика"))
     if not (get_settings().pdf_dir / manual.file).exists():
         raise LibraryError("Файла руководства нет на сервере: загрузите PDF заново")
     if JOBS.get(manual_id, {}).get("state") == "running":
@@ -133,6 +141,8 @@ def remove(manual_id: str) -> None:
     manual = manuals.manual_by_id(manual_id)
     if manual is None:
         raise LibraryError("Нет такого руководства")
+    if demo.enabled() and manual.source == "base":
+        raise DemoLocked(demo.locked("удалять руководства заказчика"))
     if JOBS.get(manual_id, {}).get("state") == "running":
         raise LibraryError("Идёт индексация этого руководства: дождитесь окончания")
     get_index().remove_manual(manual_id)
