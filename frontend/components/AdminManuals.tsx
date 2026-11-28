@@ -256,14 +256,19 @@ function UploadSheet({
           </button>
         </div>
         <div className="sp-b">
-          <label className="sp-g kfile">
+          <div className="sp-g kfile">
             <span className="sp-l">PDF</span>
-            <input className="inp sp-in" type="file" accept="application/pdf,.pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
-            <span className="sp-s">
-              {file ? `${file.name}, ${(file.size / 1024 / 1024).toFixed(1)} МБ` : 'До 300 МБ'}
-              {ocr ? '. Сканы без текста распознаются автоматически' : ''}
-            </span>
-          </label>
+            {/* Своя кнопка вместо системной: системная выбивается из вида панели */}
+            <label className="kpick">
+              <input type="file" accept="application/pdf,.pdf" onChange={(e) => setFile(e.target.files?.[0] ?? null)} />
+              <span className="btn">
+                <Icon name="file-type-pdf" />
+                Выбрать PDF
+              </span>
+              <span className="kpick-n">{file ? `${file.name}, ${(file.size / 1024 / 1024).toFixed(1)} МБ` : 'Файл не выбран'}</span>
+            </label>
+            <span className="sp-s">До 300 МБ{ocr ? '. Сканы без текста распознаются автоматически' : ''}</span>
+          </div>
           <label className="sp-g">
             <span className="sp-l">Название</span>
             <input className="inp sp-in" value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} placeholder="Двигатели ЯМЗ-536. Руководство по ремонту" />

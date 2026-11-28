@@ -9,6 +9,7 @@
 /* Узкая колонка по центру: список фамилий, внизу подсказка и вход администратора */
 .body.fit.lg {
   align-items: center;
+  justify-content: safe center;
   /* Вниз прокручивается, если не помещается (PIN на низком экране); вбок — никогда */
   overflow-x: hidden;
   overflow-y: auto;
@@ -17,6 +18,11 @@
 .body.fit.lg > * {
   width: 100%;
   max-width: calc(640px * var(--k));
+}
+
+/* Список своей высоты, а не на весь экран: тогда вся колонка встаёт по центру по вертикали */
+.body.fit.lg > .fit-area {
+  flex: 0 1 auto;
 }
 
 /* Таблица своей высоты: три фамилии — три строки, без пустого поля под ними */
@@ -290,14 +296,15 @@
 
 .al-body {
   display: flex;
-  align-items: flex-start;
+  align-items: safe center;
   justify-content: center;
 }
 
 .al {
   width: 100%;
   max-width: calc(440px * var(--k));
-  margin-top: 6vh;
+  /* Чуть выше середины: так форма смотрится по центру, а не провалившейся */
+  margin-bottom: 6vh;
   padding: var(--sy) var(--sx);
   display: flex;
   flex-direction: column;
@@ -564,6 +571,41 @@
   grid-column: 1 / -1;
 }
 
+.kpick {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.kpick input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kpick .btn {
+  flex: none;
+  pointer-events: none;
+}
+
+.kpick-n {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--tx2);
+  font-size: calc(15px * var(--k));
+}
+
+.kpick:focus-within .btn {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
 .kpair {
   display: grid;
   grid-template-columns: minmax(0, 1fr) calc(96px * var(--k));
@@ -571,12 +613,13 @@
 }
 
 .kchips {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(calc(160px * var(--k)), 1fr));
   gap: 8px;
 }
 
 .kchip {
+  width: 100%;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -667,7 +710,7 @@
 .intg-src {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 4px 8px;
   font-size: calc(13px * var(--k));
   line-height: calc(18px * var(--k));

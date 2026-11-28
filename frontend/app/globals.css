@@ -4835,8 +4835,12 @@ button.sp-link {
   min-width: calc(20px * var(--k));
   height: calc(20px * var(--k));
   padding: 0 6px;
-  display: inline-grid;
-  place-items: center;
+  /* Цифра ровно по центру кружка: у моноширинного шрифта своя высота строки */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  vertical-align: middle;
   border-radius: 10px;
   background: var(--warn);
   color: #ffffff;
