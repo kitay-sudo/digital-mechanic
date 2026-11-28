@@ -62,3 +62,11 @@ services:
     ports:
       - "${FRONTEND_PORT:-3000}:3000"
     restart: unless-stopped
+
+  # Автотесты сервера и MCP-коннектора в изолированном контейнере: docker compose run --rm tests
+  # Профиль test: обычный docker compose up этот сервис не собирает и не запускает
+  tests:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    profiles: ["test"]

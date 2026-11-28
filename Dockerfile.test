@@ -1,0 +1,25 @@
+# Автотесты сервера и MCP-коннектора в изолированном контейнере, без установки Python на компьютер.
+# Запуск из корня репозитория:  docker compose run --rm tests
+# Тестам не нужны сеть, ключи модели и PDF заказчика: у них своя тестовая база знаний и свой парк.
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir uv
+ENV PYTHONUNBUFFERED=1 PYTHONIOENCODING=utf-8 UV_LINK_MODE=copy
+
+# Зависимости ставятся отдельным слоем, чтобы повторная сборка после правки кода была быстрой.
+WORKDIR /srv/backend
+COPY backend/pyproject.toml backend/uv.lock ./
+RUN uv sync --frozen
+WORKDIR /srv/mcp-server
+COPY mcp-server/pyproject.toml mcp-server/uv.lock ./
+RUN uv sync --frozen
+
+COPY backend/app /srv/backend/app
+COPY backend/eval /srv/backend/eval
+COPY backend/tests /srv/backend/tests
+COPY mcp-server/connector.py /srv/mcp-server/connector.py
+COPY mcp-server/tests /srv/mcp-server/tests
+COPY config /srv/config
+
+WORKDIR /srv
+CMD ["sh", "-c", "echo 'Тесты сервера:' && cd /srv/backend && uv run --frozen pytest -q && echo 'Тесты MCP-коннектора:' && cd /srv/mcp-server && uv run --frozen pytest -q && echo 'Итог: все тесты пройдены'"]
