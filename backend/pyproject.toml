@@ -1,6 +1,6 @@
 [project]
 name = "digital-mechanic-backend"
-version = "1.0.0"
+version = "1.1.0"
 description = "AI-агент «Цифровой механик»: сервер"
 requires-python = ">=3.10"
 dependencies = [

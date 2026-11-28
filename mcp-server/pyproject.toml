@@ -1,6 +1,6 @@
 [project]
 name = "digital-mechanic-mcp"
-version = "1.0.0"
+version = "1.1.0"
 description = "MCP-коннектор «Цифрового механика»: инструменты агента для внешних ИИ-ассистентов"
 requires-python = ">=3.12"
 dependencies = [
