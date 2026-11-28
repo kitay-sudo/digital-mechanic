@@ -28,7 +28,6 @@ out/
 # Прочее
 .DS_Store
 Thumbs.db
-.claude/
 
 # Файлы, которые Next.js создаёт сам
 frontend/AGENTS.md
