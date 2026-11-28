@@ -69,7 +69,7 @@
 |:---|:---|:---|
 | Стенд, механик | [digital-mechanic.ru](https://digital-mechanic.ru) | фамилия в списке и PIN: Иванов 1111, Петров 2222, Сидоров 3333 |
 | Стенд, администратор | [digital-mechanic.ru/admin/login](https://digital-mechanic.ru/admin/login) | логин и пароль на экране входа, кнопка «Подставить в форму» |
-| Демо-видео | [digital-mechanic.ru/video](https://digital-mechanic.ru/video/) | обзор 3:04 и полная версия 6:53, одним фрагментом |
+| Демо-видео | [digital-mechanic.ru/video](https://digital-mechanic.ru/video/) | обзор 2:59 и полная версия 6:53, одним фрагментом |
 | Презентация | [digital-mechanic.ru/presentation](https://digital-mechanic.ru/presentation/) | PDF в браузере |
 | Руководство пользователя | [docs/user-guide.md](docs/user-guide.md) | механик, главный механик, администратор |
 | Документация API | [digital-mechanic.ru/api/docs](https://digital-mechanic.ru/api/docs) | OpenAPI; запросы по ключу `X-API-Key` |
@@ -211,7 +211,7 @@ backend-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to q
 | B1 | Память по `vehicle_id`: прошлые проверки и заявки | инструмент истории; прошлые заявки в контексте агента; «Повтор после ремонта» | `test_past_tickets_are_in_context_months_later` |
 | B2 | График `anomaly_score` по 3-5 проверкам с тенденцией | экран истории машины, график и подписанная тенденция | `test_trend_detects_growth` |
 | B3 | Режим «Главный механик»: сводка, приоритетный список, история | экран «Парк»: норма, внимание, карантин, список по приоритету | `test_fleet_summary_covers_all_vehicles` |
-| Видео | Демо-ролик | 3:04 и 6:53, одним фрагментом на стенде | [digital-mechanic.ru/video](https://digital-mechanic.ru/video/) |
+| Видео | Демо-ролик | 2:59 и 6:53, одним фрагментом на стенде | [digital-mechanic.ru/video](https://digital-mechanic.ru/video/) |
 
 ### 4.3. Сценарии защиты и контрольные случаи (ТЗ 6, 7)
 
