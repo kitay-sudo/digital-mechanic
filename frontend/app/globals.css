@@ -4840,7 +4840,7 @@ button.sp-link {
   vertical-align: middle;
   border-radius: 10px;
   background: var(--warn);
-  color: #ffffff;
+  color: #14181d;  /* тёмная цифра на оранжевом читается лучше белой */
   font-size: calc(12px * var(--k));
   font-weight: 600;
 }
@@ -5621,12 +5621,12 @@ input.switch:disabled {
 
 .lg-bg > .lg-art {
   position: absolute;
-  /* Весь лист в кадре */
-  right: 1vw;
-  bottom: 1vh;
-  width: min(64vw, 1000px);
+  /* Во всю высоту экрана, без пустоты сверху; правый край уходит за экран */
+  top: 2%;
+  right: -4vw;
+  height: 96%;
+  width: auto;
   max-width: none;
-  height: auto;
   color: var(--tx);
   opacity: 0.07;
   pointer-events: none;
@@ -5653,6 +5653,8 @@ input.switch:disabled {
 
 @media (max-width: 900px) {
   .lg-bg > .lg-art {
+    top: auto;
+    height: auto;
     width: 150vw;
     right: -40vw;
     bottom: -6vh;
